@@ -1,0 +1,593 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string
+          full_name: string
+          email: string | null
+          role: 'trainee' | 'trainer' | 'admin' | 'super_admin'
+          department: string | null
+          designation: string | null
+          approval_status: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path: string | null
+          biography: string | null
+          years_of_experience: number | null
+          qualifications: string | null
+          availability: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string
+          email?: string | null
+          role?: 'trainee' | 'trainer' | 'admin' | 'super_admin'
+          department?: string | null
+          designation?: string | null
+          approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path?: string | null
+          biography?: string | null
+          years_of_experience?: number | null
+          qualifications?: string | null
+          availability?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string | null
+          role?: 'trainee' | 'trainer' | 'admin' | 'super_admin'
+          department?: string | null
+          designation?: string | null
+          approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path?: string | null
+          biography?: string | null
+          years_of_experience?: number | null
+          qualifications?: string | null
+          availability?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      courses: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          course_type: 'standard' | 'scenario'
+          trainer_id: string | null
+          department: string | null
+          duration_minutes: number | null
+          passing_score: number
+          status: 'draft' | 'pending_review' | 'published' | 'archived'
+          thumbnail_path: string | null
+          learning_objectives: Json | null
+          competencies: Json | null
+          created_at: string
+          updated_at: string
+          published_at: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          course_type?: 'standard' | 'scenario'
+          trainer_id?: string | null
+          department?: string | null
+          duration_minutes?: number | null
+          passing_score?: number
+          status?: 'draft' | 'pending_review' | 'published' | 'archived'
+          thumbnail_path?: string | null
+          learning_objectives?: Json | null
+          competencies?: Json | null
+          created_at?: string
+          updated_at?: string
+          published_at?: string | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          course_type?: 'standard' | 'scenario'
+          trainer_id?: string | null
+          department?: string | null
+          duration_minutes?: number | null
+          passing_score?: number
+          status?: 'draft' | 'pending_review' | 'published' | 'archived'
+          thumbnail_path?: string | null
+          learning_objectives?: Json | null
+          competencies?: Json | null
+          created_at?: string
+          updated_at?: string
+          published_at?: string | null
+        }
+        Relationships: []
+      }
+      materials: {
+        Row: {
+          id: string
+          course_id: string
+          uploaded_by: string
+          file_name: string
+          storage_path: string
+          mime_type: string | null
+          file_size: number | null
+          extracted_text: string | null
+          extraction_status: 'pending' | 'completed' | 'failed'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          uploaded_by: string
+          file_name: string
+          storage_path: string
+          mime_type?: string | null
+          file_size?: number | null
+          extracted_text?: string | null
+          extraction_status?: 'pending' | 'completed' | 'failed'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          uploaded_by?: string
+          file_name?: string
+          storage_path?: string
+          mime_type?: string | null
+          file_size?: number | null
+          extracted_text?: string | null
+          extraction_status?: 'pending' | 'completed' | 'failed'
+          created_at?: string
+        }
+        Relationships: []
+      }
+      enrollments: {
+        Row: {
+          id: string
+          user_id: string
+          course_id: string
+          status: 'enrolled' | 'in_progress' | 'completed' | 'withdrawn'
+          progress_percent: number
+          enrolled_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          course_id: string
+          status?: 'enrolled' | 'in_progress' | 'completed' | 'withdrawn'
+          progress_percent?: number
+          enrolled_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          course_id?: string
+          status?: 'enrolled' | 'in_progress' | 'completed' | 'withdrawn'
+          progress_percent?: number
+          enrolled_at?: string
+          completed_at?: string | null
+        }
+        Relationships: []
+      }
+      assessments: {
+        Row: {
+          id: string
+          course_id: string
+          title: string
+          instructions: string | null
+          passing_score: number
+          status: 'draft' | 'pending_review' | 'published' | 'archived'
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          title: string
+          instructions?: string | null
+          passing_score?: number
+          status?: 'draft' | 'pending_review' | 'published' | 'archived'
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          title?: string
+          instructions?: string | null
+          passing_score?: number
+          status?: 'draft' | 'pending_review' | 'published' | 'archived'
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          id: string
+          assessment_id: string
+          question_text: string
+          options: Json
+          correct_answer: string
+          explanation: string | null
+          position: number
+          approved: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          assessment_id: string
+          question_text: string
+          options: Json
+          correct_answer: string
+          explanation?: string | null
+          position?: number
+          approved?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          assessment_id?: string
+          question_text?: string
+          options?: Json
+          correct_answer?: string
+          explanation?: string | null
+          position?: number
+          approved?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      assessment_attempts: {
+        Row: {
+          id: string
+          assessment_id: string
+          user_id: string
+          score: number | null
+          passed: boolean | null
+          started_at: string
+          submitted_at: string | null
+        }
+        Insert: {
+          id?: string
+          assessment_id: string
+          user_id: string
+          score?: number | null
+          passed?: boolean | null
+          started_at?: string
+          submitted_at?: string | null
+        }
+        Update: {
+          id?: string
+          assessment_id?: string
+          user_id?: string
+          score?: number | null
+          passed?: boolean | null
+          started_at?: string
+          submitted_at?: string | null
+        }
+        Relationships: []
+      }
+      attempt_answers: {
+        Row: {
+          id: string
+          attempt_id: string
+          question_id: string
+          selected_answer: string
+          is_correct: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          attempt_id: string
+          question_id: string
+          selected_answer: string
+          is_correct: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          attempt_id?: string
+          question_id?: string
+          selected_answer?: string
+          is_correct?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      certificates: {
+        Row: {
+          id: string
+          certificate_number: string
+          user_id: string
+          course_id: string
+          final_score: number
+          storage_path: string
+          verification_hash: string
+          issued_at: string
+          expires_at: string | null
+          status: 'valid' | 'revoked'
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          id?: string
+          certificate_number: string
+          user_id: string
+          course_id: string
+          final_score: number
+          storage_path: string
+          verification_hash: string
+          issued_at?: string
+          expires_at?: string | null
+          status?: 'valid' | 'revoked'
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          id?: string
+          certificate_number?: string
+          user_id?: string
+          course_id?: string
+          final_score?: number
+          storage_path?: string
+          verification_hash?: string
+          issued_at?: string
+          expires_at?: string | null
+          status?: 'valid' | 'revoked'
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: []
+      }
+      skills: {
+        Row: {
+          id: string
+          name: string
+          category: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          category?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          category?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      user_skills: {
+        Row: {
+          user_id: string
+          skill_id: string
+          level: number
+        }
+        Insert: {
+          user_id: string
+          skill_id: string
+          level?: number
+        }
+        Update: {
+          user_id?: string
+          skill_id?: string
+          level?: number
+        }
+        Relationships: []
+      }
+      course_skills: {
+        Row: {
+          course_id: string
+          skill_id: string
+          required_level: number
+        }
+        Insert: {
+          course_id: string
+          skill_id: string
+          required_level?: number
+        }
+        Update: {
+          course_id?: string
+          skill_id?: string
+          required_level?: number
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          related_certificate_id: string | null
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message: string
+          related_certificate_id?: string | null
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string
+          related_certificate_id?: string | null
+          read_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          actor_id: string | null
+          action: string
+          entity_type: string
+          entity_id: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          actor_id?: string | null
+          action: string
+          entity_type: string
+          entity_id?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          actor_id?: string | null
+          action?: string
+          entity_type?: string
+          entity_id?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      scenario_modules: {
+        Row: {
+          id: string
+          course_id: string
+          title: string
+          description: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          title: string
+          description?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          title?: string
+          description?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      scenario_nodes: {
+        Row: {
+          id: string
+          scenario_id: string
+          question: string
+          options: Json
+          correct_option: string
+          explanation: string | null
+          position: number
+          next_node_id: string | null
+          score_value: number
+        }
+        Insert: {
+          id?: string
+          scenario_id: string
+          question: string
+          options: Json
+          correct_option: string
+          explanation?: string | null
+          position?: number
+          next_node_id?: string | null
+          score_value?: number
+        }
+        Update: {
+          id?: string
+          scenario_id?: string
+          question?: string
+          options?: Json
+          correct_option?: string
+          explanation?: string | null
+          position?: number
+          next_node_id?: string | null
+          score_value?: number
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      questions_safe: {
+        Row: {
+          id: string | null
+          assessment_id: string | null
+          question_text: string | null
+          options: Json | null
+          position: number | null
+        }
+        Relationships: []
+      }
+      scenario_nodes_safe: {
+        Row: {
+          id: string | null
+          scenario_id: string | null
+          question: string | null
+          options: Json | null
+          position: number | null
+        }
+        Relationships: []
+      }
+    }
+    Functions: {
+      current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      admin_update_user: {
+        Args: {
+          target_user_id: string
+          new_role: string
+          new_status: string
+        }
+        Returns: void
+      }
+      super_admin_promote_to_admin: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: void
+      }
+      admin_update_course: {
+        Args: {
+          target_course_id: string
+          new_status: string
+        }
+        Returns: void
+      }
+    }
+    Enums: {}
+    CompositeTypes: {}
+  }
+}
