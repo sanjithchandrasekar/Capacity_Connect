@@ -8,12 +8,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        feldgrau: {
-          DEFAULT: '#3A4B41',
-          dark: '#2D3A32'
+        cream: {
+          DEFAULT: '#FFFDF2',
+          50: '#FFFDF2',
+          100: '#FFF9E0',
+          200: '#FFF3C4',
+          300: '#FFEDA8',
+          400: '#FFE78C',
+          500: '#FFE170',
         },
-        wheat: {
-          DEFAULT: '#E6CFA7'
+        ink: {
+          DEFAULT: '#000000',
+          50: '#1A1A1A',
+          100: '#333333',
+          200: '#4D4D4D',
+          300: '#666666',
+          400: '#808080',
+          500: '#999999',
         },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

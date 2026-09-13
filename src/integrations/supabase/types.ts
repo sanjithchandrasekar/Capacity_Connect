@@ -125,6 +125,8 @@ export interface Database {
           file_size: number | null
           extracted_text: string | null
           extraction_status: 'pending' | 'completed' | 'failed'
+          material_type: 'file' | 'link' | 'video'
+          url: string | null
           created_at: string
         }
         Insert: {
@@ -137,6 +139,8 @@ export interface Database {
           file_size?: number | null
           extracted_text?: string | null
           extraction_status?: 'pending' | 'completed' | 'failed'
+          material_type?: 'file' | 'link' | 'video'
+          url?: string | null
           created_at?: string
         }
         Update: {
@@ -149,6 +153,8 @@ export interface Database {
           file_size?: number | null
           extracted_text?: string | null
           extraction_status?: 'pending' | 'completed' | 'failed'
+          material_type?: 'file' | 'link' | 'video'
+          url?: string | null
           created_at?: string
         }
         Relationships: []
@@ -570,6 +576,12 @@ export interface Database {
           target_user_id: string
           new_role: string
           new_status: string
+        }
+        Returns: void
+      }
+      admin_delete_user: {
+        Args: {
+          target_user_id: string
         }
         Returns: void
       }

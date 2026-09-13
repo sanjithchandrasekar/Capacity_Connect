@@ -11,7 +11,7 @@ type AuthContextType = {
   profile: Profile | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, metadata: { full_name: string; department?: string; designation?: string }) => Promise<void>
+  signUp: (email: string, password: string, metadata: { full_name: string; department?: string; designation?: string; proof_path?: string }) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   refreshProfile: () => Promise<void>
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error
   }
 
-  const signUp = async (email: string, password: string, metadata: { full_name: string; department?: string; designation?: string }) => {
+  const signUp = async (email: string, password: string, metadata: { full_name: string; department?: string; designation?: string; proof_path?: string }) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -109,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: metadata.full_name,
           department: metadata.department,
           designation: metadata.designation,
+          proof_path: metadata.proof_path,
           // We don't send role or approval_status; backend defaults them.
         }
       }

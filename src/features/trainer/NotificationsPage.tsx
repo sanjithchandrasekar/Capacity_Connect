@@ -6,7 +6,7 @@ import { TrainerLayout, fadeUp, stagger } from './TrainerLayout'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Bell, CheckCircle, Loader2, Inbox } from 'lucide-react'
+import { CheckCircle, Loader2, Inbox } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -71,7 +71,7 @@ export function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.read_at).length
 
   if (loading) {
-    return <TrainerLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div></TrainerLayout>
+    return <TrainerLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div></TrainerLayout>
   }
 
   return (
@@ -79,11 +79,11 @@ export function NotificationsPage() {
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-3xl mx-auto space-y-6">
         <motion.div variants={fadeUp} className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">Notifications</h2>
-            <p className="text-slate-400 text-sm mt-1">{unreadCount} unread</p>
+            <h2 className="text-2xl font-bold tracking-tight text-ink">Notifications</h2>
+            <p className="text-ink/60 text-sm mt-1">{unreadCount} unread</p>
           </div>
           {unreadCount > 0 && (
-            <Button onClick={markAllRead} variant="outline" size="sm" className="border-white/10 text-white">
+            <Button onClick={markAllRead} variant="outline" size="sm" className="border-ink/10 text-ink">
               <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Mark all read
             </Button>
           )}
@@ -91,10 +91,10 @@ export function NotificationsPage() {
 
         {notifications.length === 0 ? (
           <motion.div variants={fadeUp}>
-            <Card className="bg-white/[0.02] border-white/[0.06]">
+            <Card className="bg-white border-ink/10">
               <CardContent className="py-16 text-center">
-                <Inbox className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400">No notifications yet.</p>
+                <Inbox className="w-12 h-12 text-ink/40 mx-auto mb-4" />
+                <p className="text-ink/60">No notifications yet.</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -103,20 +103,20 @@ export function NotificationsPage() {
             {notifications.map(n => (
               <div key={n.id} className={`p-4 rounded-xl border transition-all ${
                 n.read_at
-                  ? 'bg-white/[0.01] border-white/[0.04]'
-                  : 'bg-white/[0.03] border-cyan-500/20'
+                  ? 'bg-ink/5 border-ink/5'
+                  : 'bg-ink/5 border-ink/20'
               }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {!n.read_at && <div className="w-2 h-2 rounded-full bg-cyan-400 shrink-0" />}
-                      <p className="text-sm font-medium text-white">{n.title}</p>
+                      {!n.read_at && <div className="w-2 h-2 rounded-full bg-ink shrink-0" />}
+                      <p className="text-sm font-medium text-ink">{n.title}</p>
                     </div>
-                    <p className="text-xs text-slate-400">{n.message}</p>
-                    <p className="text-[10px] text-slate-600 mt-1">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
+                    <p className="text-xs text-ink/60">{n.message}</p>
+                    <p className="text-[10px] text-ink/40 mt-1">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
                   </div>
                   {!n.read_at && (
-                    <button onClick={() => markAsRead(n.id)} disabled={markingId === n.id} className="text-xs text-slate-500 hover:text-white transition-colors shrink-0">
+                    <button onClick={() => markAsRead(n.id)} disabled={markingId === n.id} className="text-xs text-ink/50 hover:text-ink transition-colors shrink-0">
                       {markingId === n.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Mark read'}
                     </button>
                   )}

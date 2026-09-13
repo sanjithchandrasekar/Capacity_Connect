@@ -163,7 +163,7 @@ export function AssessmentsPage() {
   if (loading) {
     return (
       <TrainerLayout>
-        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div>
       </TrainerLayout>
     )
   }
@@ -172,21 +172,21 @@ export function AssessmentsPage() {
     <TrainerLayout>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-4xl mx-auto space-y-6">
         <motion.div variants={fadeUp}>
-          <Link to={`/trainer/courses/${courseId}/edit`} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mb-4">
+          <Link to={`/trainer/courses/${courseId}/edit`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Assessment Builder</h2>
-          <p className="text-slate-400 text-sm mt-1">{course?.title}</p>
+          <h2 className="text-2xl font-bold tracking-tight text-ink">Assessment Builder</h2>
+          <p className="text-ink/60 text-sm mt-1">{course?.title}</p>
         </motion.div>
 
         {!assessment ? (
           <motion.div variants={fadeUp}>
-            <Card className="bg-white/[0.02] border-white/[0.06]">
+            <Card className="bg-white border-ink/10">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <Target className="h-12 w-12 text-slate-600 mb-4" />
-                <h3 className="font-semibold text-lg text-white mb-1">No assessment yet</h3>
-                <p className="text-slate-400 text-sm mb-4">Create an assessment for this course.</p>
-                <Button onClick={handleCreateAssessment} disabled={saving} className="bg-cyan-500 hover:bg-cyan-400 text-white">
+                <Target className="h-12 w-12 text-ink/40 mb-4" />
+                <h3 className="font-semibold text-lg text-ink mb-1">No assessment yet</h3>
+                <p className="text-ink/60 text-sm mb-4">Create an assessment for this course.</p>
+                <Button onClick={handleCreateAssessment} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
                   Create Assessment
                 </Button>
@@ -197,15 +197,15 @@ export function AssessmentsPage() {
           <>
             <motion.div variants={fadeUp} className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-white">{assessment.title}</h3>
-                <p className="text-xs text-slate-500">{questions.length} questions | Passing: {assessment.passing_score}%</p>
+                <h3 className="text-lg font-semibold text-ink">{assessment.title}</h3>
+                <p className="text-xs text-ink/50">{questions.length} questions | Passing: {assessment.passing_score}%</p>
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => { setEditingQuestion(emptyQuestion); setEditingQuestionId(null); setQuestionDialogOpen(true) }}
-                  className="bg-cyan-500 hover:bg-cyan-400 text-white">
+                  className="bg-ink hover:bg-ink/90 text-cream">
                   <Plus className="w-4 h-4 mr-2" /> Add Question
                 </Button>
-                <Button onClick={handleSubmitForReview} disabled={saving || questions.length === 0} variant="outline" className="border-white/10 text-white">
+                <Button onClick={handleSubmitForReview} disabled={saving || questions.length === 0} variant="outline" className="border-ink/20 text-ink">
                   <Send className="w-4 h-4 mr-2" /> Submit for Review
                 </Button>
               </div>
@@ -213,9 +213,9 @@ export function AssessmentsPage() {
 
             {questions.length === 0 ? (
               <motion.div variants={fadeUp}>
-                <Card className="bg-white/[0.02] border-white/[0.06]">
+                <Card className="bg-white border-ink/10">
                   <CardContent className="py-12 text-center">
-                    <p className="text-slate-400">No questions yet. Add your first question.</p>
+                    <p className="text-ink/60">No questions yet. Add your first question.</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -224,33 +224,33 @@ export function AssessmentsPage() {
                 {questions.map((q, i) => {
                   const opts = q.options as Record<string, string>
                   return (
-                    <div key={q.id} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.1] transition-all">
+                    <div key={q.id} className="p-4 rounded-xl bg-white border border-ink/10 hover:border-ink/20 transition-all">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <p className="text-sm text-white font-medium mb-2">
-                            <span className="text-cyan-400 mr-2">Q{i + 1}.</span>
+                          <p className="text-sm text-ink font-medium mb-2">
+                            <span className="text-ink mr-2">Q{i + 1}.</span>
                             {q.question_text}
                           </p>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             {['A', 'B', 'C', 'D'].map(opt => (
                               <div key={opt} className={`px-3 py-2 rounded-lg border ${
                                 q.correct_answer === opt
-                                  ? 'bg-green-500/10 border-green-500/30 text-green-300'
-                                  : 'bg-white/[0.03] border-white/[0.06] text-slate-400'
+                                  ? 'bg-ink/10 border-ink/30 text-ink'
+                                  : 'bg-ink/5 border-ink/10 text-ink/60'
                               }`}>
                                 <span className="font-medium mr-1">{opt}.</span> {opts[opt]}
                               </div>
                             ))}
                           </div>
                           {q.explanation && (
-                            <p className="text-xs text-slate-500 mt-2 italic">Explanation: {q.explanation}</p>
+                            <p className="text-xs text-ink/50 mt-2 italic">Explanation: {q.explanation}</p>
                           )}
                         </div>
                         <div className="flex gap-1 shrink-0">
-                          <button onClick={() => openEditQuestion(q)} className="p-1.5 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">
+                          <button onClick={() => openEditQuestion(q)} className="p-1.5 rounded-lg hover:bg-ink/5 text-ink/60 hover:text-ink transition-all">
                             <FileText className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all">
+                          <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-ink/60 hover:text-red-600 transition-all">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -264,45 +264,48 @@ export function AssessmentsPage() {
         )}
 
         <Dialog open={questionDialogOpen} onOpenChange={(o) => { if (!o) { setQuestionDialogOpen(false); setEditingQuestionId(null) } }}>
-          <DialogContent className="max-w-lg bg-[#0a0f1e] border-white/10">
+          <DialogContent className="max-w-lg bg-white border-ink/20">
             <DialogHeader>
-              <DialogTitle className="text-white">{editingQuestionId ? 'Edit Question' : 'Add Question'}</DialogTitle>
+              <DialogTitle className="text-ink">{editingQuestionId ? 'Edit Question' : 'Add Question'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-slate-300">Question *</Label>
-                <Textarea value={editingQuestion.question_text} onChange={e => setEditingQuestion(p => ({ ...p, question_text: e.target.value }))} rows={3} className="bg-white/5 border-white/10 text-white" />
+                <Label className="text-ink/80">Question *</Label>
+                <Textarea value={editingQuestion.question_text} onChange={e => setEditingQuestion(p => ({ ...p, question_text: e.target.value }))} rows={3} className="bg-ink/5 border-ink/20 text-ink" />
               </div>
               {['A', 'B', 'C', 'D'].map(opt => (
                 <div key={opt} className="space-y-1.5">
-                  <Label className="text-slate-300">Option {opt} *</Label>
+                  <Label className="text-ink/80">Option {opt} *</Label>
                   <Input value={editingQuestion[`option_${opt.toLowerCase()}` as keyof QuestionForm] as string}
                     onChange={e => setEditingQuestion(p => ({ ...p, [`option_${opt.toLowerCase()}`]: e.target.value }))}
-                    className="bg-white/5 border-white/10 text-white" />
+                    className="bg-ink/5 border-ink/20 text-ink" />
                 </div>
               ))}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-slate-300">Correct Answer</Label>
+                  <Label className="text-ink/80">Correct Answer</Label>
                   <select value={editingQuestion.correct_answer}
                     onChange={e => setEditingQuestion(p => ({ ...p, correct_answer: e.target.value }))}
-                    className="w-full h-10 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm">
-                    <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                    className="w-full h-10 px-3 rounded-lg bg-ink/5 border border-ink/20 text-ink text-sm appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ink/30">
+                    <option value="A" className="bg-white text-ink">A</option>
+                    <option value="B" className="bg-white text-ink">B</option>
+                    <option value="C" className="bg-white text-ink">C</option>
+                    <option value="D" className="bg-white text-ink">D</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-slate-300">Explanation</Label>
-                  <Input value={editingQuestion.explanation} onChange={e => setEditingQuestion(p => ({ ...p, explanation: e.target.value }))} className="bg-white/5 border-white/10 text-white" />
+                  <Label className="text-ink/80">Explanation</Label>
+                  <Input value={editingQuestion.explanation} onChange={e => setEditingQuestion(p => ({ ...p, explanation: e.target.value }))} className="bg-ink/5 border-ink/20 text-ink" />
                 </div>
               </div>
-              <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-yellow-300">Correct answers are hidden from trainees.</p>
+              <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-yellow-700 shrink-0 mt-0.5" />
+                <p className="text-xs text-yellow-700">Correct answers are hidden from trainees.</p>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setQuestionDialogOpen(false); setEditingQuestionId(null) }} className="border-white/10 text-white">Cancel</Button>
-              <Button onClick={handleSaveQuestion} disabled={saving} className="bg-cyan-500 hover:bg-cyan-400 text-white">
+              <Button variant="outline" onClick={() => { setQuestionDialogOpen(false); setEditingQuestionId(null) }} className="border-ink/20 text-ink">Cancel</Button>
+              <Button onClick={handleSaveQuestion} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 {editingQuestionId ? 'Update' : 'Add'} Question
               </Button>

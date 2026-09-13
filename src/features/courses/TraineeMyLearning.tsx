@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
 import { BookOpen, Compass, BookMarked, PlayCircle, CheckCircle2, Clock } from 'lucide-react'
+import { Thumbnail } from '@/components/ui/Thumbnail'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -46,10 +47,10 @@ export function TraineeMyLearning() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'text-green-400 bg-green-500/10 border-green-500/20'
-      case 'in_progress': return 'text-wheat bg-wheat/10 border-wheat/20'
-      case 'withdrawn': return 'text-red-400 bg-red-500/10 border-red-500/20'
-      default: return 'text-wheat/70 bg-slate-500/10 border-slate-500/20' // enrolled
+      case 'completed': return 'text-green-700 bg-green-50 border-green-200'
+      case 'in_progress': return 'text-ink bg-ink/5 border-ink/10'
+      case 'withdrawn': return 'text-red-600 bg-red-50 border-red-200'
+      default: return 'text-ink/60 bg-ink/5 border-ink/10'
     }
   }
 
@@ -69,17 +70,17 @@ export function TraineeMyLearning() {
       <div className="max-w-6xl space-y-6">
         <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-wheat mb-1">My Learning Journey</h2>
-            <p className="text-wheat/70 text-sm">Track your progress and continue where you left off.</p>
+            <h2 className="text-xl font-bold text-ink mb-1">My Learning Journey</h2>
+            <p className="text-ink/60 text-sm">Track your progress and continue where you left off.</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="px-4 py-2 bg-wheat/5 border border-wheat/10 rounded-xl">
-              <span className="text-sm text-wheat/70">In Progress: </span>
-              <span className="text-wheat font-bold">{inProgressCount}</span>
+            <div className="px-4 py-2 bg-ink/5 border border-ink/10 rounded-xl">
+              <span className="text-sm text-ink/60">In Progress: </span>
+              <span className="text-ink font-bold">{inProgressCount}</span>
             </div>
-            <div className="px-4 py-2 bg-wheat/5 border border-wheat/10 rounded-xl">
-              <span className="text-sm text-wheat/70">Completed: </span>
-              <span className="text-wheat font-bold">{completedCount}</span>
+            <div className="px-4 py-2 bg-ink/5 border border-ink/10 rounded-xl">
+              <span className="text-sm text-ink/60">Completed: </span>
+              <span className="text-ink font-bold">{completedCount}</span>
             </div>
           </div>
         </motion.div>
@@ -87,18 +88,18 @@ export function TraineeMyLearning() {
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-32 bg-wheat/5 animate-pulse rounded-2xl border border-wheat/10" />
+              <div key={i} className="h-32 bg-ink/5 animate-pulse rounded-2xl border border-ink/10" />
             ))}
           </div>
         ) : enrollments?.length === 0 ? (
-          <div className="p-12 text-center bg-white/3 border border-white/8 rounded-2xl">
-            <div className="w-16 h-16 bg-wheat/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="w-8 h-8 text-wheat0" />
+          <div className="p-12 text-center bg-cream border border-ink/10 rounded-2xl">
+            <div className="w-16 h-16 bg-ink/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="w-8 h-8 text-ink/40" />
             </div>
-            <h3 className="text-lg font-medium text-wheat mb-2">Not enrolled in any courses yet</h3>
-            <p className="text-wheat/70 text-sm mb-6">Explore the catalog to find a course and start learning.</p>
+            <h3 className="text-lg font-medium text-ink mb-2">Not enrolled in any courses yet</h3>
+            <p className="text-ink/60 text-sm mb-6">Explore the catalog to find a course and start learning.</p>
             <Link to="/trainee/courses">
-              <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-wheat to-wheat/70 hover:from-cyan-400 hover:to-blue-500 text-wheat font-medium shadow-[0_0_20px_rgba(14,165,233,0.3)] transition-all">
+              <button className="px-6 py-2.5 rounded-xl bg-ink hover:bg-ink/90 text-cream font-medium transition-all">
                 Browse Courses
               </button>
             </Link>
@@ -109,18 +110,11 @@ export function TraineeMyLearning() {
               <motion.div 
                 key={enrollment.id} 
                 variants={fadeUp} 
-                className="group bg-white/3 hover:bg-wheat/10 border border-wheat/10 hover:border-wheat/20 rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-6 transition-all duration-300"
+                className="group bg-cream hover:bg-ink/5 border border-ink/10 hover:border-ink/20 rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-6 transition-all duration-300"
               >
                 {/* Thumbnail */}
-                <div className="w-full md:w-48 h-32 md:h-24 rounded-xl bg-gradient-to-br from-feldgrau-dark to-feldgrau border border-wheat/10 relative overflow-hidden shrink-0 flex items-center justify-center">
-                  {enrollment.course?.thumbnail_path ? (
-                    <img src={enrollment.course.thumbnail_path} alt="Course" className="w-full h-full object-cover opacity-80" />
-                  ) : (
-                    <>
-                      <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.02)_50%,transparent_75%,transparent_100%)] bg-[length:150px_150px] opacity-20" />
-                      <PlayCircle className="w-8 h-8 text-slate-600" />
-                    </>
-                  )}
+                <div className="w-full md:w-48 h-32 md:h-24 rounded-xl bg-ink/10 border border-ink/10 relative overflow-hidden shrink-0">
+                  <Thumbnail path={enrollment.course?.thumbnail_path || null} alt="Course" className="opacity-80" fallbackIcon={<PlayCircle className="w-8 h-8 text-ink/30" />} />
                 </div>
 
                 {/* Info */}
@@ -129,21 +123,21 @@ export function TraineeMyLearning() {
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${getStatusColor(enrollment.status)}`}>
                       {enrollment.status.replace('_', ' ')}
                     </span>
-                    <span className="text-xs text-wheat0 uppercase tracking-wider">{enrollment.course?.course_type}</span>
+                    <span className="text-xs text-ink/50 uppercase tracking-wider">{enrollment.course?.course_type}</span>
                   </div>
-                  <h3 className="text-lg font-bold text-wheat mb-2 truncate group-hover:text-wheat transition-colors">
+                  <h3 className="text-lg font-bold text-ink mb-2 truncate group-hover:text-ink transition-colors">
                     {enrollment.course?.title}
                   </h3>
                   
                   {/* Progress Bar */}
                   <div className="w-full max-w-md">
-                    <div className="flex justify-between text-xs text-wheat/70 mb-1">
+                    <div className="flex justify-between text-xs text-ink/60 mb-1">
                       <span>Progress</span>
-                      <span className="text-wheat">{enrollment.progress_percent}%</span>
+                      <span className="text-ink">{enrollment.progress_percent}%</span>
                     </div>
-                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-ink/10 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-wheat to-wheat/70 rounded-full transition-all duration-500"
+                        className="h-full bg-ink rounded-full transition-all duration-500"
                         style={{ width: `${enrollment.progress_percent}%` }}
                       />
                     </div>
@@ -151,16 +145,16 @@ export function TraineeMyLearning() {
                 </div>
 
                 {/* Actions */}
-                <div className="shrink-0 flex items-center gap-3 pt-4 md:pt-0 md:pl-4 md:border-l border-wheat/10">
+                <div className="shrink-0 flex items-center gap-3 pt-4 md:pt-0 md:pl-4 md:border-l border-ink/10">
                   {enrollment.status === 'completed' ? (
                     <Link to={`/trainee/courses/${enrollment.course?.id}`}>
-                      <button className="px-5 py-2 rounded-xl bg-wheat/5 hover:bg-wheat/10 border border-wheat/10 text-sm font-medium text-wheat transition-all flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-400" /> Review
+                      <button className="px-5 py-2 rounded-xl bg-ink/5 hover:bg-ink/10 border border-ink/10 text-sm font-medium text-ink transition-all flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" /> Review
                       </button>
                     </Link>
                   ) : (
                     <Link to={`/trainee/courses/${enrollment.course?.id}`}>
-                      <button className="px-5 py-2 rounded-xl bg-gradient-to-r from-wheat to-wheat/70 hover:from-cyan-400 hover:to-blue-500 text-wheat font-medium text-sm shadow-[0_0_20px_rgba(14,165,233,0.3)] transition-all flex items-center gap-2">
+                      <button className="px-5 py-2 rounded-xl bg-ink hover:bg-ink/90 text-cream font-medium text-sm transition-all flex items-center gap-2">
                         <PlayCircle className="w-4 h-4" /> Continue
                       </button>
                     </Link>

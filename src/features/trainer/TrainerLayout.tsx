@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
 import {
   Globe, LogOut, BookOpen, BarChart3,
   Settings, Bell, Menu, X,
@@ -47,19 +46,21 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
     navigate('/login')
   }
 
-  const isActive = (item: typeof navItems[0]) =>
-    item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to) && item.to !== '/trainer'
+  const isActive = (item: typeof navItems[0]) => {
+    if (item.exact) return location.pathname === item.to
+    if (item.to === '/trainer/courses') return location.pathname === '/trainer/courses'
+    return location.pathname.startsWith(item.to) && item.to !== '/trainer'
+  }
 
   const sidebarContent = (
     <>
-      <div className="h-14 flex items-center px-4 border-b border-white/[0.06]">
+      <div className="h-14 flex items-center px-4 border-b border-ink/10">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(14,165,233,0.4)] shrink-0">
-            <Globe className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-ink flex items-center justify-center shrink-0">
+            <Globe className="w-4 h-4 text-cream" />
           </div>
-          <span className="text-sm font-bold whitespace-nowrap">
-            <span className="text-white">Capacity</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500"> Connect</span>
+          <span className="text-sm font-bold whitespace-nowrap text-ink">
+            Capacity Connect
           </span>
         </Link>
       </div>
@@ -71,13 +72,13 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
             <Link key={item.to} to={item.to} onClick={() => setMobileOpen(false)}>
               <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm group ${
                 active
-                  ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'bg-ink text-cream border border-ink'
+                  : 'text-ink/60 hover:text-ink hover:bg-ink/5 border border-transparent'
               }`}>
                 <div className="relative">
-                  <item.icon className={`w-4 h-4 shrink-0 ${active ? 'text-cyan-400' : 'group-hover:text-cyan-400'} transition-colors`} />
+                  <item.icon className={`w-4 h-4 shrink-0 ${active ? 'text-cream' : 'group-hover:text-ink'} transition-colors`} />
                   {item.label === 'Notifications' && unreadCount !== null && unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center font-bold">
+                    <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-600 rounded-full text-[8px] text-cream flex items-center justify-center font-bold">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -90,21 +91,21 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      <div className="p-3 border-t border-white/[0.06] space-y-3">
+      <div className="p-3 border-t border-ink/10 space-y-3">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 ring-2 ring-cyan-500/30">
+          <div className="w-8 h-8 rounded-full bg-ink flex items-center justify-center text-cream text-xs font-bold shrink-0 ring-2 ring-ink/20">
             {profile?.full_name?.charAt(0)?.toUpperCase() ?? '?'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-white font-medium truncate">{profile?.full_name}</p>
-            <p className="text-xs text-slate-500 truncate">{profile?.email}</p>
+            <p className="text-sm text-ink font-medium truncate">{profile?.full_name}</p>
+            <p className="text-xs text-ink/50 truncate">{profile?.email}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3">
-          <span className="text-xs px-2 py-0.5 rounded-full border bg-blue-500/20 text-blue-300 border-blue-500/30 capitalize">Trainer</span>
-          <span className="text-xs px-2 py-0.5 rounded-full border bg-green-500/20 text-green-300 border-green-500/30 capitalize">{profile?.approval_status}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full border bg-ink/10 text-ink border-ink/20 capitalize">Trainer</span>
+          <span className="text-xs px-2 py-0.5 rounded-full border bg-ink/10 text-ink border-ink/20 capitalize">{profile?.approval_status}</span>
         </div>
-        <button onClick={handleSignOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/8 transition-all text-sm">
+        <button onClick={handleSignOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-ink/50 hover:text-red-600 hover:bg-red-50 transition-all text-sm">
           <LogOut className="w-4 h-4" />
           <span>Logout</span>
         </button>
@@ -113,47 +114,42 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="min-h-screen bg-[#050A15] text-slate-100 flex">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-cyan-600/5 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-blue-600/5 blur-[120px]" />
-      </div>
-
+    <div className="min-h-screen bg-cream text-ink flex">
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-ink/30 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/[0.06] bg-[#0a0f1e] backdrop-blur-2xl flex flex-col transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-ink/10 bg-cream flex flex-col transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="absolute top-3 right-3 z-10">
-          <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-all">
+          <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-ink/5 text-ink/50 hover:text-ink transition-all">
             <X className="w-5 h-5" />
           </button>
         </div>
         {sidebarContent}
       </aside>
 
-      <aside className="relative z-20 hidden md:flex w-64 border-r border-white/[0.06] bg-[#0a0f1e]/80 backdrop-blur-2xl flex-col shrink-0 h-screen sticky top-0">
+      <aside className="relative z-20 hidden md:flex w-64 border-r border-ink/10 bg-cream flex-col shrink-0 h-screen sticky top-0">
         {sidebarContent}
       </aside>
 
       <div className="flex-1 min-w-0">
-        <header className="h-14 border-b border-white/[0.06] bg-[#050A15]/80 backdrop-blur-2xl sticky top-0 z-10 flex items-center px-4 md:px-6 gap-3">
-          <button onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all md:hidden">
+        <header className="h-14 border-b border-ink/10 bg-cream/80 backdrop-blur-2xl sticky top-0 z-10 flex items-center px-4 md:px-6 gap-3">
+          <button onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-ink/5 text-ink/50 hover:text-ink transition-all md:hidden">
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <GraduationCap className="w-5 h-5 text-cyan-400" />
-            <span className="text-sm font-semibold text-white">Trainer</span>
+            <GraduationCap className="w-5 h-5 text-ink" />
+            <span className="text-sm font-semibold text-ink">Trainer</span>
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-1 md:gap-2">
-            <Link to="/trainer/notifications" className="relative p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">
+            <Link to="/trainer/notifications" className="relative p-2 rounded-lg hover:bg-ink/5 text-ink/50 hover:text-ink transition-all">
               <Bell className="w-4 h-4" />
               {unreadCount !== null && unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-600 rounded-full" />
               )}
             </Link>
-            <Link to="/trainer/settings" className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-all">
+            <Link to="/trainer/settings" className="p-2 rounded-lg hover:bg-ink/5 text-ink/50 hover:text-ink transition-all">
               <Settings className="w-4 h-4" />
             </Link>
           </div>

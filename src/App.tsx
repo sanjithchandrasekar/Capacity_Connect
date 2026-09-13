@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth'
 import { ProtectedRoute, ApprovedRoute, RoleRoute } from './components/ProtectedRoute'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
+import { SetupPassword } from './pages/SetupPassword'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { PendingApprovalPage } from './pages/PendingApprovalPage'
 import { AccountSuspendedPage } from './pages/AccountSuspendedPage'
@@ -26,11 +27,14 @@ import { AssessmentsPage } from './features/trainer/AssessmentsPage'
 import { PerformancePage } from './features/trainer/PerformancePage'
 import { TrainerProfile } from './features/trainer/TrainerProfile'
 import { TrainerSkills } from './features/trainer/TrainerSkills'
+import { NotificationsPage } from './features/trainer/NotificationsPage'
+import { CourseDetailPage } from './features/trainer/CourseDetailPage'
+import { SettingsPage } from './features/trainer/SettingsPage'
 import { LandingPage } from './pages/LandingPage'
 
 function DashboardRedirect() {
   const { session, profile, loading } = useAuth()
-  if (loading) return null
+  if (loading) return <div className="min-h-screen bg-cream flex items-center justify-center"><div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin" /></div>
   if (!session) return <Navigate to="/login" replace />
   if (profile?.role === 'admin' || profile?.role === 'super_admin') return <Navigate to="/admin" replace />
   if (profile?.role === 'trainer') return <Navigate to="/trainer" replace />
@@ -47,6 +51,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardRedirect />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/setup-password" element={<SetupPassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/supabase-test" element={<SupabaseTest />} />
             
@@ -72,10 +77,13 @@ export default function App() {
                   <Route path="/trainer" element={<TrainerDashboard />} />
                   <Route path="/trainer/courses" element={<CourseListPage />} />
                   <Route path="/trainer/courses/new" element={<CourseCreatePage />} />
+                  <Route path="/trainer/courses/:courseId" element={<CourseDetailPage />} />
                   <Route path="/trainer/courses/:courseId/edit" element={<CourseEditPage />} />
                   <Route path="/trainer/courses/:courseId/materials" element={<CourseMaterials />} />
                   <Route path="/trainer/courses/:courseId/assessments" element={<AssessmentsPage />} />
                   <Route path="/trainer/courses/:courseId/performance" element={<PerformancePage />} />
+                  <Route path="/trainer/notifications" element={<NotificationsPage />} />
+                  <Route path="/trainer/settings" element={<SettingsPage />} />
                   <Route path="/trainer/profile" element={<TrainerProfile />} />
                   <Route path="/trainer/skills" element={<TrainerSkills />} />
                 </Route>

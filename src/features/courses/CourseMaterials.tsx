@@ -1,80 +1,128 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { generateQuestionsFromMaterial, extractTextFromFile } from '@/lib/ai'
 import { Database } from '@/integrations/supabase/types'
 import { TrainerLayout } from '@/features/trainer/TrainerLayout'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, FileText, Trash2, Loader2, File, AlertCircle, Download } from 'lucide-react'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  ArrowLeft, FileText, Trash2, Loader2, Download, Upload, Video, File, Image,
+  AlertCircle, CheckCircle, Link2, ExternalLink, Globe, Plus, Sparkles, Brain
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
 type Course = Database['public']['Tables']['courses']['Row']
 type Material = Database['public']['Tables']['materials']['Row']
 
-const ACCEPTED_TYPES = '.pdf,.doc,.docx,.pptx,.txt,.mp4,.png,.jpg,.jpeg,.gif,.webp'
+const ACCEPTED_TYPES = [
+  '.pdf', '.doc', '.docx', '.pptx', '.ppt', '.txt',
+  '.mp4', '.webm', '.mov',
+  '.png', '.jpg', '.jpeg', '.gif', '.webp',
+].join(',')
 
-function mimeToIcon(mime: string | null) {
+const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
+
+function getFileIcon(mime: string | null) {
   if (!mime) return File
-  if (mime.startsWith('video/')) return File
+  if (mime.startsWith('video/')) return Video
+  if (mime.startsWith('image/')) return Image
   if (mime.includes('pdf')) return FileText
+  if (mime.includes('word') || mime.includes('document')) return FileText
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return FileText
   return File
 }
 
-export function CourseMaterials() {
+function formatFileSize(bytes: number | null) {
+  if (!bytes) return 'Unknown'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+interface CourseMaterialsProps {
+  embedded?: boolean
+  onMaterialCountChange?: (count: number) => void
+}
+
+export function CourseMaterials({ embedded = false, onMaterialCountChange }: CourseMaterialsProps) {
   const { courseId } = useParams<{ courseId: string }>()
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
   const [materials, setMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const [activeTab, setActiveTab] = useState<'files' | 'links'>('files')
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkTitle, setLinkTitle] = useState('')
+  const [addingLink, setAddingLink] = useState(false)
+  const [generatingForMaterial, setGeneratingForMaterial] = useState<string | null>(null)
+  const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([])
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<number>>(new Set())
+  const [savingQuestions, setSavingQuestions] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
     setLoading(true)
     try {
-      const { data: courseData, error: courseError } = await supabase
+      const { data: courseData } = await supabase
         .from('courses')
         .select('*')
         .eq('id', courseId)
         .eq('trainer_id', user.id)
         .single()
-      if (courseError) throw courseError
-      setCourse(courseData)
+      if (courseData) setCourse(courseData)
 
-      const { data: materialsData, error: materialsError } = await supabase
+      const { data: materialsData } = await supabase
         .from('materials')
         .select('*')
         .eq('course_id', courseId)
         .order('created_at', { ascending: false })
-      if (materialsError) throw materialsError
-      setMaterials(materialsData ?? [])
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load materials'
-      toast.error(message)
-      if (err instanceof Error && err.message.includes('JSON object requested')) {
-        navigate('/trainer/courses')
+      if (materialsData) {
+        setMaterials(materialsData)
+        onMaterialCountChange?.(materialsData.length)
       }
+    } catch {
+      if (!embedded) toast.error('Failed to load materials')
     } finally {
       setLoading(false)
     }
-  }, [user, courseId, navigate])
+  }, [user, courseId, embedded, onMaterialCountChange])
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file || !user || !courseId) return
+  const validateFile = (file: File): string | null => {
+    if (file.size > MAX_FILE_SIZE) return `File too large (${formatFileSize(file.size)}). Max 100MB.`
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+    const allowed = ['.pdf', '.doc', '.docx', '.pptx', '.ppt', '.txt', '.mp4', '.webm', '.mov', '.png', '.jpg', '.jpeg', '.gif', '.webp']
+    if (!allowed.includes(ext)) return `File type not supported: ${ext}`
+    return null
+  }
+
+  const uploadFile = async (file: File) => {
+    if (!user || !courseId) return
+    const error = validateFile(file)
+    if (error) {
+      toast.error(error)
+      return
+    }
 
     setUploading(true)
+    setUploadProgress(file.name)
     try {
       const fileExt = file.name.split('.').pop()
       const materialId = crypto.randomUUID()
@@ -99,15 +147,188 @@ export function CourseMaterials() {
         })
       if (dbError) throw dbError
 
-      toast.success('Material uploaded successfully')
+      toast.success(`Uploaded: ${file.name}`)
       fetchData()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to upload material'
-      toast.error(message)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed')
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      setUploadProgress(null)
     }
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+    Array.from(files).forEach(uploadFile)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const files = e.dataTransfer.files
+    Array.from(files).forEach(uploadFile)
+  }
+
+  const addLink = async () => {
+    if (!user || !courseId) return
+    const url = linkUrl.trim()
+    if (!url) return
+
+    try {
+      new URL(url)
+    } catch {
+      toast.error('Please enter a valid URL')
+      return
+    }
+
+    setAddingLink(true)
+    try {
+      const title = linkTitle.trim() || new URL(url).hostname
+      const { error } = await supabase.from('materials').insert({
+        course_id: courseId,
+        uploaded_by: user.id,
+        file_name: title,
+        storage_path: `link/${crypto.randomUUID()}`,
+        material_type: 'link',
+        url,
+        mime_type: 'text/uri-list',
+        extraction_status: 'completed',
+      })
+      if (error) throw error
+      toast.success('Link added')
+      setLinkUrl('')
+      setLinkTitle('')
+      fetchData()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add link')
+    } finally {
+      setAddingLink(false)
+    }
+  }
+
+  const handleGenerateQuestions = async (material: Material) => {
+    if (!courseId) return
+    setGeneratingForMaterial(material.id)
+    try {
+      let content = ''
+
+      if (material.material_type === 'file' && material.mime_type) {
+        // Download file and extract text
+        const { data: signedUrlData } = await supabase.storage
+          .from('materials')
+          .createSignedUrl(material.storage_path, 3600)
+
+        if (signedUrlData) {
+          const response = await fetch(signedUrlData.signedUrl)
+          const blob = await response.blob()
+          const file = new File([blob], material.file_name, { type: material.mime_type })
+          content = await extractTextFromFile(file, material.mime_type)
+        }
+      } else if (material.url) {
+        content = `External resource: ${material.url}\nTitle: ${material.file_name}`
+      }
+
+      if (!content || content.length < 20) {
+        toast.error('Not enough content to generate questions. Try uploading a text-based file.')
+        return
+      }
+
+      const result = await generateQuestionsFromMaterial(
+        material.id,
+        courseId,
+        content,
+        material.file_name
+      )
+
+      if (result.questions && result.questions.length > 0) {
+        setGeneratedQuestions(result.questions)
+        setSelectedQuestions(new Set(result.questions.map((_: any, i: number) => i)))
+        setReviewOpen(true)
+        toast.success(`Generated ${result.questions.length} questions from "${material.file_name}"`)
+      } else {
+        toast.error('No questions could be generated from this material')
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate questions')
+    } finally {
+      setGeneratingForMaterial(null)
+    }
+  }
+
+  const handleSaveAcceptedQuestions = async () => {
+    if (!courseId || generatedQuestions.length === 0) return
+    setSavingQuestions(true)
+    try {
+      // Find or create assessment
+      let { data: assessment } = await supabase
+        .from('assessments')
+        .select('id')
+        .eq('course_id', courseId)
+        .single()
+
+      if (!assessment) {
+        const { data: newAssessment } = await supabase
+          .from('assessments')
+          .insert({
+            course_id: courseId,
+            title: 'Course Assessment',
+            passing_score: 60,
+          })
+          .select('id')
+          .single()
+        assessment = newAssessment
+      }
+
+      if (!assessment) throw new Error('Failed to create assessment')
+
+      // Get current max position
+      const { data: existing } = await supabase
+        .from('questions')
+        .select('position')
+        .eq('assessment_id', assessment.id)
+        .order('position', { ascending: false })
+        .limit(1)
+
+      const maxPos = existing?.[0]?.position ?? 0
+
+      // Insert only selected questions
+      const toInsert = generatedQuestions
+        .filter((_: any, i: number) => selectedQuestions.has(i))
+        .map((q: any, i: number) => ({
+          assessment_id: assessment!.id,
+          question_text: q.question_text,
+          options: q.options,
+          correct_answer: q.correct_answer,
+          explanation: q.explanation,
+          position: maxPos + i + 1,
+          approved: false,
+        }))
+
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from('questions').insert(toInsert)
+        if (error) throw error
+        toast.success(`Added ${toInsert.length} questions to assessment`)
+      }
+
+      setReviewOpen(false)
+      setGeneratedQuestions([])
+      setSelectedQuestions(new Set())
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save questions')
+    } finally {
+      setSavingQuestions(false)
+    }
+  }
+
+  const toggleQuestionSelection = (index: number) => {
+    setSelectedQuestions(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
   }
 
   const handleDownload = async (material: Material) => {
@@ -125,156 +346,388 @@ export function CourseMaterials() {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-    } catch (err) {
+    } catch {
       toast.error('Failed to generate download link')
     } finally {
       setDownloadingId(null)
     }
   }
 
-  const handleDelete = async (materialId: string, storagePath: string) => {
-    if (!confirm('Are you sure you want to delete this material?')) return
-    setDeletingId(materialId)
+  const handleDelete = async (material: Material) => {
+    if (!confirm(`Delete "${material.file_name}"?`)) return
+    setDeletingId(material.id)
     try {
-      const { error: storageError } = await supabase.storage
-        .from('materials')
-        .remove([storagePath])
-      if (storageError) console.error('Storage deletion error:', storageError)
-
-      const { error: dbError } = await supabase
-        .from('materials')
-        .delete()
-        .eq('id', materialId)
-      if (dbError) throw dbError
-
+      if (material.material_type === 'file') {
+        await supabase.storage.from('materials').remove([material.storage_path])
+      }
+      const { error } = await supabase.from('materials').delete().eq('id', material.id)
+      if (error) throw error
       toast.success('Material deleted')
-      setMaterials(prev => prev.filter(m => m.id !== materialId))
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to delete material'
-      toast.error(message)
+      setMaterials(prev => prev.filter(m => m.id !== material.id))
+      onMaterialCountChange?.(materials.length - 1)
+    } catch {
+      toast.error('Failed to delete')
     } finally {
       setDeletingId(null)
     }
   }
 
   if (loading) {
-    return (
+    return embedded ? (
+      <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-ink" /></div>
+    ) : (
       <TrainerLayout>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
-        </div>
+        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div>
       </TrainerLayout>
     )
   }
 
-  if (!course) return null
-
-  return (
-    <TrainerLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
+  const content = (
+    <div className={embedded ? '' : 'max-w-5xl mx-auto space-y-6'}>
+      {!embedded && (
         <div>
-          <Link to={`/trainer/courses/${courseId}/edit`} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mb-4">
+          <Link to={`/trainer/courses/${courseId}/edit`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Course Materials</h2>
-          <p className="text-slate-400 text-sm mt-1">Manage documents and resources for "{course.title}"</p>
+          <h2 className="text-2xl font-bold tracking-tight text-ink">Course Materials</h2>
+          <p className="text-ink/60 text-sm mt-1">Upload documents, videos, and resources for "{course?.title}"</p>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="md:col-span-1 bg-white/[0.02] border-white/[0.06] h-fit">
-            <CardHeader>
-              <h3 className="text-sm font-semibold text-white">Upload Material</h3>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Select File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  ref={fileInputRef}
-                  disabled={uploading}
-                  onChange={handleFileUpload}
-                  accept={ACCEPTED_TYPES}
-                  className="bg-white/5 border-white/10 text-white file:text-cyan-400"
-                />
-              </div>
-              <p className="text-xs text-slate-500">PDF, DOCX, PPTX, TXT, MP4, Images</p>
-              <div className="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-300">Text extraction is queued automatically. Once extracted, content will be available for AI features.</p>
-              </div>
-              {uploading && (
-                <div className="flex items-center gap-2 text-sm text-slate-400">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Uploading to secure storage...
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="md:col-span-2 bg-white/[0.02] border-white/[0.06]">
-            <CardHeader>
-              <h3 className="text-sm font-semibold text-white">Uploaded Files ({materials.length})</h3>
-            </CardHeader>
-            <CardContent>
-              {materials.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-white/[0.1] rounded-xl">
-                  <FileText className="h-10 w-10 text-slate-600 mb-3" />
-                  <h3 className="font-semibold text-slate-300 mb-1">No materials yet</h3>
-                  <p className="text-slate-500 text-sm">Upload a file to see it listed here.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {materials.map(material => {
-                    const Icon = mimeToIcon(material.mime_type)
-                    return (
-                      <div key={material.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.1] transition-all">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
-                            <Icon className="w-4 h-4 text-sky-400" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm text-white font-medium truncate">{material.file_name}</p>
-                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                              <span>{material.file_size ? `${(material.file_size / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}</span>
-                              <span>{formatDistanceToNow(new Date(material.created_at), { addSuffix: true })}</span>
-                              <Badge className={
-                                material.extraction_status === 'completed' ? 'bg-green-500/20 text-green-300 border border-green-500/30 text-[10px] h-4' :
-                                material.extraction_status === 'failed' ? 'bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] h-4' :
-                                'bg-slate-500/20 text-slate-300 border border-slate-500/30 text-[10px] h-4'
-                              }>
-                                {material.extraction_status}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-1 shrink-0 ml-3">
-                          <button
-                            onClick={() => handleDownload(material)}
-                            disabled={downloadingId === material.id}
-                            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-cyan-400 transition-all"
-                            title="Download"
-                          >
-                            {downloadingId === material.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(material.id, material.storage_path)}
-                            disabled={deletingId === material.id}
-                            className="p-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all"
-                            title="Delete"
-                          >
-                            {deletingId === material.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-ink/5 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('files')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'files'
+              ? 'bg-ink/20 text-ink'
+              : 'text-ink/60 hover:text-ink'
+          }`}
+        >
+          <FileText className="w-4 h-4 mr-1.5 inline" />
+          Files
+        </button>
+        <button
+          onClick={() => setActiveTab('links')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'links'
+              ? 'bg-ink/20 text-ink'
+              : 'text-ink/60 hover:text-ink'
+          }`}
+        >
+          <Link2 className="w-4 h-4 mr-1.5 inline" />
+          Links & Videos
+        </button>
       </div>
-    </TrainerLayout>
+
+      {activeTab === 'files' && (
+        <div
+          className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
+                    dragOver ? 'border-ink bg-ink/10' : 'border-ink/20 hover:border-ink/30 hover:bg-ink/5'
+          }`}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ACCEPTED_TYPES}
+            className="hidden"
+            onChange={handleFileInput}
+            disabled={uploading}
+          />
+          <Upload className={`w-8 h-8 mx-auto mb-3 ${dragOver ? 'text-ink' : 'text-ink/50'}`} />
+          {uploading ? (
+            <div>
+              <p className="text-sm text-ink font-medium">Uploading: {uploadProgress}</p>
+              <Loader2 className="w-4 h-4 animate-spin text-ink mx-auto mt-2" />
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-ink font-medium mb-1">
+                {dragOver ? 'Drop files here' : 'Click to upload or drag and drop'}
+              </p>
+              <p className="text-xs text-ink/50">
+                PDF, DOCX, PPTX, TXT, MP4, Images — Max 100MB each
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'links' && (
+        <Card className="bg-white border-ink/10">
+          <CardContent className="p-4 space-y-3">
+            <p className="text-xs text-ink/50">Add links to external resources, YouTube videos, or any online material.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+              <Input
+                value={linkUrl}
+                onChange={e => setLinkUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
+                placeholder="https://example.com/resource"
+                className="bg-ink/5 border-ink/20 text-ink h-9 text-xs"
+                disabled={addingLink}
+              />
+              <Input
+                value={linkTitle}
+                onChange={e => setLinkTitle(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
+                placeholder="Title (optional)"
+                className="bg-ink/5 border-ink/20 text-ink h-9 text-xs"
+                disabled={addingLink}
+              />
+              <Button
+                type="button"
+                onClick={addLink}
+                disabled={!linkUrl.trim() || addingLink}
+                className="bg-ink hover:bg-ink/90 text-ink h-9 px-3 shrink-0"
+              >
+                {addingLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-ink/5 border-ink/10">
+        <Brain className="w-4 h-4 text-ink shrink-0" />
+        <p className="text-xs text-ink/60">
+          <span className="font-medium text-ink">AI Question Generation:</span> Click the <Sparkles className="w-3 h-3 inline" /> icon on any material to auto-generate assessment questions from its content.
+        </p>
+      </div>
+
+      {materials.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-ink">
+              Materials ({materials.length})
+              {materials.some(m => m.material_type === 'file') && materials.some(m => m.material_type !== 'file') && (
+                <span className="text-ink/50 font-normal ml-2">
+                  — {materials.filter(m => m.material_type === 'file').length} files, {materials.filter(m => m.material_type !== 'file').length} links
+                </span>
+              )}
+            </h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                materials.forEach(m => {
+                  if (!generatingForMaterial) handleGenerateQuestions(m)
+                })
+              }}
+              disabled={!!generatingForMaterial}
+              className="border-ink/20 text-ink hover:bg-ink/5 h-8 text-xs"
+            >
+              {generatingForMaterial ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              Generate Questions
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {materials.map(material => {
+              const isLink = material.material_type === 'link' || material.material_type === 'video'
+              const isVideo = material.mime_type?.startsWith('video/') || material.material_type === 'video'
+              const Icon = isLink ? Globe : isVideo ? Video : getFileIcon(material.mime_type)
+              return (
+                <div key={material.id} className="flex items-center gap-3 p-3 rounded-xl bg-cream border border-ink/10 hover:border-ink/10 transition-all group">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    isLink ? 'bg-ink/5' : isVideo ? 'bg-ink/5' : 'bg-ink/5'
+                  }`}>
+                    <Icon className={`w-5 h-5 ${isLink ? 'text-ink' : isVideo ? 'text-ink' : 'text-ink'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-ink font-medium truncate">{material.file_name}</p>
+                      {isLink && (
+                        <Badge className="bg-ink/10 text-ink border-ink/20 text-[10px] h-4">
+                          <Link2 className="w-2.5 h-2.5 mr-0.5 inline" />
+                          Link
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-ink/50 mt-0.5">
+                      {isLink ? (
+                        <a href={material.url || '#'} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-ink truncate max-w-xs flex items-center gap-1">
+                          {material.url}
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </a>
+                      ) : (
+                        <>
+                          <span>{formatFileSize(material.file_size)}</span>
+                          <span>&middot;</span>
+                        </>
+                      )}
+                      <span>{formatDistanceToNow(new Date(material.created_at), { addSuffix: true })}</span>
+                      {!isLink && (
+                        <Badge className={
+                          material.extraction_status === 'completed' ? 'bg-green-50 text-green-700 border border-green-200 text-[10px] h-4' :
+                          material.extraction_status === 'failed' ? 'bg-red-50 text-red-600 border border-red-200 text-[10px] h-4' :
+                            'bg-ink/10 text-ink/60 border border-ink/20 text-[10px] h-4'
+                        }>
+                          {material.extraction_status === 'completed' && <CheckCircle className="w-2.5 h-2.5 mr-0.5 inline" />}
+                          {material.extraction_status}
+                        </Badge>
+                      )}
+                    </div>
+                    {isVideo && material.storage_path && !isLink && (
+                      <div className="mt-2">
+                        <VideoPreview storagePath={material.storage_path} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => handleGenerateQuestions(material)}
+                      disabled={generatingForMaterial === material.id}
+                      className="p-2 rounded-lg hover:bg-ink/5 text-ink/60 hover:text-ink transition-all"
+                      title="Generate AI Questions"
+                    >
+                      {generatingForMaterial === material.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                    </button>
+                    {!isLink && (
+                      <button
+                        onClick={() => handleDownload(material)}
+                        disabled={downloadingId === material.id}
+                        className="p-2 rounded-lg hover:bg-ink/5 text-ink/60 hover:text-ink transition-all"
+                        title="Download"
+                      >
+                        {downloadingId === material.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(material)}
+                      disabled={deletingId === material.id}
+                      className="p-2 rounded-lg hover:bg-red-500/10 text-ink/60 hover:text-red-400 transition-all"
+                      title="Delete"
+                    >
+                      {deletingId === material.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {materials.length === 0 && !uploading && (
+        <div className="text-center py-8">
+          <FileText className="w-10 h-10 text-ink/30 mx-auto mb-3" />
+          <p className="text-ink/60 text-sm">No materials added yet.</p>
+          <p className="text-ink/40 text-xs mt-1">Upload files or add links to build your course content.</p>
+        </div>
+      )}
+    </div>
+  )
+
+  return embedded ? content : <TrainerLayout>{content}</TrainerLayout>
+
+  return (
+    <>
+      {embedded ? content : <TrainerLayout>{content}</TrainerLayout>}
+
+      {/* AI Question Review Dialog */}
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-cream border-ink/20">
+          <DialogHeader>
+            <DialogTitle className="text-ink flex items-center gap-2">
+              <Brain className="w-5 h-5 text-ink" />
+              AI-Generated Questions ({generatedQuestions.length})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-ink/50">
+              Review and select questions to add to your assessment. Uncheck questions you don't want.
+            </p>
+            {generatedQuestions.map((q: any, i: number) => (
+              <div
+                key={i}
+                className={`p-3 rounded-lg border transition-all ${
+                  selectedQuestions.has(i)
+                    ? 'bg-ink/5 border-ink/20'
+                    : 'bg-cream border-ink/10 opacity-50'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedQuestions.has(i)}
+                    onChange={() => toggleQuestionSelection(i)}
+                    className="mt-1 rounded border-ink/30 bg-ink/5 text-ink focus:ring-ink/50"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm text-ink font-medium mb-2">{q.question_text}</p>
+                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                      {['A', 'B', 'C', 'D'].map(opt => (
+                        <div
+                          key={opt}
+                          className={`px-2 py-1 rounded border ${
+                            q.correct_answer === opt
+                              ? 'bg-green-500/10 border-green-500/20 text-green-300'
+                              : 'bg-ink/5 border-ink/10 text-ink/60'
+                          }`}
+                        >
+                          <span className="font-medium">{opt}.</span> {q.options?.[opt]}
+                        </div>
+                      ))}
+                    </div>
+                    {q.explanation && (
+                      <p className="text-xs text-ink/50 mt-2 italic">
+                        <span className="text-ink/60">Explanation:</span> {q.explanation}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setReviewOpen(false)}
+              className="border-ink/20 text-ink"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveAcceptedQuestions}
+              disabled={savingQuestions || selectedQuestions.size === 0}
+              className="bg-ink hover:bg-ink/90 text-ink"
+            >
+              {savingQuestions ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Add {selectedQuestions.size} Question{selectedQuestions.size !== 1 ? 's' : ''}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+function VideoPreview({ storagePath }: { storagePath: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase.storage.from('materials').createSignedUrl(storagePath, 3600).then(({ data }) => {
+      if (data) setUrl(data.signedUrl)
+    })
+  }, [storagePath])
+
+  if (!url) return null
+
+  return (
+    <video controls preload="metadata" className="w-full max-w-md rounded-lg" src={url}>
+      <track kind="captions" />
+    </video>
   )
 }

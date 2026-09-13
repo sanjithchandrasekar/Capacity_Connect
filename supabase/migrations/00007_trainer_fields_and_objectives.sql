@@ -16,7 +16,7 @@ ALTER TABLE courses ADD COLUMN IF NOT EXISTS learning_objectives JSONB;
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS competencies JSONB;
 
 COMMENT ON COLUMN courses.learning_objectives IS 'JSONB: { understand: text, able_to_do: text, competencies_built: text }';
-COMMENT ON COLUMN courses.competencies_text IS 'Free-text competencies description';
+COMMENT ON COLUMN courses.competencies IS 'Free-text competencies description';
 
 COMMENT ON COLUMN profiles.biography IS 'Trainer biography / about text';
 COMMENT ON COLUMN profiles.years_of_experience IS 'Number of years of professional experience';
