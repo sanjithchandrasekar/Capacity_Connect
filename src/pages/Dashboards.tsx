@@ -133,10 +133,10 @@ export function DashboardShell({
           {(!sidebarCollapsed || mobileOpen) && (
             <div className="min-w-0 flex-1">
               <p className="text-sm text-ink font-medium truncate">{profile?.full_name}</p>
-              <p className="text-xs text-ink0 truncate">{profile?.email}</p>
+              <p className="text-xs text-ink/60 truncate">{profile?.email}</p>
             </div>
           )}
-          {(!sidebarCollapsed || mobileOpen) && <ChevronDown className="w-4 h-4 text-ink0 group-hover:text-ink/70 transition-colors" />}
+          {(!sidebarCollapsed || mobileOpen) && <ChevronDown className="w-4 h-4 text-ink/60 group-hover:text-ink/70 transition-colors" />}
         </div>
         {(!sidebarCollapsed || mobileOpen) && (
           <div className="flex items-center gap-2 px-3 flex-wrap">
@@ -150,7 +150,7 @@ export function DashboardShell({
         )}
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-ink0 hover:text-red-400 hover:bg-red-500/8 transition-all text-sm"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-ink/60 hover:text-red-400 hover:bg-red-500/8 transition-all text-sm"
         >
           <LogOut className="w-4 h-4" />
           {(!sidebarCollapsed || mobileOpen) && <span>Sign Out</span>}
@@ -366,7 +366,7 @@ export function TraineeDashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="text-sm text-ink font-medium">{course.title}</p>
-                      <p className="text-xs text-ink0">{course.instructor}</p>
+                      <p className="text-xs text-ink/60">{course.instructor}</p>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       course.status === 'Completed' ? 'bg-green-500/15 text-green-400' : 'bg-ink/10 text-ink'
@@ -427,14 +427,14 @@ export function TraineeDashboard() {
               { label: 'Designation', value: profile?.designation ?? '—' },
             ].map(item => (
               <div key={item.label}>
-                <p className="text-xs text-ink0 mb-1">{item.label}</p>
+                <p className="text-xs text-ink/60 mb-1">{item.label}</p>
                 <p className="text-sm text-ink font-medium truncate">{item.value}</p>
               </div>
             ))}
           </div>
           <div className="mt-4 pt-4 border-t border-wheat/10 flex items-center gap-3">
             <StatusBadge status={profile?.approval_status ?? 'pending'} />
-            <span className="text-xs text-ink0 capitalize">Role: {profile?.role}</span>
+            <span className="text-xs text-ink/60 capitalize">Role: {profile?.role}</span>
           </div>
         </motion.div>
       </motion.div>
@@ -529,11 +529,11 @@ export function TrainerDashboard() {
                   <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                     <div>
                       <p className="text-lg font-bold text-ink">{course.trainees}</p>
-                      <p className="text-[11px] text-ink0">Trainees</p>
+                      <p className="text-[11px] text-ink/60">Trainees</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold text-ink">{course.completion}%</p>
-                      <p className="text-[11px] text-ink0">Completion</p>
+                      <p className="text-[11px] text-ink/60">Completion</p>
                     </div>
                     <div>
                       <ProgressBar value={course.completion} color="from-ink to-ink/80" />
@@ -570,7 +570,7 @@ export function TrainerDashboard() {
               <thead>
                 <tr className="border-b border-wheat/10">
                   {['Trainee', 'Course', 'Module', 'Time'].map(h => (
-                    <th key={h} className="text-left text-xs text-ink0 font-medium px-6 py-3">{h}</th>
+                    <th key={h} className="text-left text-xs text-ink/60 font-medium px-6 py-3">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -587,7 +587,7 @@ export function TrainerDashboard() {
                     </td>
                     <td className="px-6 py-3 text-sm text-ink/70">{s.course}</td>
                     <td className="px-6 py-3 text-sm text-ink/70">{s.module}</td>
-                    <td className="px-6 py-3 text-xs text-ink0">{s.time}</td>
+                    <td className="px-6 py-3 text-xs text-ink/60">{s.time}</td>
                   </tr>
                 ))}
               </tbody>
@@ -837,34 +837,34 @@ export function AdminDashboard() {
                   <div className="px-4 md:px-6 py-4 border-b border-wheat/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-sm font-semibold text-ink capitalize">{activeTab} Management</h3>
-                      <p className="text-xs text-ink0 mt-0.5">Approve, reject, promote, or suspend users.</p>
+                      <p className="text-xs text-ink/60 mt-0.5">Approve, reject, promote, or suspend users.</p>
                     </div>
                     <div className="relative w-full sm:w-56">
-                      <Search className="w-4 h-4 text-ink0 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Search className="w-4 h-4 text-ink/60 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         placeholder="Search users..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-wheat/5 border border-wheat/10 rounded-lg text-ink placeholder:text-ink0 focus:outline-none focus:border-wheat/20 transition-colors"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-wheat/5 border border-wheat/10 rounded-lg text-ink placeholder:text-ink/60 focus:outline-none focus:border-wheat/20 transition-colors"
                       />
                     </div>
                   </div>
                   {loading ? (
-                    <div className="p-8 text-center text-ink0 text-sm">Loading users...</div>
+                    <div className="p-8 text-center text-ink/60 text-sm">Loading users...</div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-wheat/10">
                             {['Name', 'Email', 'Department', 'Role', 'Proof', 'Status', 'Actions'].map(h => (
-                              <th key={h} className="text-left text-xs text-ink0 font-medium px-6 py-3">{h}</th>
+                              <th key={h} className="text-left text-xs text-ink/60 font-medium px-6 py-3">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.04]">
                           {filteredUsers.length === 0 ? (
-                            <tr><td colSpan={6} className="text-center py-8 text-ink0 text-sm">
+                            <tr><td colSpan={6} className="text-center py-8 text-ink/60 text-sm">
                               {searchQuery ? 'No users match your search.' : 'No users found.'}
                             </td></tr>
                           ) : filteredUsers.map(u => (
@@ -888,7 +888,7 @@ export function AdminDashboard() {
                                     View Proof
                                   </button>
                                 ) : (
-                                  <span className="text-xs text-ink0">—</span>
+                                  <span className="text-xs text-ink/60">—</span>
                                 )}
                               </td>
                               <td className="px-6 py-4"><StatusBadge status={u.approval_status} /></td>
@@ -956,30 +956,30 @@ export function AdminDashboard() {
                 >
                   <div className="px-6 py-4 border-b border-wheat/10">
                     <h3 className="text-sm font-semibold text-ink">Audit Logs</h3>
-                    <p className="text-xs text-ink0 mt-0.5">Complete activity history for compliance and tracking.</p>
+                    <p className="text-xs text-ink/60 mt-0.5">Complete activity history for compliance and tracking.</p>
                   </div>
                   {loading ? (
-                    <div className="p-8 text-center text-ink0 text-sm">Loading logs...</div>
+                    <div className="p-8 text-center text-ink/60 text-sm">Loading logs...</div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-wheat/10">
                             {['Time', 'Actor', 'Action', 'Entity', 'Details'].map(h => (
-                              <th key={h} className="text-left text-xs text-ink0 font-medium px-6 py-3">{h}</th>
+                              <th key={h} className="text-left text-xs text-ink/60 font-medium px-6 py-3">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.04]">
                           {logs.length === 0 ? (
-                            <tr><td colSpan={5} className="text-center py-8 text-ink0 text-sm">No audit logs found.</td></tr>
+                            <tr><td colSpan={5} className="text-center py-8 text-ink/60 text-sm">No audit logs found.</td></tr>
                           ) : logs.map(log => (
                             <tr key={log.id} className="hover:bg-wheat/5 transition-colors">
-                              <td className="px-6 py-3 text-xs text-ink0 whitespace-nowrap">{new Date(log.created_at || '').toLocaleString()}</td>
+                              <td className="px-6 py-3 text-xs text-ink/60 whitespace-nowrap">{new Date(log.created_at || '').toLocaleString()}</td>
                               <td className="px-6 py-3 text-xs font-mono text-ink/70">{log.actor_id?.slice(0, 8)}…</td>
                               <td className="px-6 py-3 text-xs text-ink font-medium">{log.action}</td>
                               <td className="px-6 py-3 text-xs text-ink/70">{log.entity_type}</td>
-                              <td className="px-6 py-3 text-xs font-mono text-ink0 max-w-xs truncate">{JSON.stringify(log.metadata)}</td>
+                              <td className="px-6 py-3 text-xs font-mono text-ink/60 max-w-xs truncate">{JSON.stringify(log.metadata)}</td>
                             </tr>
                           ))}
                         </tbody>

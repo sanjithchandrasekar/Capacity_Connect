@@ -19,45 +19,45 @@
 
 @layer base {
   :root {
-    /* Cream #FFFDF2 */
-    --background: 55 100% 97.5%;
-    /* Black #000000 */
-    --foreground: 0 0% 0%;
+    /* Pure White Background #FFFFFF */
+    --background: 0 0% 100%;
+    /* Deep Navy #002349 */
+    --foreground: 211 100% 14.3%;
 
-    /* Cards: slightly lighter cream */
-    --card: 55 60% 99%;
-    --card-foreground: 0 0% 0%;
+    /* Cards: Pure White #FFFFFF */
+    --card: 0 0% 100%;
+    --card-foreground: 211 100% 14.3%;
 
     /* Popover */
-    --popover: 55 100% 97.5%;
-    --popover-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 211 100% 14.3%;
 
-    /* Primary: Black */
-    --primary: 0 0% 0%;
-    --primary-foreground: 55 100% 97.5%;
+    /* Primary: Rich Burgundy #5C1A2A */
+    --primary: 345 56% 23.1%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Warm gray */
-    --secondary: 40 10% 92%;
-    --secondary-foreground: 0 0% 10%;
+    /* Secondary: Deep Navy #002349 */
+    --secondary: 211 100% 14.3%;
+    --secondary-foreground: 0 0% 100%;
 
-    /* Muted */
-    --muted: 40 10% 92%;
-    --muted-foreground: 0 0% 40%;
+    /* Muted: Soft Cool Gray-Blue */
+    --muted: 211 30% 96%;
+    --muted-foreground: 211 25% 45%;
 
-    /* Accent: Black */
-    --accent: 0 0% 0%;
-    --accent-foreground: 55 100% 97.5%;
+    /* Accent: Warm Antique Gold #957C3D */
+    --accent: 43 42% 41.2%;
+    --accent-foreground: 0 0% 100%;
 
-    /* Destructive */
-    --destructive: 0 72% 51%;
+    /* Destructive: Deep Burgundy Red */
+    --destructive: 345 75% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders */
-    --border: 0 0% 88%;
-    --input: 0 0% 88%;
-    --ring: 0 0% 0%;
+    /* Borders & Inputs */
+    --border: 211 25% 90%;
+    --input: 211 25% 90%;
+    --ring: 345 56% 23.1%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
   }
 }
 
