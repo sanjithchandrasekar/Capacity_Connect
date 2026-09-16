@@ -16,11 +16,11 @@ export function PendingApprovalPage() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="bg-cream border border-ink/10 rounded-2xl p-10 shadow-sm text-center">
-          <div className="w-20 h-20 bg-yellow-50 border border-yellow-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Clock className="w-10 h-10 text-yellow-600" />
+        <div className="bg-cream border border-ink/10 rounded-2xl p-6 md:p-10 shadow-sm text-center">
+          <div className="w-16 h-16 md:w-20 md:h-20 bg-yellow-50 border border-yellow-200 rounded-2xl flex items-center justify-center mx-auto mb-4 md:mb-6">
+            <Clock className="w-8 h-8 md:w-10 md:h-10 text-yellow-600" />
           </div>
-          <h1 className="text-2xl font-bold text-ink mb-2">Approval Pending</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-ink mb-2">Approval Pending</h1>
           {profile?.full_name && (
             <p className="text-ink text-sm font-medium mb-4">Hello, {profile.full_name}!</p>
           )}

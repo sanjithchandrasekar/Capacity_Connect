@@ -14,6 +14,8 @@ const fadeUp = {
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }
 
 export function TraineeCourseCatalog() {
+  const [searchQuery, setSearchQuery] = React.useState('')
+
   const { data: courses, isLoading } = useQuery({
     queryKey: ['published_courses'],
     queryFn: async () => {
@@ -30,6 +32,18 @@ export function TraineeCourseCatalog() {
       return data
     }
   })
+
+  const filteredCourses = React.useMemo(() => {
+    if (!courses) return []
+    if (!searchQuery.trim()) return courses
+    const q = searchQuery.toLowerCase()
+    return courses.filter((course: any) =>
+      course.title?.toLowerCase().includes(q) ||
+      course.description?.toLowerCase().includes(q) ||
+      course.course_type?.toLowerCase().includes(q) ||
+      course.trainer?.full_name?.toLowerCase().includes(q)
+    )
+  }, [courses, searchQuery])
 
   return (
     <DashboardShell
@@ -53,6 +67,8 @@ export function TraineeCourseCatalog() {
             <input 
               type="text" 
               placeholder="Search courses..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-ink/5 border border-ink/10 rounded-xl pl-9 pr-4 py-2 text-sm text-ink placeholder-ink/40 focus:outline-none focus:border-ink/20 transition-colors"
             />
           </div>
@@ -64,17 +80,17 @@ export function TraineeCourseCatalog() {
               <div key={i} className="h-[300px] bg-ink/5 animate-pulse rounded-2xl border border-ink/10" />
             ))}
           </div>
-        ) : courses?.length === 0 ? (
+        ) : filteredCourses.length === 0 ? (
           <div className="p-12 text-center bg-cream border border-ink/10 rounded-2xl">
             <div className="w-16 h-16 bg-ink/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Compass className="w-8 h-8 text-ink/40" />
             </div>
-            <h3 className="text-lg font-medium text-ink mb-2">No Courses Available</h3>
-            <p className="text-ink/60 text-sm">Check back later for new published courses.</p>
+            <h3 className="text-lg font-medium text-ink mb-2">{searchQuery ? 'No Results Found' : 'No Courses Available'}</h3>
+            <p className="text-ink/60 text-sm">{searchQuery ? 'Try a different search term.' : 'Check back later for new published courses.'}</p>
           </div>
         ) : (
           <motion.div variants={stagger} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses?.map((course: any) => (
+            {filteredCourses.map((course: any) => (
               <motion.div key={course.id} variants={fadeUp} className="group flex flex-col bg-cream hover:bg-ink/5 border border-ink/10 hover:border-ink/20 rounded-2xl overflow-hidden transition-all duration-300">
                 {/* Thumbnail */}
                 <div className="h-40 bg-ink/10 border-b border-ink/10 relative overflow-hidden">

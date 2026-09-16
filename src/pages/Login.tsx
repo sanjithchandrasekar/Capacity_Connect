@@ -42,7 +42,7 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-cream flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -50,22 +50,20 @@ export function Login() {
         className="w-full max-w-md relative z-10"
       >
         {/* Logo */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2.5 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-ink flex items-center justify-center">
-              <Globe className="w-5 h-5 text-cream" />
-            </div>
-            <span className="text-lg font-bold">
+        <div className="text-center mb-6 md:mb-8">
+          <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">
+            <img src="/logo.png" alt="Logo" className="w-9 h-9 md:w-10 md:h-10 object-contain" />
+            <span className="text-base md:text-lg font-bold">
               <span className="text-ink">Capacity</span>
               <span className="text-ink"> Connect</span>
             </span>
           </Link>
-          <h1 className="text-3xl font-extrabold text-ink tracking-tight">Welcome Back</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-ink tracking-tight">Welcome Back</h1>
           <p className="text-ink/60 mt-2 text-sm">Sign in to continue to your dashboard</p>
         </div>
 
         {/* Card */}
-        <div className="bg-cream border border-ink/10 rounded-2xl p-8 shadow-sm">
+        <div className="bg-cream border border-ink/10 rounded-2xl p-6 md:p-8 shadow-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-ink/70 text-sm">Email Address</Label>

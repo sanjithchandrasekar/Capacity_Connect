@@ -45,9 +45,7 @@ export function ForgotPassword() {
       >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2.5 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-ink flex items-center justify-center">
-              <Globe className="w-5 h-5 text-cream" />
-            </div>
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
             <span className="text-lg font-bold">
               <span className="text-ink">Capacity</span>
               <span className="text-ink"> Connect</span>

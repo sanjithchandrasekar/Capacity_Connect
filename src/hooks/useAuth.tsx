@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
+      async (event, newSession) => {
         // If the session changes and we have a new user, we must set loading to true
         // so that the router doesn't try to redirect before the profile is fetched.
         if (newSession?.user && newSession.user.id !== user?.id) {
@@ -89,6 +89,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null)
         }
         setLoading(false)
+
+        // Automatically redirect to password setup when clicking an email link
+        if (event === 'PASSWORD_RECOVERY') {
+          window.location.href = '/setup-password'
+        }
       }
     )
 

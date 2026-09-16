@@ -5,9 +5,9 @@ import { Loader2 } from 'lucide-react'
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-feldgrau gap-3">
-      <Loader2 className="w-6 h-6 text-wheat animate-spin" />
-      <p className="text-sm text-wheat/70">Loading...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-cream gap-3">
+      <Loader2 className="w-6 h-6 text-ink animate-spin" />
+      <p className="text-sm text-ink/70">Loading...</p>
     </div>
   )
 }
@@ -36,12 +36,15 @@ export function ApprovedRoute() {
 
   if (loading) return <LoadingScreen />
 
-  // Profile is required.
-  if (profile?.approval_status === 'pending') {
+  if (!profile) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (profile.approval_status === 'pending') {
     return <Navigate to="/pending-approval" replace />
   }
 
-  if (profile?.approval_status === 'rejected') {
+  if (profile.approval_status === 'rejected') {
     return <Navigate to="/access-denied" replace />
   }
 

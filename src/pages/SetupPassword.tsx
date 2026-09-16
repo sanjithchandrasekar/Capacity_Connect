@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 
 const setupPasswordSchema = z.object({
@@ -23,6 +24,7 @@ type SetupPasswordFormValues = z.infer<typeof setupPasswordSchema>
 
 export function SetupPassword() {
   const navigate = useNavigate()
+  const { refreshProfile } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [hasSession, setHasSession] = useState(false)
@@ -50,8 +52,9 @@ export function SetupPassword() {
       const { error } = await supabase.auth.updateUser({ password: data.password })
       if (error) throw error
       
+      await refreshProfile()
       toast.success('Password set successfully! Welcome to your dashboard.')
-      navigate('/trainee') // Assuming they are a trainee initially
+      navigate('/dashboard')
     } catch (err: any) {
       toast.error(err.message || 'Failed to set password. Please try again.')
     } finally {
@@ -80,9 +83,7 @@ export function SetupPassword() {
       >
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-ink flex items-center justify-center">
-              <Globe className="w-5 h-5 text-cream" />
-            </div>
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
             <span className="text-lg font-bold">
               <span className="text-ink">Capacity</span>
               <span className="text-ink"> Connect</span>

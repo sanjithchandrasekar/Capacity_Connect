@@ -16,8 +16,8 @@ type ActivityLog = Database['public']['Tables']['audit_logs']['Row']
 
 const statusColors: Record<string, string> = {
   draft: 'bg-ink/10 text-ink/80 border border-ink/20',
-  pending_review: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
-  published: 'bg-ink/10 text-ink/70 border border-ink/20',
+  pending_review: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
+  published: 'bg-green-50 text-green-700 border border-green-200',
   archived: 'bg-red-50 text-red-600 border border-red-200',
 }
 
@@ -102,47 +102,47 @@ export function TrainerDashboard() {
 
   return (
     <TrainerLayout>
-      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-6xl">
-        <motion.div variants={fadeUp} className="flex items-center justify-between">
+      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-4 md:space-y-6 max-w-6xl">
+        <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-ink">Trainer Dashboard</h2>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-ink">Trainer Dashboard</h2>
             <p className="text-ink/60 text-sm mt-1">Welcome back, {user?.email?.split('@')[0]}</p>
           </div>
           <Link to="/trainer/courses/new">
-            <Button className="bg-ink hover:bg-ink/90 text-cream">
+            <Button className="bg-ink hover:bg-ink/90 text-cream w-full sm:w-auto">
               <PlusCircle className="w-4 h-4 mr-2" /> Create Course
             </Button>
           </Link>
         </motion.div>
 
-        <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {stats.map(s => (
-            <div key={s.label} className={`p-4 rounded-2xl border bg-gradient-to-br ${s.color} backdrop-blur-sm`}>
-              <s.icon className="w-4 h-4 text-ink/60 mb-2" />
-              <div className="text-xl font-bold text-ink">{s.value}</div>
-              <div className="text-[11px] text-ink/60 mt-0.5">{s.label}</div>
+            <div key={s.label} className={`p-3 md:p-4 rounded-2xl border bg-gradient-to-br ${s.color} backdrop-blur-sm`}>
+              <s.icon className="w-4 h-4 text-ink/60 mb-1.5" />
+              <div className="text-lg md:text-xl font-bold text-ink">{s.value}</div>
+              <div className="text-[10px] md:text-[11px] text-ink/60 mt-0.5">{s.label}</div>
             </div>
           ))}
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           <motion.div variants={fadeUp} className="lg:col-span-2 bg-white border border-ink/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-ink/10 flex items-center justify-between">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-ink/10 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-ink">Recent Courses</h3>
               <Link to="/trainer/courses" className="text-xs text-ink hover:text-ink">View all</Link>
             </div>
             {courses.length === 0 ? (
-              <div className="p-12 text-center">
+              <div className="p-8 md:p-12 text-center">
                 <p className="text-ink/50 mb-3">No courses yet.</p>
                 <Link to="/trainer/courses/new"><Button className="bg-ink hover:bg-ink/90 text-cream"><PlusCircle className="w-4 h-4 mr-2" /> Create First Course</Button></Link>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[450px]">
                   <thead>
                     <tr className="border-b border-ink/10">
                       {['Course', 'Status', 'Enrollments', 'Type', 'Created'].map(h => (
-                        <th key={h} className="text-left text-xs text-ink/50 font-medium px-6 py-3">{h}</th>
+                        <th key={h} className="text-left text-xs text-ink/50 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -151,17 +151,17 @@ export function TrainerDashboard() {
                       const enrollCount = enrollments.filter(e => e.course_id === course.id).length
                       return (
                         <tr key={course.id} className="hover:bg-ink/5 transition-colors">
-                          <td className="px-6 py-3">
-                            <Link to={`/trainer/courses/${course.id}/edit`} className="text-sm text-ink hover:text-ink transition-colors font-medium">
+                          <td className="px-3 md:px-4 py-2.5">
+                            <Link to={`/trainer/courses/${course.id}/edit`} className="text-xs md:text-sm text-ink hover:text-ink transition-colors font-medium truncate max-w-[150px] block">
                               {course.title}
                             </Link>
                           </td>
-                          <td className="px-6 py-3">
-                            <Badge className={`${statusColors[course.status]} text-[10px]`}>{course.status.replace('_', ' ')}</Badge>
+                          <td className="px-3 md:px-4 py-2.5">
+                            <Badge className={`${statusColors[course.status]} text-[9px] md:text-[10px]`}>{course.status.replace('_', ' ')}</Badge>
                           </td>
-                          <td className="px-6 py-3 text-xs text-ink/60">{enrollCount}</td>
-                          <td className="px-6 py-3 text-xs text-ink/60 capitalize">{course.course_type}</td>
-                          <td className="px-6 py-3 text-xs text-ink/50">{new Date(course.created_at).toLocaleDateString()}</td>
+                          <td className="px-3 md:px-4 py-2.5 text-xs text-ink/60">{enrollCount}</td>
+                          <td className="px-3 md:px-4 py-2.5 text-xs text-ink/60 capitalize">{course.course_type}</td>
+                          <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink/50">{new Date(course.created_at).toLocaleDateString()}</td>
                         </tr>
                       )
                     })}
@@ -172,7 +172,7 @@ export function TrainerDashboard() {
           </motion.div>
 
           <motion.div variants={fadeUp} className="bg-white border border-ink/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-ink/10">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-ink/10">
               <h3 className="text-sm font-semibold text-ink">Recent Activity</h3>
             </div>
             {activities.length === 0 ? (
@@ -182,8 +182,8 @@ export function TrainerDashboard() {
             ) : (
               <div className="divide-y divide-ink/10">
                 {activities.slice(0, 8).map(a => (
-                  <div key={a.id} className="px-6 py-3">
-                    <p className="text-xs text-ink">{a.action}</p>
+                  <div key={a.id} className="px-4 md:px-6 py-2.5 md:py-3">
+                    <p className="text-xs text-ink truncate">{a.action}</p>
                     <p className="text-[10px] text-ink/40 mt-0.5">{new Date(a.created_at).toLocaleString()}</p>
                   </div>
                 ))}

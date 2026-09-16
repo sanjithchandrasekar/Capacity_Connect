@@ -630,8 +630,6 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
     </div>
   )
 
-  return embedded ? content : <TrainerLayout>{content}</TrainerLayout>
-
   return (
     <>
       {embedded ? content : <TrainerLayout>{content}</TrainerLayout>}
@@ -673,7 +671,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                           key={opt}
                           className={`px-2 py-1 rounded border ${
                             q.correct_answer === opt
-                              ? 'bg-green-500/10 border-green-500/20 text-green-300'
+                              ? 'bg-green-50 border-green-200 text-green-700'
                               : 'bg-ink/5 border-ink/10 text-ink/60'
                           }`}
                         >

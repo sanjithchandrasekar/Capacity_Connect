@@ -34,30 +34,54 @@ export function Register() {
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true)
     try {
+      // Step 1: Create the auth account first (with dummy password) to get the user ID
+      const dummyPassword = crypto.randomUUID() + Math.random().toString(36) + "A!1"
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: data.email,
+        password: dummyPassword,
+        options: {
+          data: {
+            full_name: data.fullName,
+            department: data.department,
+            designation: data.designation,
+          }
+        }
+      })
+      if (signUpError) throw signUpError
+      const userId = signUpData.user?.id
+      if (!userId) throw new Error('Failed to create account. Please try again.')
+
+      // Step 2: Upload proof file under the user's ID so admin can access it
       const file = data.proofFile[0] as File
       const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
-      const filePath = `pending/${fileName}`
+      const fileName = `${Date.now()}.${fileExt}`
+      const filePath = `${userId}/${fileName}`
 
+      console.log('Uploading proof to storage...')
       const { error: uploadError } = await supabase.storage
         .from('proofs')
         .upload(filePath, file)
+      if (uploadError) {
+        console.error('Storage Upload Error:', uploadError)
+        throw new Error(`Upload failed: ${uploadError.message}`)
+      }
 
-      if (uploadError) throw uploadError
+      // Step 3: Update the profile with the proof path now that we have it
+      console.log('Updating profile with proof path...')
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ proof_path: filePath })
+        .eq('id', userId)
+      if (profileError) {
+        console.error('Profile Update Error:', profileError)
+        throw new Error(`Profile update failed: ${profileError.message}`)
+      }
 
-      // Generate a highly secure random dummy password
-      const dummyPassword = crypto.randomUUID() + Math.random().toString(36) + "A!1"
-
-      await signUp(data.email, dummyPassword, {
-        full_name: data.fullName,
-        department: data.department,
-        designation: data.designation,
-        proof_path: filePath,
-      })
       toast.success('Account created! Awaiting admin approval.')
       navigate('/pending-approval')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.'
+    } catch (err: any) {
+      console.error('Registration Error:', err)
+      const msg = err.message || 'Registration failed. Please try again.'
       toast.error(msg)
     } finally {
       setIsLoading(false)
@@ -68,28 +92,26 @@ export function Register() {
     `bg-ink/5 border-ink/10 text-ink placeholder:text-ink/40 focus:border-ink/20 h-11 ${hasError ? 'border-red-500/60' : ''}`
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center p-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-cream flex items-center justify-center p-4 md:p-6 py-8 md:py-12 relative overflow-hidden">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2.5 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-ink flex items-center justify-center">
-              <Globe className="w-5 h-5 text-cream" />
-            </div>
-            <span className="text-lg font-bold">
+        <div className="text-center mb-6 md:mb-8">
+          <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">
+            <img src="/logo.png" alt="Logo" className="w-9 h-9 md:w-10 md:h-10 object-contain" />
+            <span className="text-base md:text-lg font-bold">
               <span className="text-ink">Capacity</span>
               <span className="text-ink"> Connect</span>
             </span>
           </Link>
-          <h1 className="text-3xl font-extrabold text-ink tracking-tight">Create Account</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-ink tracking-tight">Create Account</h1>
           <p className="text-ink/60 mt-2 text-sm">Join the MoES Capacity Connect platform</p>
         </div>
 
-        <div className="bg-cream border border-ink/10 rounded-2xl p-8 shadow-sm">
+        <div className="bg-cream border border-ink/10 rounded-2xl p-6 md:p-8 shadow-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
             <div className="space-y-1.5">

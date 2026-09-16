@@ -56,9 +56,7 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
     <>
       <div className="h-14 flex items-center px-4 border-b border-ink/10">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-ink flex items-center justify-center shrink-0">
-            <Globe className="w-4 h-4 text-cream" />
-          </div>
+          <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain shrink-0" />
           <span className="text-sm font-bold whitespace-nowrap text-ink">
             Capacity Connect
           </span>

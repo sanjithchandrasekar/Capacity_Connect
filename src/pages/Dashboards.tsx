@@ -52,24 +52,22 @@ export function DashboardShell({
   const roleColor: Record<string, string> = {
     admin: 'bg-ink/10 text-ink border-ink/20',
     super_admin: 'bg-ink/5 text-ink/60 border-ink/10',
-    trainer: 'bg-wheat/10 text-ink border-wheat/20',
-    trainee: 'bg-wheat/10 text-ink border-wheat/20',
+    trainer: 'bg-ink/10 text-ink border-ink/20',
+    trainee: 'bg-ink/10 text-ink border-ink/20',
   }
   const statusColor: Record<string, string> = {
-    approved: 'bg-green-500/20 text-green-300 border-green-500/30',
-    pending: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    suspended: 'bg-red-500/20 text-red-300 border-red-500/30',
-    rejected: 'bg-red-500/20 text-red-300 border-red-500/30',
+    approved: 'bg-green-50 text-green-700 border-green-200',
+    pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    suspended: 'bg-red-50 text-red-600 border-red-200',
+    rejected: 'bg-red-50 text-red-600 border-red-200',
   }
 
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="h-16 flex items-center px-5 border-b border-wheat/10">
+      <div className="h-16 flex items-center px-5 border-b border-ink/10">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-wheat to-wheat/70 flex items-center justify-center shadow-[0_0_15px_rgba(230,207,167,0.2)] shrink-0">
-            <Globe className="w-4 h-4 text-ink" />
-          </div>
+          <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain shrink-0" />
           {(!sidebarCollapsed || mobileOpen) && (
             <motion.span
               initial={{ opacity: 0, x: -10 }}
@@ -77,7 +75,7 @@ export function DashboardShell({
               className="text-sm font-bold whitespace-nowrap"
             >
               <span className="text-ink">Capacity</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-wheat to-wheat/70"> Connect</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-ink to-ink/70"> Connect</span>
             </motion.span>
           )}
         </Link>
@@ -91,15 +89,15 @@ export function DashboardShell({
             <Link key={link.to} to={link.to} onClick={() => setMobileOpen(false)}>
               <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm group ${
                 isActive
-                  ? 'bg-wheat/10 text-ink border border-wheat/20'
-                  : 'text-ink/70 hover:text-ink hover:bg-wheat/10 border border-transparent'
+                  ? 'bg-ink/10 text-ink border border-ink/20'
+                  : 'text-ink/70 hover:text-ink hover:bg-ink/10 border border-transparent'
               }`}>
                 <link.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-ink' : 'group-hover:text-ink'} transition-colors`} />
                 {(!sidebarCollapsed || mobileOpen) && (
                   <>
                     <span className="flex-1 text-left">{link.label}</span>
                     {link.badge !== undefined && link.badge > 0 && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-ink rounded-full">
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
                         {link.badge > 99 ? '99+' : link.badge}
                       </span>
                     )}
@@ -115,7 +113,7 @@ export function DashboardShell({
       {/* Quick actions */}
       {(!sidebarCollapsed || mobileOpen) && (
         <div className="px-3 pb-2">
-          <div className="p-3 rounded-xl bg-wheat/10 border border-wheat/20">
+          <div className="p-3 rounded-xl bg-ink/10 border border-ink/20">
             <p className="text-xs font-medium text-ink mb-1">Quick Help</p>
             <p className="text-[11px] text-ink/70 leading-relaxed">
               Press <kbd className="px-1 py-0.5 bg-ink/10 rounded text-[10px]">⌘K</kbd> for search
@@ -125,18 +123,18 @@ export function DashboardShell({
       )}
 
       {/* User footer */}
-      <div className="p-3 border-t border-wheat/10 space-y-3">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-wheat/10 transition-all cursor-pointer group">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-wheat to-wheat/70 flex items-center justify-center text-ink text-xs font-bold shrink-0 ring-2 ring-ink/20">
+      <div className="p-3 border-t border-ink/10 space-y-3">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-ink/10 transition-all cursor-pointer group">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-ink to-ink/70 flex items-center justify-center text-ink text-xs font-bold shrink-0 ring-2 ring-ink/20">
             {profile?.full_name?.charAt(0)?.toUpperCase() ?? '?'}
           </div>
           {(!sidebarCollapsed || mobileOpen) && (
             <div className="min-w-0 flex-1">
               <p className="text-sm text-ink font-medium truncate">{profile?.full_name}</p>
-              <p className="text-xs text-ink0 truncate">{profile?.email}</p>
+              <p className="text-xs text-ink/60 truncate">{profile?.email}</p>
             </div>
           )}
-          {(!sidebarCollapsed || mobileOpen) && <ChevronDown className="w-4 h-4 text-ink0 group-hover:text-ink/70 transition-colors" />}
+          {(!sidebarCollapsed || mobileOpen) && <ChevronDown className="w-4 h-4 text-ink/60 group-hover:text-ink/70 transition-colors" />}
         </div>
         {(!sidebarCollapsed || mobileOpen) && (
           <div className="flex items-center gap-2 px-3 flex-wrap">
@@ -150,7 +148,7 @@ export function DashboardShell({
         )}
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-ink0 hover:text-red-400 hover:bg-red-500/8 transition-all text-sm"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-ink/60 hover:text-red-400 hover:bg-red-500/8 transition-all text-sm"
         >
           <LogOut className="w-4 h-4" />
           {(!sidebarCollapsed || mobileOpen) && <span>Sign Out</span>}
@@ -160,7 +158,7 @@ export function DashboardShell({
   )
 
   return (
-    <div className="min-h-screen bg-feldgrau text-ink flex">
+    <div className="min-h-screen bg-cream text-ink flex">
       {/* Background effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-ink/5 blur-[120px]" />
@@ -173,9 +171,9 @@ export function DashboardShell({
       )}
 
       {/* Mobile sidebar drawer */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-wheat/10 bg-feldgrau-dark backdrop-blur-2xl flex flex-col transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-ink/10 bg-white backdrop-blur-2xl flex flex-col transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="absolute top-4 right-4 z-10">
-          <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-wheat/10 text-ink/70 hover:text-ink transition-all">
+          <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-ink/10 text-ink/70 hover:text-ink transition-all">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -183,14 +181,14 @@ export function DashboardShell({
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className={`relative z-20 hidden md:flex ${sidebarCollapsed ? 'w-[72px]' : 'w-64'} border-r border-wheat/10 bg-feldgrau-dark backdrop-blur-2xl flex-col shrink-0 h-screen sticky top-0 transition-all duration-300`}>
+      <aside className={`relative z-20 hidden md:flex ${sidebarCollapsed ? 'w-[72px]' : 'w-64'} border-r border-ink/10 bg-white backdrop-blur-2xl flex-col shrink-0 h-screen sticky top-0 transition-all duration-300`}>
         {sidebarContent}
       </aside>
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
         {/* Topbar */}
-        <header className="h-14 md:h-16 border-b border-wheat/10 bg-feldgrau backdrop-blur-2xl sticky top-0 z-10 flex items-center px-4 md:px-6 gap-3">
+        <header className="h-14 md:h-16 border-b border-ink/10 bg-cream backdrop-blur-2xl sticky top-0 z-10 flex items-center px-4 md:px-6 gap-3">
           <button
             onClick={() => {
               if (window.innerWidth < 768) {
@@ -199,7 +197,7 @@ export function DashboardShell({
                 setSidebarCollapsed(!sidebarCollapsed)
               }
             }}
-            className="p-2 rounded-lg hover:bg-wheat/10 text-ink/70 hover:text-ink transition-all"
+            className="p-2 rounded-lg hover:bg-ink/10 text-ink/70 hover:text-ink transition-all"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -209,11 +207,11 @@ export function DashboardShell({
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-1 md:gap-2">
-            <button className="relative p-2 rounded-lg hover:bg-wheat/10 text-ink/70 hover:text-ink transition-all">
+            <button className="relative p-2 rounded-lg hover:bg-ink/10 text-ink/70 hover:text-ink transition-all">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="p-2 rounded-lg hover:bg-wheat/10 text-ink/70 hover:text-ink transition-all">
+            <button className="p-2 rounded-lg hover:bg-ink/10 text-ink/70 hover:text-ink transition-all">
               <Settings className="w-4 h-4" />
             </button>
           </div>
@@ -229,10 +227,10 @@ export function DashboardShell({
 /* ─── Status Badge ──────────────────────────────────────────── */
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { color: string; icon: React.ElementType }> = {
-    approved: { color: 'bg-green-500/20 text-green-300 border-green-500/30', icon: CheckCircle },
-    pending: { color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', icon: Clock },
-    rejected: { color: 'bg-red-500/20 text-red-300 border-red-500/30', icon: XCircle },
-    suspended: { color: 'bg-red-500/20 text-red-300 border-red-500/30', icon: Ban },
+    approved: { color: 'bg-green-50 text-green-700 border border-green-200', icon: CheckCircle },
+    pending: { color: 'bg-yellow-50 text-yellow-700 border border-yellow-200', icon: Clock },
+    rejected: { color: 'bg-red-50 text-red-600 border border-red-200', icon: XCircle },
+    suspended: { color: 'bg-red-50 text-red-600 border border-red-200', icon: Ban },
   }
   const c = config[status] ?? { color: 'bg-ink/70 text-ink/70', icon: Clock }
   return (
@@ -310,7 +308,7 @@ export function TraineeDashboard() {
   ]
 
   const activities = [
-    { icon: CheckCircle, title: 'Completed Module 5', desc: 'Data Science Fundamentals — Statistics', time: '2h ago', color: 'bg-green-500/10 text-green-400' },
+    { icon: CheckCircle, title: 'Completed Module 5', desc: 'Data Science Fundamentals — Statistics', time: '2h ago', color: 'bg-green-50 text-green-600' },
     { icon: Award, title: 'Certificate Earned', desc: 'Cloud Computing Basics — Final Exam Passed', time: '1d ago', color: 'bg-yellow-500/10 text-yellow-400' },
     { icon: BookOpen, title: 'Started New Course', desc: 'Python for Analytics — Introduction', time: '2d ago', color: 'bg-ink/10 text-ink' },
     { icon: Star, title: 'Quiz Score: 92%', desc: 'Data Science Fundamentals — Module 4 Quiz', time: '3d ago', color: 'bg-ink/10 text-ink' },
@@ -328,7 +326,7 @@ export function TraineeDashboard() {
     >
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-6xl">
         {/* Welcome Banner */}
-        <motion.div variants={fadeUp} className="relative p-6 rounded-2xl bg-wheat/10 border border-wheat/20 overflow-hidden">
+        <motion.div variants={fadeUp} className="relative p-6 rounded-2xl bg-ink/10 border border-ink/20 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-ink/10 rounded-full blur-[60px]" />
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -338,7 +336,7 @@ export function TraineeDashboard() {
               <p className="text-ink/70 text-sm">Continue your learning journey. You've made great progress this week!</p>
             </div>
             <Link to="/trainee/courses" className="shrink-0">
-              <Button className="w-full sm:w-auto bg-wheat/10 text-ink border border-wheat/20 hover:bg-wheat/20 transition-all">
+              <Button className="w-full sm:w-auto bg-ink/10 text-ink border border-ink/20 hover:bg-ink/20 transition-all">
                 <Compass className="w-4 h-4 mr-2" />
                 Browse Courses
               </Button>
@@ -353,8 +351,8 @@ export function TraineeDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Course Progress */}
-          <motion.div variants={fadeUp} className="lg:col-span-2 bg-wheat/5 border border-wheat/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-wheat/10 flex items-center justify-between">
+          <motion.div variants={fadeUp} className="lg:col-span-2 bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-ink/10 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-ink">Course Progress</h3>
               <Link to="/trainee/my-learning" className="text-xs text-ink hover:text-ink transition-colors flex items-center gap-1">
                 View All <ArrowUpRight className="w-3 h-3" />
@@ -366,10 +364,10 @@ export function TraineeDashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="text-sm text-ink font-medium">{course.title}</p>
-                      <p className="text-xs text-ink0">{course.instructor}</p>
+                      <p className="text-xs text-ink/60">{course.instructor}</p>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      course.status === 'Completed' ? 'bg-green-500/15 text-green-400' : 'bg-ink/10 text-ink'
+                      course.status === 'Completed' ? 'bg-green-50 text-green-700' : 'bg-ink/10 text-ink'
                     }`}>
                       {course.status}
                     </span>
@@ -384,10 +382,10 @@ export function TraineeDashboard() {
           </motion.div>
 
           {/* Recent Activity */}
-          <motion.div variants={fadeUp} className="bg-wheat/5 border border-wheat/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-wheat/10 flex items-center justify-between">
+          <motion.div variants={fadeUp} className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-ink/10 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-ink">Recent Activity</h3>
-              <button className="p-1 rounded hover:bg-wheat/10 transition-colors">
+              <button className="p-1 rounded hover:bg-ink/10 transition-colors">
                 <RefreshCw className="w-3.5 h-3.5 text-ink/70" />
               </button>
             </div>
@@ -402,8 +400,8 @@ export function TraineeDashboard() {
         {/* Quick Actions */}
         <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { icon: Compass, title: 'Explore Catalog', desc: 'Discover new courses', to: '/trainee/courses', color: 'from-ink/10 to-ink/5 border-wheat/20 hover:border-wheat/20' },
-            { icon: BookOpen, title: 'My Learning', desc: 'Continue where you left off', to: '/trainee/my-learning', color: 'from-ink/10 to-ink/5 border-wheat/20 hover:border-wheat/20' },
+            { icon: Compass, title: 'Explore Catalog', desc: 'Discover new courses', to: '/trainee/courses', color: 'from-ink/10 to-ink/5 border-ink/20 hover:border-ink/20' },
+            { icon: BookOpen, title: 'My Learning', desc: 'Continue where you left off', to: '/trainee/my-learning', color: 'from-ink/10 to-ink/5 border-ink/20 hover:border-ink/20' },
             { icon: Award, title: 'Certificates', desc: 'View your achievements', to: '/trainee/my-learning', color: 'from-ink/10 to-ink/5 border-ink/10 hover:border-ink/20' },
           ].map(action => (
             <Link key={action.title} to={action.to}>
@@ -417,7 +415,7 @@ export function TraineeDashboard() {
         </motion.div>
 
         {/* Profile card */}
-        <motion.div variants={fadeUp} className="bg-wheat/5 border border-wheat/10 rounded-2xl p-6">
+        <motion.div variants={fadeUp} className="bg-ink/5 border border-ink/10 rounded-2xl p-6">
           <h3 className="text-sm font-semibold text-ink/70 uppercase tracking-wider mb-4">Your Profile</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -427,14 +425,14 @@ export function TraineeDashboard() {
               { label: 'Designation', value: profile?.designation ?? '—' },
             ].map(item => (
               <div key={item.label}>
-                <p className="text-xs text-ink0 mb-1">{item.label}</p>
+                <p className="text-xs text-ink/60 mb-1">{item.label}</p>
                 <p className="text-sm text-ink font-medium truncate">{item.value}</p>
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-wheat/10 flex items-center gap-3">
+          <div className="mt-4 pt-4 border-t border-ink/10 flex items-center gap-3">
             <StatusBadge status={profile?.approval_status ?? 'pending'} />
-            <span className="text-xs text-ink0 capitalize">Role: {profile?.role}</span>
+            <span className="text-xs text-ink/60 capitalize">Role: {profile?.role}</span>
           </div>
         </motion.div>
       </motion.div>
@@ -467,7 +465,7 @@ export function TrainerDashboard() {
   ]
 
   const activities = [
-    { icon: FileText, title: 'New Submission', desc: 'Amit Kumar — Module 6 Quiz (94%)', time: '1h ago', color: 'bg-green-500/10 text-green-400' },
+    { icon: FileText, title: 'New Submission', desc: 'Amit Kumar — Module 6 Quiz (94%)', time: '1h ago', color: 'bg-green-50 text-green-600' },
     { icon: Users, title: '5 New Enrollments', desc: 'Data Science Fundamentals', time: '3h ago', color: 'bg-ink/10 text-ink' },
     { icon: MessageSquare, title: 'New Question', desc: 'Python for Analytics — Forum Post', time: '6h ago', color: 'bg-yellow-500/10 text-yellow-400' },
     { icon: Star, title: '5-Star Review', desc: 'Cloud Computing Basics — Rating', time: '1d ago', color: 'bg-ink/10 text-ink' },
@@ -484,7 +482,7 @@ export function TrainerDashboard() {
     >
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-6xl">
         {/* Welcome Banner */}
-        <motion.div variants={fadeUp} className="relative p-6 rounded-2xl bg-gradient-to-r from-ink/10 to-ink/5 border border-wheat/20 overflow-hidden">
+        <motion.div variants={fadeUp} className="relative p-6 rounded-2xl bg-gradient-to-r from-ink/10 to-ink/5 border border-ink/20 overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-ink/10 rounded-full blur-[60px]" />
           <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -494,7 +492,7 @@ export function TrainerDashboard() {
               <p className="text-ink/70 text-sm">Manage your courses and track trainee progress. 3 new submissions today!</p>
             </div>
             <Link to="/trainer/courses" className="shrink-0">
-              <Button className="w-full sm:w-auto bg-wheat/10 text-ink border border-wheat/20 hover:bg-wheat/20 transition-all">
+              <Button className="w-full sm:w-auto bg-ink/10 text-ink border border-ink/20 hover:bg-ink/20 transition-all">
                 <BookOpen className="w-4 h-4 mr-2" />
                 Manage Courses
               </Button>
@@ -509,8 +507,8 @@ export function TrainerDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Top Courses */}
-          <motion.div variants={fadeUp} className="lg:col-span-2 bg-wheat/5 border border-wheat/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-wheat/10 flex items-center justify-between">
+          <motion.div variants={fadeUp} className="lg:col-span-2 bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-ink/10 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-ink">Top Courses</h3>
               <Link to="/trainer/courses" className="text-xs text-ink hover:text-ink transition-colors flex items-center gap-1">
                 View All <ArrowUpRight className="w-3 h-3" />
@@ -529,11 +527,11 @@ export function TrainerDashboard() {
                   <div className="grid grid-cols-3 gap-2 md:gap-4 text-center">
                     <div>
                       <p className="text-lg font-bold text-ink">{course.trainees}</p>
-                      <p className="text-[11px] text-ink0">Trainees</p>
+                      <p className="text-[11px] text-ink/60">Trainees</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold text-ink">{course.completion}%</p>
-                      <p className="text-[11px] text-ink0">Completion</p>
+                      <p className="text-[11px] text-ink/60">Completion</p>
                     </div>
                     <div>
                       <ProgressBar value={course.completion} color="from-ink to-ink/80" />
@@ -545,8 +543,8 @@ export function TrainerDashboard() {
           </motion.div>
 
           {/* Recent Activity */}
-          <motion.div variants={fadeUp} className="bg-wheat/5 border border-wheat/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-wheat/10">
+          <motion.div variants={fadeUp} className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-ink/10">
               <h3 className="text-sm font-semibold text-ink">Recent Activity</h3>
             </div>
             <div className="p-2">
@@ -558,36 +556,36 @@ export function TrainerDashboard() {
         </div>
 
         {/* Recent Submissions */}
-        <motion.div variants={fadeUp} className="bg-wheat/5 border border-wheat/10 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-wheat/10 flex items-center justify-between">
+        <motion.div variants={fadeUp} className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden">
+          <div className="px-4 md:px-6 py-3 md:py-4 border-b border-ink/10 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-ink">Recent Submissions</h3>
             <button className="text-xs text-ink hover:text-ink transition-colors flex items-center gap-1">
               View All <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[400px]">
               <thead>
-                <tr className="border-b border-wheat/10">
+                <tr className="border-b border-ink/10">
                   {['Trainee', 'Course', 'Module', 'Time'].map(h => (
-                    <th key={h} className="text-left text-xs text-ink0 font-medium px-6 py-3">{h}</th>
+                    <th key={h} className="text-left text-xs text-ink/60 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
                 {recentSubmissions.map((s, i) => (
-                  <tr key={i} className="hover:bg-wheat/5 transition-colors">
-                    <td className="px-6 py-3">
+                  <tr key={i} className="hover:bg-ink/5 transition-colors">
+                    <td className="px-3 md:px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-ink flex items-center justify-center text-cream text-[10px] font-bold">
+                        <div className="w-6 h-6 rounded-full bg-ink flex items-center justify-center text-cream text-[10px] font-bold">
                           {s.name.charAt(0)}
                         </div>
-                        <span className="text-sm text-ink">{s.name}</span>
+                        <span className="text-xs md:text-sm text-ink truncate max-w-[100px]">{s.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-sm text-ink/70">{s.course}</td>
-                    <td className="px-6 py-3 text-sm text-ink/70">{s.module}</td>
-                    <td className="px-6 py-3 text-xs text-ink0">{s.time}</td>
+                    <td className="px-3 md:px-4 py-2.5 text-xs md:text-sm text-ink/70 truncate max-w-[120px]">{s.course}</td>
+                    <td className="px-3 md:px-4 py-2.5 text-xs md:text-sm text-ink/70">{s.module}</td>
+                    <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink/60">{s.time}</td>
                   </tr>
                 ))}
               </tbody>
@@ -598,8 +596,8 @@ export function TrainerDashboard() {
         {/* Quick Actions */}
         <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { icon: BookOpen, title: 'Create Course', desc: 'Start building new content', to: '/trainer/courses', color: 'from-ink/10 to-ink/5 border-wheat/20 hover:border-wheat/20' },
-            { icon: Users, title: 'View Trainees', desc: 'Track engagement & progress', to: '/trainer/courses', color: 'from-ink/10 to-ink/5 border-wheat/20 hover:border-wheat/20' },
+            { icon: BookOpen, title: 'Create Course', desc: 'Start building new content', to: '/trainer/courses', color: 'from-ink/10 to-ink/5 border-ink/20 hover:border-ink/20' },
+            { icon: Users, title: 'View Trainees', desc: 'Track engagement & progress', to: '/trainer/courses', color: 'from-ink/10 to-ink/5 border-ink/20 hover:border-ink/20' },
             { icon: BarChart3, title: 'Analytics', desc: 'Course performance insights', to: '/trainer/courses', color: 'from-ink/10 to-ink/5 border-ink/10 hover:border-ink/20' },
           ].map(action => (
             <Link key={action.title} to={action.to}>
@@ -689,12 +687,19 @@ export function AdminDashboard() {
 
   const handleRejectUser = async (userId: string) => {
     try {
+      // First, find the user's proof path so we can delete the file
+      const user = users.find(u => u.id === userId)
+      if (user?.proof_path) {
+        await supabase.storage.from('proofs').remove([user.proof_path])
+      }
+
+      // Then delete the user account and profile via RPC
       const { error } = await supabase.rpc('admin_delete_user', {
         target_user_id: userId,
       })
       if (error) throw error
       
-      toast.success('User rejected and application deleted successfully')
+      toast.success('User rejected and application deleted. They may re-apply.')
       fetchData()
     } catch (e) {
       toast.error('Failed to reject user. Check Supabase connection.')
@@ -755,7 +760,7 @@ export function AdminDashboard() {
 
   const activities = [
     { icon: Users, title: 'New Registration', desc: 'user@example.com registered as Trainee', time: '30m ago', color: 'bg-ink/10 text-ink' },
-    { icon: CheckCircle, title: 'User Approved', desc: 'Amit Kumar — Trainer role', time: '2h ago', color: 'bg-green-500/10 text-green-400' },
+    { icon: CheckCircle, title: 'User Approved', desc: 'Amit Kumar — Trainer role', time: '2h ago', color: 'bg-green-50 text-green-600' },
     { icon: Ban, title: 'User Suspended', desc: 'Inactive account — 90 days', time: '5h ago', color: 'bg-red-500/10 text-red-400' },
     { icon: Shield, title: 'Role Updated', desc: 'Priya Singh — Trainee → Trainer', time: '1d ago', color: 'bg-ink/10 text-ink' },
   ]
@@ -784,7 +789,7 @@ export function AdminDashboard() {
               </p>
             </div>
             {pendingCount > 0 && (
-              <Button onClick={() => setActiveTab('trainees')} className="w-full sm:w-auto bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 hover:bg-yellow-500/30 transition-all">
+              <Button onClick={() => setActiveTab('trainees')} className="w-full sm:w-auto bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-all">
                 <Clock className="w-4 h-4 mr-2" />
                 Review Pending
               </Button>
@@ -801,15 +806,15 @@ export function AdminDashboard() {
           {/* Tabs + Content */}
           <motion.div variants={fadeUp} className="lg:col-span-2 space-y-4">
             {/* Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-wheat/5 border border-wheat/10 rounded-xl w-full md:w-fit overflow-x-auto">
+            <div className="flex items-center gap-1 p-1 bg-ink/5 border border-ink/10 rounded-xl w-full md:w-fit overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
                     activeTab === tab.key
-                      ? 'bg-gradient-to-r from-wheat to-wheat/70 text-ink shadow-sm'
-                      : 'text-ink/70 hover:text-ink hover:bg-wheat/10'
+                      ? 'bg-ink text-cream shadow-sm'
+                      : 'text-ink/70 hover:text-ink hover:bg-ink/10'
                   }`}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -832,91 +837,91 @@ export function AdminDashboard() {
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className="bg-wheat/5 border border-wheat/10 rounded-2xl overflow-hidden"
+                  className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden"
                 >
-                  <div className="px-4 md:px-6 py-4 border-b border-wheat/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="px-4 md:px-6 py-4 border-b border-ink/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-sm font-semibold text-ink capitalize">{activeTab} Management</h3>
-                      <p className="text-xs text-ink0 mt-0.5">Approve, reject, promote, or suspend users.</p>
+                      <p className="text-xs text-ink/60 mt-0.5">Approve, reject, promote, or suspend users.</p>
                     </div>
                     <div className="relative w-full sm:w-56">
-                      <Search className="w-4 h-4 text-ink0 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Search className="w-4 h-4 text-ink/60 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         placeholder="Search users..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-wheat/5 border border-wheat/10 rounded-lg text-ink placeholder:text-ink0 focus:outline-none focus:border-wheat/20 transition-colors"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-ink/5 border border-ink/10 rounded-lg text-ink placeholder:text-ink/60 focus:outline-none focus:border-ink/20 transition-colors"
                       />
                     </div>
                   </div>
                   {loading ? (
-                    <div className="p-8 text-center text-ink0 text-sm">Loading users...</div>
+                    <div className="p-8 text-center text-ink/60 text-sm">Loading users...</div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <table className="w-full min-w-[600px]">
                         <thead>
-                          <tr className="border-b border-wheat/10">
-                            {['Name', 'Email', 'Department', 'Role', 'Proof', 'Status', 'Actions'].map(h => (
-                              <th key={h} className="text-left text-xs text-ink0 font-medium px-6 py-3">{h}</th>
+                          <tr className="border-b border-ink/10">
+                            {['Name', 'Email', 'Dept', 'Role', 'Proof', 'Status', 'Actions'].map(h => (
+                              <th key={h} className="text-left text-xs text-ink/60 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.04]">
                           {filteredUsers.length === 0 ? (
-                            <tr><td colSpan={6} className="text-center py-8 text-ink0 text-sm">
+                            <tr><td colSpan={7} className="text-center py-8 text-ink/60 text-sm">
                               {searchQuery ? 'No users match your search.' : 'No users found.'}
                             </td></tr>
                           ) : filteredUsers.map(u => (
-                            <tr key={u.id} className="hover:bg-wheat/5 transition-colors group">
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-wheat to-wheat/70 flex items-center justify-center text-ink text-xs font-bold shrink-0 ring-2 ring-white/5 group-hover:ring-ink/20 transition-all">
+                            <tr key={u.id} className="hover:bg-ink/5 transition-colors group">
+                              <td className="px-3 md:px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-ink to-ink/70 flex items-center justify-center text-ink text-xs font-bold shrink-0">
                                     {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
                                   </div>
-                                  <span className="text-sm text-ink font-medium">{u.full_name}</span>
+                                  <span className="text-xs md:text-sm text-ink font-medium truncate max-w-[120px]">{u.full_name}</span>
                                 </div>
                               </td>
-                              <td className="px-6 py-4 text-sm text-ink/70">{u.email}</td>
-                              <td className="px-6 py-4 text-sm text-ink/70">{u.department ?? '—'}</td>
-                              <td className="px-6 py-4">
-                                <span className="text-xs capitalize text-ink/70 bg-ink/5 px-2.5 py-1 rounded-lg">{u.role}</span>
+                              <td className="px-3 md:px-4 py-3 text-xs md:text-sm text-ink/70 truncate max-w-[150px]">{u.email}</td>
+                              <td className="px-3 md:px-4 py-3 text-xs md:text-sm text-ink/70 truncate max-w-[80px]">{u.department ?? '—'}</td>
+                              <td className="px-3 md:px-4 py-3">
+                                <span className="text-[10px] md:text-xs capitalize text-ink/70 bg-ink/5 px-2 py-0.5 rounded-lg">{u.role}</span>
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="px-3 md:px-4 py-3">
                                 {u.proof_path ? (
-                                  <button onClick={() => handleViewProof(u.proof_path!)} className="text-xs px-3 py-1.5 rounded-lg bg-ink/10 text-ink border border-ink/20 hover:bg-ink/15 transition-all font-medium whitespace-nowrap">
-                                    View Proof
+                                  <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] md:text-xs px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-ink/10 text-ink border border-ink/20 hover:bg-ink/15 transition-all font-medium whitespace-nowrap">
+                                    View
                                   </button>
                                 ) : (
-                                  <span className="text-xs text-ink0">—</span>
+                                  <span className="text-[10px] text-ink/60">—</span>
                                 )}
                               </td>
-                              <td className="px-6 py-4"><StatusBadge status={u.approval_status} /></td>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-2 flex-wrap">
+                              <td className="px-3 md:px-4 py-3"><StatusBadge status={u.approval_status} /></td>
+                              <td className="px-3 md:px-4 py-3">
+                                <div className="flex items-center gap-1 flex-wrap">
                                   {u.approval_status === 'pending' && (
                                     <>
-                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25 transition-all font-medium">
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-[10px] md:text-xs px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-all font-medium">
                                         Approve
                                       </button>
-                                      <button onClick={() => handleRejectUser(u.id)} className="text-xs px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-all font-medium">
+                                      <button onClick={() => handleRejectUser(u.id)} className="text-[10px] md:text-xs px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all font-medium">
                                         Reject
                                       </button>
                                     </>
                                   )}
                                   {u.role === 'trainee' && u.approval_status === 'approved' && (
-                                    <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-xs px-3 py-1.5 rounded-lg bg-ink/10 text-ink border border-wheat/20 hover:bg-ink/15 transition-all font-medium">
+                                    <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-[10px] md:text-xs px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-ink/10 text-ink border border-ink/20 hover:bg-ink/15 transition-all font-medium">
                                       → Trainer
                                     </button>
                                   )}
                                   {u.approval_status === 'approved' && (
-                                    <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25 transition-all font-medium">
+                                    <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-[10px] md:text-xs px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all font-medium">
                                       Suspend
                                     </button>
                                   )}
                                   {isSuperAdmin && u.approval_status === 'approved' && u.role !== 'admin' && u.role !== 'super_admin' && (
-                                    <button onClick={() => handlePromoteToAdmin(u.id)} className="text-xs px-3 py-1.5 rounded-lg bg-ink/10 text-ink border border-ink/20 hover:bg-ink/15 transition-all font-medium">
-                                      Promote Admin
+                                    <button onClick={() => handlePromoteToAdmin(u.id)} className="text-[10px] md:text-xs px-2 md:px-3 py-1 md:py-1.5 rounded-lg bg-ink/10 text-ink border border-ink/20 hover:bg-ink/15 transition-all font-medium">
+                                      Promote
                                     </button>
                                   )}
                                 </div>
@@ -952,34 +957,34 @@ export function AdminDashboard() {
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className="bg-wheat/5 border border-wheat/10 rounded-2xl overflow-hidden"
+                  className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden"
                 >
-                  <div className="px-6 py-4 border-b border-wheat/10">
+                  <div className="px-4 md:px-6 py-4 border-b border-ink/10">
                     <h3 className="text-sm font-semibold text-ink">Audit Logs</h3>
-                    <p className="text-xs text-ink0 mt-0.5">Complete activity history for compliance and tracking.</p>
+                    <p className="text-xs text-ink/60 mt-0.5">Complete activity history for compliance and tracking.</p>
                   </div>
                   {loading ? (
-                    <div className="p-8 text-center text-ink0 text-sm">Loading logs...</div>
+                    <div className="p-8 text-center text-ink/60 text-sm">Loading logs...</div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <table className="w-full min-w-[500px]">
                         <thead>
-                          <tr className="border-b border-wheat/10">
+                          <tr className="border-b border-ink/10">
                             {['Time', 'Actor', 'Action', 'Entity', 'Details'].map(h => (
-                              <th key={h} className="text-left text-xs text-ink0 font-medium px-6 py-3">{h}</th>
+                              <th key={h} className="text-left text-xs text-ink/60 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.04]">
                           {logs.length === 0 ? (
-                            <tr><td colSpan={5} className="text-center py-8 text-ink0 text-sm">No audit logs found.</td></tr>
+                            <tr><td colSpan={5} className="text-center py-8 text-ink/60 text-sm">No audit logs found.</td></tr>
                           ) : logs.map(log => (
-                            <tr key={log.id} className="hover:bg-wheat/5 transition-colors">
-                              <td className="px-6 py-3 text-xs text-ink0 whitespace-nowrap">{new Date(log.created_at || '').toLocaleString()}</td>
-                              <td className="px-6 py-3 text-xs font-mono text-ink/70">{log.actor_id?.slice(0, 8)}…</td>
-                              <td className="px-6 py-3 text-xs text-ink font-medium">{log.action}</td>
-                              <td className="px-6 py-3 text-xs text-ink/70">{log.entity_type}</td>
-                              <td className="px-6 py-3 text-xs font-mono text-ink0 max-w-xs truncate">{JSON.stringify(log.metadata)}</td>
+                            <tr key={log.id} className="hover:bg-ink/5 transition-colors">
+                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink/60 whitespace-nowrap">{new Date(log.created_at || '').toLocaleString()}</td>
+                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs font-mono text-ink/70">{log.actor_id?.slice(0, 8)}…</td>
+                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink font-medium">{log.action}</td>
+                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink/70">{log.entity_type}</td>
+                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs font-mono text-ink/60 max-w-[150px] truncate">{JSON.stringify(log.metadata)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -992,8 +997,8 @@ export function AdminDashboard() {
           </motion.div>
 
           {/* Recent Activity Sidebar */}
-          <motion.div variants={fadeUp} className="bg-wheat/5 border border-wheat/10 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-wheat/10">
+          <motion.div variants={fadeUp} className="bg-ink/5 border border-ink/10 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-ink/10">
               <h3 className="text-sm font-semibold text-ink">Recent Activity</h3>
             </div>
             <div className="p-2">
@@ -1007,7 +1012,7 @@ export function AdminDashboard() {
         {/* Quick Actions */}
         <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { icon: Users, title: 'Manage Users', desc: 'Approve, suspend, or promote', to: '/admin', color: 'from-ink/10 to-ink/5 border-wheat/20 hover:border-wheat/20' },
+            { icon: Users, title: 'Manage Users', desc: 'Approve, suspend, or promote', to: '/admin', color: 'from-ink/10 to-ink/5 border-ink/20 hover:border-ink/20' },
             { icon: Shield, title: 'System Settings', desc: 'Configure platform settings', to: '/admin', color: 'from-ink/10 to-ink/5 border-ink/10 hover:border-ink/20' },
             { icon: BarChart3, title: 'Analytics', desc: 'Platform usage insights', to: '/admin', color: 'from-ink/10 to-ink/5 border-ink/10 hover:border-ink/20' },
           ].map(action => (
