@@ -103,31 +103,31 @@ export function Register() {
           <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">
             <img src="/logo.png" alt="Logo" className="w-9 h-9 md:w-10 md:h-10 object-contain" />
             <span className="text-base md:text-lg font-bold">
-              <span className="text-navy">Capacity</span>
-              <span className="text-burgundy"> Connect</span>
+              <span className="text-obsidian">Capacity</span>
+              <span className="text-teal"> Connect</span>
             </span>
           </Link>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-navy tracking-tight">Create Account</h1>
-          <p className="text-navy/60 mt-2 text-sm">Join the MoES Capacity Connect platform</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-obsidian tracking-tight">Create Account</h1>
+          <p className="text-obsidian/60 mt-2 text-sm">Join the MoES Capacity Connect platform</p>
         </div>
 
-        <div className="bg-white border border-navy/10 rounded-2xl p-6 md:p-8 shadow-xl shadow-navy/5">
+        <div className="bg-white border border-obsidian/10 rounded-2xl p-6 md:p-8 shadow-xl shadow-obsidian/5">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
             <div className="space-y-1.5">
-              <Label htmlFor="fullName" className="text-navy/80 text-sm font-medium">Full Name</Label>
+              <Label htmlFor="fullName" className="text-obsidian/80 text-sm font-medium">Full Name</Label>
               <Input id="fullName" placeholder="John Doe" {...register('fullName')} className={inputClass(!!errors.fullName)} disabled={isLoading} />
               {errors.fullName && <p className="text-xs text-red-600">{errors.fullName.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-navy/80 text-sm font-medium">Email Address</Label>
+              <Label htmlFor="email" className="text-obsidian/80 text-sm font-medium">Email Address</Label>
               <Input id="email" type="email" placeholder="name@moes.gov.in" {...register('email')} className={inputClass(!!errors.email)} disabled={isLoading} />
               {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="proofFile" className="text-navy/80 text-sm font-medium">Proof Document</Label>
+              <Label htmlFor="proofFile" className="text-obsidian/80 text-sm font-medium">Proof Document</Label>
               <Input 
                 id="proofFile" 
                 type="file" 
@@ -136,32 +136,32 @@ export function Register() {
                 className={`${inputClass(!!errors.proofFile)} pt-2.5`} 
                 disabled={isLoading} 
               />
-              <p className="text-xs text-navy/50">Please upload your ID or employment proof (PDF, JPG, PNG)</p>
+              <p className="text-xs text-obsidian/50">Please upload your ID or employment proof (PDF, JPG, PNG)</p>
               {errors.proofFile && <p className="text-xs text-red-600">{errors.proofFile.message as string}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="department" className="text-navy/80 text-sm font-medium">Department <span className="text-navy/40">(optional)</span></Label>
+                <Label htmlFor="department" className="text-obsidian/80 text-sm font-medium">Department <span className="text-obsidian/40">(optional)</span></Label>
                 <Input id="department" placeholder="e.g. IMD" {...register('department')} className={inputClass(false)} disabled={isLoading} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="designation" className="text-navy/80 text-sm font-medium">Designation <span className="text-navy/40">(optional)</span></Label>
+                <Label htmlFor="designation" className="text-obsidian/80 text-sm font-medium">Designation <span className="text-obsidian/40">(optional)</span></Label>
                 <Input id="designation" placeholder="e.g. Scientist" {...register('designation')} className={inputClass(false)} disabled={isLoading} />
               </div>
             </div>
 
             {/* Notice */}
-            <div className="flex items-start gap-2 p-3 bg-gold/10 border border-gold/25 rounded-xl">
-              <CheckCircle className="w-4 h-4 text-gold-700 shrink-0 mt-0.5" />
-              <p className="text-xs text-navy/70 leading-relaxed">
-                New accounts are reviewed as <strong className="text-navy">Trainee</strong> and require admin approval before full access.
+            <div className="flex items-start gap-2 p-3 bg-ice border border-ice-400/40 rounded-xl">
+              <CheckCircle className="w-4 h-4 text-teal shrink-0 mt-0.5" />
+              <p className="text-xs text-obsidian/70 leading-relaxed">
+                New accounts are reviewed as <strong className="text-obsidian">Trainee</strong> and require admin approval before full access.
               </p>
             </div>
 
             <Button
               type="submit"
-              className="w-full h-11 bg-burgundy hover:bg-burgundy/90 text-white shadow-lg shadow-burgundy/20 border-0 transition-all font-semibold"
+              className="w-full h-11 bg-teal hover:bg-teal/90 text-cream shadow-lg shadow-teal/20 border-0 transition-all font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -173,9 +173,9 @@ export function Register() {
           </form>
 
           <div className="mt-5 text-center">
-            <p className="text-sm text-navy/60">
+            <p className="text-sm text-obsidian/60">
               Already have an account?{' '}
-              <Link to="/login" className="text-burgundy hover:text-burgundy/80 font-semibold transition-colors">Sign in</Link>
+              <Link to="/login" className="text-teal hover:text-teal/80 font-semibold transition-colors">Sign in</Link>
             </p>
           </div>
         </div>

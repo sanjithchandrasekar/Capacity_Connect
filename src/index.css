@@ -19,43 +19,43 @@
 
 @layer base {
   :root {
-    /* Pure White Background #FFFFFF */
-    --background: 0 0% 100%;
-    /* Deep Navy #002349 */
-    --foreground: 211 100% 14.3%;
+    /* Warm Off-White Background #F2EFEA */
+    --background: 38 22% 93%;
+    /* Obsidian Black #0D0D0D */
+    --foreground: 0 0% 5%;
 
-    /* Cards: Pure White #FFFFFF */
+    /* Cards: Pure / Elevated Cream White */
     --card: 0 0% 100%;
-    --card-foreground: 211 100% 14.3%;
+    --card-foreground: 0 0% 5%;
 
     /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 211 100% 14.3%;
+    --popover-foreground: 0 0% 5%;
 
-    /* Primary: Rich Burgundy #5C1A2A */
-    --primary: 345 56% 23.1%;
+    /* Primary: Slate Teal #557373 */
+    --primary: 180 15% 39%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Deep Navy #002349 */
-    --secondary: 211 100% 14.3%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary: Deep Olive Bronze #272401 */
+    --secondary: 55 95% 8%;
+    --secondary-foreground: 38 22% 93%;
 
-    /* Muted: Soft Cool Gray-Blue */
-    --muted: 211 30% 96%;
-    --muted-foreground: 211 25% 45%;
+    /* Muted: Soft Ice Lavender #DFE5F3 */
+    --muted: 222 48% 91%;
+    --muted-foreground: 180 10% 35%;
 
-    /* Accent: Warm Antique Gold #957C3D */
-    --accent: 43 42% 41.2%;
+    /* Accent: Slate Teal #557373 */
+    --accent: 180 15% 39%;
     --accent-foreground: 0 0% 100%;
 
-    /* Destructive: Deep Burgundy Red */
-    --destructive: 345 75% 42%;
+    /* Destructive */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & Inputs */
-    --border: 211 25% 90%;
-    --input: 211 25% 90%;
-    --ring: 345 56% 23.1%;
+    /* Borders & Inputs based on Soft Ice / Linen */
+    --border: 222 20% 86%;
+    --input: 222 20% 86%;
+    --ring: 180 15% 39%;
 
     --radius: 0.625rem;
   }

@@ -54,25 +54,25 @@ export function Login() {
           <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">
             <img src="/logo.png" alt="Logo" className="w-9 h-9 md:w-10 md:h-10 object-contain" />
             <span className="text-base md:text-lg font-bold">
-              <span className="text-navy">Capacity</span>
-              <span className="text-burgundy"> Connect</span>
+              <span className="text-obsidian">Capacity</span>
+              <span className="text-teal"> Connect</span>
             </span>
           </Link>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-navy tracking-tight">Welcome Back</h1>
-          <p className="text-navy/60 mt-2 text-sm">Sign in to continue to your dashboard</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-obsidian tracking-tight">Welcome Back</h1>
+          <p className="text-obsidian/60 mt-2 text-sm">Sign in to continue to your dashboard</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-navy/10 rounded-2xl p-6 md:p-8 shadow-xl shadow-navy/5">
+        <div className="bg-white border border-obsidian/10 rounded-2xl p-6 md:p-8 shadow-xl shadow-obsidian/5">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-navy/80 text-sm font-medium">Email Address</Label>
+              <Label htmlFor="email" className="text-obsidian/80 text-sm font-medium">Email Address</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="name@example.com"
                 {...register('email')}
-                className={`bg-navy/[0.02] border-navy/15 text-navy placeholder:text-navy/40 focus:border-burgundy h-11 ${errors.email ? 'border-red-500/60' : ''}`}
+                className={`bg-obsidian/[0.02] border-obsidian/15 text-obsidian placeholder:text-obsidian/40 focus:border-teal h-11 ${errors.email ? 'border-red-500/60' : ''}`}
                 disabled={isLoading}
               />
               {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
@@ -80,8 +80,8 @@ export function Login() {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-navy/80 text-sm font-medium">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-navy/60 hover:text-burgundy transition-colors font-medium">
+                <Label htmlFor="password" className="text-obsidian/80 text-sm font-medium">Password</Label>
+                <Link to="/forgot-password" className="text-xs text-obsidian/60 hover:text-teal transition-colors font-medium">
                   Forgot password?
                 </Link>
               </div>
@@ -91,13 +91,13 @@ export function Login() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   {...register('password')}
-                  className={`bg-navy/[0.02] border-navy/15 text-navy placeholder:text-navy/40 focus:border-burgundy h-11 pr-10 ${errors.password ? 'border-red-500/60' : ''}`}
+                  className={`bg-obsidian/[0.02] border-obsidian/15 text-obsidian placeholder:text-obsidian/40 focus:border-teal h-11 pr-10 ${errors.password ? 'border-red-500/60' : ''}`}
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-navy/50 hover:text-navy transition-colors"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-obsidian/50 hover:text-obsidian transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -108,7 +108,7 @@ export function Login() {
 
             <Button
               type="submit"
-              className="w-full h-11 bg-burgundy hover:bg-burgundy/90 text-white shadow-lg shadow-burgundy/20 border-0 transition-all font-semibold"
+              className="w-full h-11 bg-teal hover:bg-teal/90 text-cream shadow-lg shadow-teal/20 border-0 transition-all font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -120,16 +120,16 @@ export function Login() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-navy/60">
+            <p className="text-sm text-obsidian/60">
               Don't have an account?{' '}
-              <Link to="/register" className="text-burgundy hover:text-burgundy/80 font-semibold transition-colors">
+              <Link to="/register" className="text-teal hover:text-teal/80 font-semibold transition-colors">
                 Create one
               </Link>
             </p>
           </div>
         </div>
 
-        <p className="text-center text-xs text-navy/40 mt-6">
+        <p className="text-center text-xs text-obsidian/40 mt-6">
           Ministry of Earth Sciences — SIH 2026 &nbsp;•&nbsp; Secure Platform
         </p>
       </motion.div>
