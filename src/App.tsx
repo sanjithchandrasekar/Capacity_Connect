@@ -54,7 +54,7 @@ export default function App() {
             <Route path="/setup-password" element={<SetupPassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/supabase-test" element={<SupabaseTest />} />
-            <Route path="/as/db" element={<SupabaseTest />} />
+            <Route path="/db" element={<SupabaseTest />} />
             
             {/* Auth Fallbacks */}
             <Route path="/pending-approval" element={<PendingApprovalPage />} />

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Loader2, CheckCircle, XCircle, ShieldCheck, ExternalLink, Database, Globe, Lock, Users, BookOpen, Shield, GraduationCap, Settings } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, ShieldCheck, ExternalLink, Database, Globe, Lock, Users, BookOpen, Shield, GraduationCap, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -34,6 +34,16 @@ export function SupabaseTest() {
     { label: 'Network Reachability', status: 'loading', detail: '' },
     { label: 'RLS Protection Active', status: 'loading', detail: '' },
   ])
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const resetAndRefresh = () => {
+    setResults([
+      { label: 'Environment Variables', status: 'loading', detail: '' },
+      { label: 'Network Reachability', status: 'loading', detail: '' },
+      { label: 'RLS Protection Active', status: 'loading', detail: '' },
+    ])
+    setRefreshKey(k => k + 1)
+  }
 
   useEffect(() => {
     const run = async () => {
@@ -80,7 +90,7 @@ export function SupabaseTest() {
 
     run()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [refreshKey])
 
   const allOk = results.every(r => r.status === 'ok')
   const hasError = results.some(r => r.status === 'error')
@@ -110,6 +120,14 @@ export function SupabaseTest() {
           <div className="px-6 py-4 border-b border-ink/10 flex items-center gap-2">
             <Database className="w-4 h-4 text-ink/60" />
             <h2 className="text-sm font-semibold text-ink">Supabase Connection Tests</h2>
+            <button
+              onClick={resetAndRefresh}
+              disabled={stillLoading}
+              className="ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-ink/20 text-ink/60 hover:text-ink hover:bg-ink/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-3 h-3 ${stillLoading ? 'animate-spin' : ''}`} />
+              {stillLoading ? 'Checking...' : 'Refresh'}
+            </button>
           </div>
           <div className="p-4 space-y-3">
             {results.map((r) => (
