@@ -28,39 +28,39 @@ const roles = [
     icon: GraduationCap,
     title: 'Trainees',
     desc: 'Access personalized courses, skill tracks, assessments, and digital certificates.',
-    color: 'from-ink/5 to-ink/5',
-    border: 'hover:border-ink/20',
-    iconColor: 'text-ink',
-    iconBg: 'bg-ink/5',
+    color: 'from-navy/5 to-white',
+    border: 'hover:border-navy/30 border-navy/15',
+    iconColor: 'text-white',
+    iconBg: 'bg-navy',
     glow: '',
   },
   {
     icon: BookOpen,
     title: 'Trainers',
     desc: 'Create, manage, and deliver impactful learning content with rich media support.',
-    color: 'from-ink/5 to-ink/5',
-    border: 'hover:border-ink/20',
-    iconColor: 'text-ink',
-    iconBg: 'bg-ink/5',
+    color: 'from-burgundy/5 to-white',
+    border: 'hover:border-burgundy/40 border-burgundy/20',
+    iconColor: 'text-white',
+    iconBg: 'bg-burgundy',
     glow: '',
   },
   {
     icon: ShieldCheck,
     title: 'Admins',
     desc: 'Oversee operations, manage users, approve content, and monitor analytics.',
-    color: 'from-ink/10 to-ink/5',
-    border: 'hover:border-ink/20',
-    iconColor: 'text-ink',
-    iconBg: 'bg-ink/10',
+    color: 'from-gold/10 to-white',
+    border: 'hover:border-gold/40 border-gold/25',
+    iconColor: 'text-white',
+    iconBg: 'bg-gold',
     glow: '',
   },
 ];
 
 const stats = [
-  { label: 'Courses Available', value: '200+', icon: BookOpen, color: 'text-ink' },
-  { label: 'Active Users', value: '5,000+', icon: Users, color: 'text-ink' },
-  { label: 'Completion Rate', value: '94%', icon: BarChart3, color: 'text-ink' },
-  { label: 'Certificates Issued', value: '12,000+', icon: Star, color: 'text-ink' },
+  { label: 'Courses Available', value: '200+', icon: BookOpen, color: 'text-navy', bg: 'bg-navy/10' },
+  { label: 'Active Users', value: '5,000+', icon: Users, color: 'text-burgundy', bg: 'bg-burgundy/10' },
+  { label: 'Completion Rate', value: '94%', icon: BarChart3, color: 'text-gold', bg: 'bg-gold/15' },
+  { label: 'Certificates Issued', value: '12,000+', icon: Star, color: 'text-burgundy', bg: 'bg-burgundy/10' },
 ];
 
 const features = [
@@ -85,23 +85,25 @@ export function LandingPage() {
     <div className="min-h-screen bg-cream text-ink overflow-x-hidden font-sans">
 
       {/* === NAVBAR === */}
-      <header className="relative z-20 sticky top-0 border-b border-ink/10 bg-cream backdrop-blur-2xl">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Logo" className="w-8 h-8 md:w-9 md:h-9 object-contain" />
-            <span className="text-base md:text-lg font-bold tracking-tight">
-              <span className="text-ink">Capacity</span>
-              <span className="text-ink"> Connect</span>
+      <header className="relative z-20 sticky top-0 border-b border-navy/10 bg-white/90 backdrop-blur-2xl">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-navy flex items-center justify-center shadow-sm shadow-navy/20">
+              <Globe className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-bold tracking-tight">
+              <span className="text-navy">Capacity</span>
+              <span className="text-burgundy"> Connect</span>
             </span>
           </div>
           <nav className="flex items-center gap-2 md:gap-3">
             <Link to="/login">
-              <Button variant="ghost" className="text-ink/70 hover:text-ink hover:bg-ink/5 transition-all text-sm h-9 px-3">
+              <Button variant="ghost" className="text-navy/80 hover:text-burgundy hover:bg-burgundy/5 transition-all font-medium">
                 Sign In
               </Button>
             </Link>
             <Link to="/register">
-              <Button className="bg-ink hover:bg-ink/90 text-cream border-0 transition-all text-sm h-9 px-3 md:px-4">
+              <Button className="bg-burgundy hover:bg-burgundy/90 text-white shadow-md shadow-burgundy/20 border-0 transition-all font-semibold">
                 Get Started
                 <ArrowRight className="ml-1 w-3.5 h-3.5 md:w-4 md:h-4" />
               </Button>
@@ -112,23 +114,27 @@ export function LandingPage() {
 
       {/* === HERO === */}
       <main className="relative z-10">
-        <section className="max-w-7xl mx-auto px-6 pt-16 md:pt-24 pb-16 text-center">
+        <section className="max-w-7xl mx-auto px-6 pt-8 md:pt-12 pb-20 text-center">
           <motion.div variants={stagger} initial="hidden" animate="visible">
             {/* Badge */}
-            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 rounded-full bg-ink/5 border border-ink/10 text-ink text-xs md:text-sm font-medium mb-6">
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">MoES — SIH 2026 Initiative</span>
+            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gold/10 border border-gold/30 text-gold-800 text-sm font-medium mb-8 shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 text-gold-600" />
+              Ministry of Earth Sciences (MoES) — SIH 2026 Initiative
             </motion.div>
 
             {/* Heading */}
-            <motion.h1 variants={fadeUp} className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-4">
-              <span className="text-ink">Digital Capacity Building</span>
+            <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[1.05] mb-6">
+              <span className="text-navy">Digital Capacity</span>
               <br />
-              <span className="text-ink">& Learning Portal</span>
+              <span className="text-burgundy">
+                Building & Learning
+              </span>
+              <br />
+              <span className="text-navy">Portal</span>
             </motion.h1>
 
             {/* Subtitle */}
-            <motion.p variants={fadeUp} className="text-base md:text-lg text-ink/70 max-w-2xl mx-auto leading-relaxed mb-8">
+            <motion.p variants={fadeUp} className="text-lg md:text-xl text-navy/70 max-w-2xl mx-auto leading-relaxed mb-10">
               A secure, role-based platform powering organizational training,
               competency development, knowledge sharing, and advanced learning analytics.
             </motion.p>
@@ -136,15 +142,15 @@ export function LandingPage() {
             {/* CTA Buttons */}
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/register">
-                <Button size="lg" className="group h-11 px-8 text-sm font-semibold bg-ink hover:bg-ink/90 text-cream border-0 transition-all rounded-xl">
-                    <span className="flex items-center gap-2">
+                <Button size="lg" className="group relative h-14 px-10 text-base font-semibold bg-burgundy hover:bg-burgundy/90 text-white shadow-xl shadow-burgundy/25 border-0 hover:-translate-y-0.5 transition-all duration-300 rounded-xl overflow-hidden">
+                    <span className="relative z-10 flex items-center gap-2">
                       Join the Platform
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </span>
                 </Button>
               </Link>
               <Link to="/login">
-                <Button size="lg" variant="outline" className="h-11 px-8 text-sm font-semibold border-ink/20 bg-ink/5 hover:bg-ink/10 text-ink transition-all rounded-xl">
+                <Button size="lg" variant="outline" className="group h-14 px-10 text-base font-semibold border-navy/20 bg-navy/5 hover:bg-navy/10 text-navy hover:-translate-y-0.5 transition-all duration-300 rounded-xl">
                   Access Dashboard
                   <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
                 </Button>
@@ -164,14 +170,14 @@ export function LandingPage() {
               <motion.div
                 key={s.label}
                 variants={fadeUp}
-                className="group relative bg-ink/5 border border-ink/10 rounded-2xl p-5 text-center hover:border-ink/20 transition-all duration-300 cursor-default"
+                className="group relative bg-white border border-navy/10 rounded-2xl p-6 text-center hover:border-gold/40 hover:shadow-md transition-all duration-300 cursor-default overflow-hidden"
               >
                 <div className="relative">
-                  <div className={`w-9 h-9 rounded-xl bg-ink/5 flex items-center justify-center mx-auto mb-2 ${s.color} group-hover:scale-110 transition-transform duration-300`}>
-                    <s.icon className="w-4 h-4" />
+                  <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center mx-auto mb-3 ${s.color} group-hover:scale-110 transition-transform duration-300`}>
+                    <s.icon className="w-5 h-5" />
                   </div>
-                  <div className="text-xl md:text-2xl font-bold text-ink mb-0.5">{s.value}</div>
-                  <div className="text-xs text-ink/60">{s.label}</div>
+                  <div className="text-2xl md:text-3xl font-bold text-navy mb-1">{s.value}</div>
+                  <div className="text-sm text-navy/60">{s.label}</div>
                 </div>
               </motion.div>
             ))}
@@ -186,9 +192,9 @@ export function LandingPage() {
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
           >
-            <motion.div variants={fadeUp} className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-bold text-ink mb-3">Built for Every Role</h2>
-              <p className="text-ink/70 max-w-xl mx-auto text-sm">One platform, three specialized experiences — each designed to maximize impact.</p>
+            <motion.div variants={fadeUp} className="text-center mb-14">
+              <h2 className="text-3xl md:text-4xl font-bold text-navy mb-4">Built for Every Role</h2>
+              <p className="text-navy/70 max-w-xl mx-auto">One platform, three specialized experiences — each designed to maximize impact.</p>
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -196,14 +202,14 @@ export function LandingPage() {
                 <motion.div
                   key={r.title}
                   variants={scaleIn}
-                  className={`group relative p-6 rounded-2xl border border-ink/10 ${r.border} bg-gradient-to-br ${r.color} transition-all duration-500 hover:-translate-y-1 cursor-default overflow-hidden ${r.glow}`}
+                  className={`group relative p-8 rounded-2xl border ${r.border} bg-gradient-to-br ${r.color} shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-lg cursor-default overflow-hidden`}
                 >
                   <div className="relative">
-                    <div className={`w-12 h-12 rounded-xl ${r.iconBg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                      <r.icon className={`w-6 h-6 ${r.iconColor}`} />
+                    <div className={`w-14 h-14 rounded-xl ${r.iconBg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
+                      <r.icon className={`w-7 h-7 ${r.iconColor}`} />
                     </div>
-                    <h3 className="text-lg font-bold text-ink mb-2">For {r.title}</h3>
-                    <p className="text-ink/70 leading-relaxed text-sm">{r.desc}</p>
+                    <h3 className="text-xl font-bold text-navy mb-3">For {r.title}</h3>
+                    <p className="text-navy/70 leading-relaxed text-sm">{r.desc}</p>
                   </div>
                 </motion.div>
               ))}
@@ -212,8 +218,8 @@ export function LandingPage() {
         </section>
 
         {/* === FEATURES === */}
-        <section className="max-w-7xl mx-auto px-6 pb-20">
-          <div className="relative border border-ink/10 rounded-3xl p-8 md:p-12 bg-ink/5 overflow-hidden">
+        <section className="max-w-7xl mx-auto px-6 pb-32">
+          <div className="relative border border-navy/10 rounded-3xl p-10 md:p-16 bg-gradient-to-br from-navy/[0.02] to-burgundy/[0.03] overflow-hidden">
             <motion.div
               variants={stagger}
               initial="hidden"
@@ -222,13 +228,13 @@ export function LandingPage() {
               className="relative grid grid-cols-1 md:grid-cols-3 gap-8"
             >
               {features.map((f) => (
-                <motion.div key={f.title} variants={fadeUp} className="group flex gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-ink/10 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-all duration-300">
-                    <f.icon className="w-4 h-4 text-ink" />
+                <motion.div key={f.title} variants={fadeUp} className="group flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-burgundy/10 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-all duration-300">
+                    <f.icon className="w-5 h-5 text-burgundy" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-ink mb-1 group-hover:text-ink transition-colors">{f.title}</h4>
-                    <p className="text-xs text-ink/60 leading-relaxed">{f.desc}</p>
+                    <h4 className="font-semibold text-navy mb-1 group-hover:text-burgundy transition-colors">{f.title}</h4>
+                    <p className="text-sm text-navy/60 leading-relaxed">{f.desc}</p>
                   </div>
                 </motion.div>
               ))}
@@ -238,17 +244,19 @@ export function LandingPage() {
       </main>
 
       {/* === FOOTER === */}
-      <footer className="relative z-10 border-t border-ink/10 py-8 md:py-10">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Logo" className="w-7 h-7 object-contain" />
-            <span className="text-sm font-semibold text-ink/70">
-              <span className="text-ink">Capacity</span>
-              <span className="text-ink"> Connect</span>
+      <footer className="relative z-10 border-t border-navy/10 py-10 bg-white">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-navy flex items-center justify-center">
+              <Globe className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm font-semibold">
+              <span className="text-navy">Capacity</span>
+              <span className="text-burgundy"> Connect</span>
             </span>
           </div>
-          <p className="text-xs md:text-sm text-ink/50 text-center md:text-right">
-            Smart India Hackathon 2026 &nbsp;•&nbsp; SIH26075 &nbsp;•&nbsp; Team InnoX
+          <p className="text-sm text-navy/50">
+            Smart India Hackathon 2026 &nbsp;•&nbsp; Problem Statement: SIH26075 &nbsp;•&nbsp; Team InnoX
           </p>
         </div>
       </footer>

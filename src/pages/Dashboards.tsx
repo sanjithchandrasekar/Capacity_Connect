@@ -568,7 +568,7 @@ export function TrainerDashboard() {
               <thead>
                 <tr className="border-b border-ink/10">
                   {['Trainee', 'Course', 'Module', 'Time'].map(h => (
-                    <th key={h} className="text-left text-xs text-ink/60 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
+                    <th key={h} className="text-left text-xs text-ink/60 font-medium px-3 md:px-6 py-3 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -583,9 +583,9 @@ export function TrainerDashboard() {
                         <span className="text-xs md:text-sm text-ink truncate max-w-[100px]">{s.name}</span>
                       </div>
                     </td>
-                    <td className="px-3 md:px-4 py-2.5 text-xs md:text-sm text-ink/70 truncate max-w-[120px]">{s.course}</td>
-                    <td className="px-3 md:px-4 py-2.5 text-xs md:text-sm text-ink/70">{s.module}</td>
-                    <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink/60">{s.time}</td>
+                    <td className="px-3 md:px-6 py-2.5 text-xs md:text-sm text-ink/70 truncate max-w-[120px]">{s.course}</td>
+                    <td className="px-3 md:px-6 py-2.5 text-xs md:text-sm text-ink/70">{s.module}</td>
+                    <td className="px-3 md:px-6 py-2.5 text-[10px] md:text-xs text-ink/60">{s.time}</td>
                   </tr>
                 ))}
               </tbody>
@@ -851,7 +851,7 @@ export function AdminDashboard() {
                         placeholder="Search users..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-ink/5 border border-ink/10 rounded-lg text-ink placeholder:text-ink/60 focus:outline-none focus:border-ink/20 transition-colors"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-wheat/5 border border-wheat/10 rounded-lg text-ink placeholder:text-ink/60 focus:outline-none focus:border-wheat/20 transition-colors"
                       />
                     </div>
                   </div>
@@ -861,15 +861,15 @@ export function AdminDashboard() {
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[600px]">
                         <thead>
-                          <tr className="border-b border-ink/10">
-                            {['Name', 'Email', 'Dept', 'Role', 'Proof', 'Status', 'Actions'].map(h => (
-                              <th key={h} className="text-left text-xs text-ink/60 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
+                          <tr className="border-b border-wheat/10">
+                            {['Name', 'Email', 'Department', 'Role', 'Proof', 'Status', 'Actions'].map(h => (
+                              <th key={h} className="text-left text-xs text-ink/60 font-medium px-6 py-3">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.04]">
                           {filteredUsers.length === 0 ? (
-                            <tr><td colSpan={7} className="text-center py-8 text-ink/60 text-sm">
+                            <tr><td colSpan={6} className="text-center py-8 text-ink/60 text-sm">
                               {searchQuery ? 'No users match your search.' : 'No users found.'}
                             </td></tr>
                           ) : filteredUsers.map(u => (
@@ -893,7 +893,7 @@ export function AdminDashboard() {
                                     View
                                   </button>
                                 ) : (
-                                  <span className="text-[10px] text-ink/60">—</span>
+                                  <span className="text-xs text-ink/60">—</span>
                                 )}
                               </td>
                               <td className="px-3 md:px-4 py-3"><StatusBadge status={u.approval_status} /></td>
@@ -971,7 +971,7 @@ export function AdminDashboard() {
                         <thead>
                           <tr className="border-b border-ink/10">
                             {['Time', 'Actor', 'Action', 'Entity', 'Details'].map(h => (
-                              <th key={h} className="text-left text-xs text-ink/60 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
+                              <th key={h} className="text-left text-xs text-ink/60 font-medium px-6 py-3">{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -979,12 +979,12 @@ export function AdminDashboard() {
                           {logs.length === 0 ? (
                             <tr><td colSpan={5} className="text-center py-8 text-ink/60 text-sm">No audit logs found.</td></tr>
                           ) : logs.map(log => (
-                            <tr key={log.id} className="hover:bg-ink/5 transition-colors">
-                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink/60 whitespace-nowrap">{new Date(log.created_at || '').toLocaleString()}</td>
-                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs font-mono text-ink/70">{log.actor_id?.slice(0, 8)}…</td>
-                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink font-medium">{log.action}</td>
-                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink/70">{log.entity_type}</td>
-                              <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs font-mono text-ink/60 max-w-[150px] truncate">{JSON.stringify(log.metadata)}</td>
+                            <tr key={log.id} className="hover:bg-wheat/5 transition-colors">
+                              <td className="px-6 py-3 text-xs text-ink/60 whitespace-nowrap">{new Date(log.created_at || '').toLocaleString()}</td>
+                              <td className="px-6 py-3 text-xs font-mono text-ink/70">{log.actor_id?.slice(0, 8)}…</td>
+                              <td className="px-6 py-3 text-xs text-ink font-medium">{log.action}</td>
+                              <td className="px-6 py-3 text-xs text-ink/70">{log.entity_type}</td>
+                              <td className="px-6 py-3 text-xs font-mono text-ink/60 max-w-xs truncate">{JSON.stringify(log.metadata)}</td>
                             </tr>
                           ))}
                         </tbody>
