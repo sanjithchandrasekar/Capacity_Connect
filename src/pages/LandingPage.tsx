@@ -247,8 +247,8 @@ export function LandingPage() {
       <footer className="relative z-10 border-t border-navy/10 py-10 bg-white">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-navy flex items-center justify-center">
-              <Globe className="w-4 h-4 text-white" />
+            <div className="w-7 h-7 flex items-center justify-center shrink-0">
+              <img src="/logo.png" alt="Capacity Connect" className="w-full h-full object-contain" />
             </div>
             <span className="text-sm font-semibold">
               <span className="text-navy">Capacity</span>
