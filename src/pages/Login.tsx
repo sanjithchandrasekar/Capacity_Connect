@@ -42,7 +42,11 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-white text-midnight flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
+      {/* Decorative ambient gradients */}
+      <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-purple-500/15 via-pink-500/15 to-orange-500/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-orange-500/15 via-pink-500/15 to-purple-500/10 blur-[100px]" />
+
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -54,25 +58,25 @@ export function Login() {
           <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">
             <img src="/logo.png" alt="Logo" className="w-9 h-9 md:w-10 md:h-10 object-contain" />
             <span className="text-base md:text-lg font-bold">
-              <span className="text-obsidian">Capacity</span>
-              <span className="text-teal"> Connect</span>
+              <span className="text-purple-900">Capacity</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500"> Connect</span>
             </span>
           </Link>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-obsidian tracking-tight">Welcome Back</h1>
-          <p className="text-obsidian/60 mt-2 text-sm">Sign in to continue to your dashboard</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-midnight tracking-tight">Welcome Back</h1>
+          <p className="text-midnight/60 mt-2 text-sm">Sign in to continue to your dashboard</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-obsidian/10 rounded-2xl p-6 md:p-8 shadow-xl shadow-obsidian/5">
+        <div className="bg-white/90 backdrop-blur-xl border border-purple-500/15 rounded-2xl p-6 md:p-8 shadow-2xl shadow-purple-500/10">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-obsidian/80 text-sm font-medium">Email Address</Label>
+              <Label htmlFor="email" className="text-midnight/80 text-sm font-medium">Email Address</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="name@example.com"
                 {...register('email')}
-                className={`bg-obsidian/[0.02] border-obsidian/15 text-obsidian placeholder:text-obsidian/40 focus:border-teal h-11 ${errors.email ? 'border-red-500/60' : ''}`}
+                className={`bg-purple-500/[0.03] border-purple-500/20 text-midnight placeholder:text-midnight/40 focus:border-pink-500 h-11 ${errors.email ? 'border-red-500/60' : ''}`}
                 disabled={isLoading}
               />
               {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
@@ -80,8 +84,8 @@ export function Login() {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-obsidian/80 text-sm font-medium">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-obsidian/60 hover:text-teal transition-colors font-medium">
+                <Label htmlFor="password" className="text-midnight/80 text-sm font-medium">Password</Label>
+                <Link to="/forgot-password" className="text-xs text-midnight/60 hover:text-pink-600 transition-colors font-medium">
                   Forgot password?
                 </Link>
               </div>
@@ -91,13 +95,13 @@ export function Login() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   {...register('password')}
-                  className={`bg-obsidian/[0.02] border-obsidian/15 text-obsidian placeholder:text-obsidian/40 focus:border-teal h-11 pr-10 ${errors.password ? 'border-red-500/60' : ''}`}
+                  className={`bg-purple-500/[0.03] border-purple-500/20 text-midnight placeholder:text-midnight/40 focus:border-pink-500 h-11 pr-10 ${errors.password ? 'border-red-500/60' : ''}`}
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-obsidian/50 hover:text-obsidian transition-colors"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-midnight/50 hover:text-midnight transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -108,7 +112,7 @@ export function Login() {
 
             <Button
               type="submit"
-              className="w-full h-11 bg-teal hover:bg-teal/90 text-cream shadow-lg shadow-teal/20 border-0 transition-all font-semibold"
+              className="w-full h-11 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 hover:opacity-95 text-white shadow-lg shadow-pink-500/25 border-0 transition-all font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -120,16 +124,16 @@ export function Login() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-obsidian/60">
+            <p className="text-sm text-midnight/60">
               Don't have an account?{' '}
-              <Link to="/register" className="text-teal hover:text-teal/80 font-semibold transition-colors">
+              <Link to="/register" className="text-pink-600 hover:text-pink-700 font-semibold transition-colors">
                 Create one
               </Link>
             </p>
           </div>
         </div>
 
-        <p className="text-center text-xs text-obsidian/40 mt-6">
+        <p className="text-center text-xs text-midnight/40 mt-6">
           Ministry of Earth Sciences — SIH 2026 &nbsp;•&nbsp; Secure Platform
         </p>
       </motion.div>

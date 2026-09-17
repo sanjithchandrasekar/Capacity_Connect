@@ -4,23 +4,27 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-teal/20",
+  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/20",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-teal text-cream shadow hover:bg-teal/90",
-        teal:
-          "border-transparent bg-teal text-cream shadow hover:bg-teal/90",
-        olive:
-          "border-transparent bg-olive text-cream shadow hover:bg-olive/90",
-        ice:
-          "border-ice-400/40 bg-ice text-obsidian hover:bg-ice-300",
+          "border-transparent bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-sm",
+        gradient:
+          "border-transparent bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-sm",
+        purple:
+          "border-purple-200 bg-purple-50 text-purple-700",
+        pink:
+          "border-pink-200 bg-pink-50 text-pink-700",
+        orange:
+          "border-orange-200 bg-orange-50 text-orange-700",
+        coral:
+          "border-coral-200 bg-coral-50 text-coral-700",
         secondary:
-          "border-transparent bg-teal/10 text-teal hover:bg-teal/20",
+          "border-transparent bg-purple-100 text-purple-800 hover:bg-purple-200",
         destructive:
           "border-transparent bg-red-600 text-white shadow hover:bg-red-700",
-        outline: "border-obsidian/20 text-obsidian",
+        outline: "border-purple-200 text-midnight",
       },
     },
     defaultVariants: {

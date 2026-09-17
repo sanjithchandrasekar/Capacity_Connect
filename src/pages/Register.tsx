@@ -89,10 +89,14 @@ export function Register() {
   }
 
   const inputClass = (hasError: boolean) =>
-    `bg-ink/5 border-ink/10 text-ink placeholder:text-ink/40 focus:border-ink/20 h-11 ${hasError ? 'border-red-500/60' : ''}`
+    `bg-purple-500/[0.03] border-purple-500/20 text-midnight placeholder:text-midnight/40 focus:border-pink-500 h-11 ${hasError ? 'border-red-500/60' : ''}`
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center p-4 md:p-6 py-8 md:py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-white text-midnight flex items-center justify-center p-4 md:p-6 py-8 md:py-12 relative overflow-hidden">
+      {/* Decorative ambient gradients */}
+      <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-purple-500/15 via-pink-500/15 to-orange-500/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-orange-500/15 via-pink-500/15 to-purple-500/10 blur-[100px]" />
+
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -103,31 +107,31 @@ export function Register() {
           <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">
             <img src="/logo.png" alt="Logo" className="w-9 h-9 md:w-10 md:h-10 object-contain" />
             <span className="text-base md:text-lg font-bold">
-              <span className="text-obsidian">Capacity</span>
-              <span className="text-teal"> Connect</span>
+              <span className="text-purple-900">Capacity</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500"> Connect</span>
             </span>
           </Link>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-obsidian tracking-tight">Create Account</h1>
-          <p className="text-obsidian/60 mt-2 text-sm">Join the MoES Capacity Connect platform</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-midnight tracking-tight">Create Account</h1>
+          <p className="text-midnight/60 mt-2 text-sm">Join the MoES Capacity Connect platform</p>
         </div>
 
-        <div className="bg-white border border-obsidian/10 rounded-2xl p-6 md:p-8 shadow-xl shadow-obsidian/5">
+        <div className="bg-white/90 backdrop-blur-xl border border-purple-500/15 rounded-2xl p-6 md:p-8 shadow-2xl shadow-purple-500/10">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
             <div className="space-y-1.5">
-              <Label htmlFor="fullName" className="text-obsidian/80 text-sm font-medium">Full Name</Label>
+              <Label htmlFor="fullName" className="text-midnight/80 text-sm font-medium">Full Name</Label>
               <Input id="fullName" placeholder="John Doe" {...register('fullName')} className={inputClass(!!errors.fullName)} disabled={isLoading} />
               {errors.fullName && <p className="text-xs text-red-600">{errors.fullName.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-obsidian/80 text-sm font-medium">Email Address</Label>
+              <Label htmlFor="email" className="text-midnight/80 text-sm font-medium">Email Address</Label>
               <Input id="email" type="email" placeholder="name@moes.gov.in" {...register('email')} className={inputClass(!!errors.email)} disabled={isLoading} />
               {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="proofFile" className="text-obsidian/80 text-sm font-medium">Proof Document</Label>
+              <Label htmlFor="proofFile" className="text-midnight/80 text-sm font-medium">Proof Document</Label>
               <Input 
                 id="proofFile" 
                 type="file" 
@@ -136,32 +140,32 @@ export function Register() {
                 className={`${inputClass(!!errors.proofFile)} pt-2.5`} 
                 disabled={isLoading} 
               />
-              <p className="text-xs text-obsidian/50">Please upload your ID or employment proof (PDF, JPG, PNG)</p>
+              <p className="text-xs text-midnight/50">Please upload your ID or employment proof (PDF, JPG, PNG)</p>
               {errors.proofFile && <p className="text-xs text-red-600">{errors.proofFile.message as string}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="department" className="text-obsidian/80 text-sm font-medium">Department <span className="text-obsidian/40">(optional)</span></Label>
+                <Label htmlFor="department" className="text-midnight/80 text-sm font-medium">Department <span className="text-midnight/40">(optional)</span></Label>
                 <Input id="department" placeholder="e.g. IMD" {...register('department')} className={inputClass(false)} disabled={isLoading} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="designation" className="text-obsidian/80 text-sm font-medium">Designation <span className="text-obsidian/40">(optional)</span></Label>
+                <Label htmlFor="designation" className="text-midnight/80 text-sm font-medium">Designation <span className="text-midnight/40">(optional)</span></Label>
                 <Input id="designation" placeholder="e.g. Scientist" {...register('designation')} className={inputClass(false)} disabled={isLoading} />
               </div>
             </div>
 
             {/* Notice */}
-            <div className="flex items-start gap-2 p-3 bg-ice border border-ice-400/40 rounded-xl">
-              <CheckCircle className="w-4 h-4 text-teal shrink-0 mt-0.5" />
-              <p className="text-xs text-obsidian/70 leading-relaxed">
-                New accounts are reviewed as <strong className="text-obsidian">Trainee</strong> and require admin approval before full access.
+            <div className="flex items-start gap-2 p-3 bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 border border-pink-500/20 rounded-xl">
+              <CheckCircle className="w-4 h-4 text-pink-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-midnight/70 leading-relaxed">
+                New accounts are reviewed as <strong className="text-purple-900">Trainee</strong> and require admin approval before full access.
               </p>
             </div>
 
             <Button
               type="submit"
-              className="w-full h-11 bg-teal hover:bg-teal/90 text-cream shadow-lg shadow-teal/20 border-0 transition-all font-semibold"
+              className="w-full h-11 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 hover:opacity-95 text-white shadow-lg shadow-pink-500/25 border-0 transition-all font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -173,9 +177,9 @@ export function Register() {
           </form>
 
           <div className="mt-5 text-center">
-            <p className="text-sm text-obsidian/60">
+            <p className="text-sm text-midnight/60">
               Already have an account?{' '}
-              <Link to="/login" className="text-teal hover:text-teal/80 font-semibold transition-colors">Sign in</Link>
+              <Link to="/login" className="text-pink-600 hover:text-pink-700 font-semibold transition-colors">Sign in</Link>
             </p>
           </div>
         </div>

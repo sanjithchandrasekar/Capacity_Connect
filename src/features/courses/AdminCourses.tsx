@@ -130,41 +130,41 @@ export function AdminCourses() {
 
   return (
     <>
-      <Card className="bg-cream border-ink/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-ink">
-            <BookOpen className="h-5 w-5" />
+      <Card className="bg-white border-purple-500/15 rounded-3xl shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-purple-500/10">
+          <CardTitle className="flex items-center gap-2 text-midnight text-base font-bold">
+            <BookOpen className="h-5 w-5 text-purple-600" />
             Course Management
           </CardTitle>
-          <CardDescription className="text-ink/50">Review, approve, publish or archive courses submitted by trainers.</CardDescription>
+          <CardDescription className="text-midnight/50 text-xs">Review, approve, publish or archive courses submitted by trainers.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-5 h-5 animate-spin text-ink/40" />
+              <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
             </div>
           ) : courses.length === 0 ? (
-            <p className="text-ink/40 text-sm text-center py-12">No courses found.</p>
+            <p className="text-midnight/40 text-sm text-center py-12">No courses found.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {courses.map(course => {
                 const trainer = (course as any).trainer
                 return (
-                  <div key={course.id} className="flex items-center gap-4 p-4 rounded-xl bg-cream border border-ink/10 hover:border-ink/20 transition-all">
+                  <div key={course.id} className="flex items-center gap-4 p-4 rounded-2xl bg-purple-50/40 hover:bg-purple-50/80 border border-purple-500/10 hover:border-purple-500/20 transition-all">
                     {/* Thumbnail */}
-                    <div className="w-20 h-16 rounded-lg bg-ink/10 border border-ink/10 overflow-hidden shrink-0">
-                      <Thumbnail path={course.thumbnail_path} alt={course.title} fallbackIcon={<BookOpen className="w-6 h-6 text-ink/30" />} />
+                    <div className="w-20 h-16 rounded-xl bg-purple-100 border border-purple-200/60 overflow-hidden shrink-0">
+                      <Thumbnail path={course.thumbnail_path} alt={course.title} fallbackIcon={<BookOpen className="w-6 h-6 text-purple-400" />} />
                     </div>
                     
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-semibold text-ink truncate">{course.title}</h3>
+                        <h3 className="text-sm font-bold text-midnight truncate">{course.title}</h3>
                         <StatusBadge status={course.status} />
                       </div>
-                      <p className="text-xs text-ink/50 line-clamp-1 mb-1">{course.description}</p>
-                      <div className="flex items-center gap-3 text-[10px] text-ink/40">
-                        <span className="capitalize">{course.course_type}</span>
+                      <p className="text-xs text-midnight/60 line-clamp-1 mb-1.5">{course.description || 'No description provided.'}</p>
+                      <div className="flex items-center gap-3 text-[11px] text-midnight/50 font-medium">
+                        <span className="capitalize px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">{course.course_type}</span>
                         <span>{course.department || 'General'}</span>
                         {trainer?.full_name && <span>by {trainer.full_name}</span>}
                         <span>{course.created_at ? formatDistanceToNow(new Date(course.created_at), { addSuffix: true }) : ''}</span>
@@ -177,19 +177,19 @@ export function AdminCourses() {
                         size="sm"
                         variant="outline"
                         onClick={() => openCourseDetail(course)}
-                        className="border-ink/20 text-ink h-8"
+                        className="border-purple-200 text-purple-900 hover:bg-purple-50 h-8 rounded-xl text-xs font-semibold"
                       >
                         <Eye className="w-3.5 h-3.5 mr-1" /> View
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-ink/60">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-midnight/60 rounded-xl hover:bg-purple-50">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-cream border-ink/10">
+                        <DropdownMenuContent align="end" className="bg-white border-purple-500/15 rounded-2xl shadow-lg">
                           {course.status === 'pending_review' && (
-                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')} className="text-green-700">
+                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')} className="text-emerald-700 font-medium">
                               Approve & Publish
                             </DropdownMenuItem>
                           )}
@@ -199,7 +199,7 @@ export function AdminCourses() {
                             </DropdownMenuItem>
                           )}
                           {course.status === 'published' && (
-                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'archived')} className="text-red-600">
+                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'archived')} className="text-rose-600">
                               Archive
                             </DropdownMenuItem>
                           )}
@@ -226,26 +226,26 @@ export function AdminCourses() {
 
       {/* Course Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-cream border-ink/10">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-white border-purple-500/15 rounded-3xl shadow-2xl">
           {selectedCourse && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-ink flex items-center gap-2">
-                  <BookOpen className="w-5 h-5" />
+                <DialogTitle className="text-midnight flex items-center gap-2 font-bold">
+                  <BookOpen className="w-5 h-5 text-purple-600" />
                   Course Details
                 </DialogTitle>
               </DialogHeader>
 
               {detailLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-5 h-5 animate-spin text-ink/40" />
+                  <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
                 </div>
               ) : (
                 <div className="space-y-5">
                   {/* Thumbnail + Basic Info */}
                   <div className="flex gap-4">
                     {selectedCourse.thumbnail_path && (
-                      <div className="w-32 h-24 rounded-lg bg-ink/10 border border-ink/10 overflow-hidden shrink-0">
+                      <div className="w-32 h-24 rounded-2xl bg-purple-100 border border-purple-200/60 overflow-hidden shrink-0">
                         <Thumbnail path={selectedCourse.thumbnail_path} alt={selectedCourse.title} />
                       </div>
                     )}

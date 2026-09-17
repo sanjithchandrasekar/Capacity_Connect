@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { DashboardShell } from '@/pages/Dashboards'
-import { Compass, BookOpen, Clock, Search, BookMarked, User } from 'lucide-react'
+import { Compass, BookOpen, Clock, Search, BookMarked, User, ArrowRight, Sparkles, Filter, CheckCircle2 } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 
 const fadeUp = {
@@ -13,8 +13,11 @@ const fadeUp = {
 }
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }
 
+const categories = ['All', 'Standard', 'Scenario']
+
 export function TraineeCourseCatalog() {
   const [searchQuery, setSearchQuery] = React.useState('')
+  const [selectedCategory, setSelectedCategory] = React.useState('All')
 
   const { data: courses, isLoading } = useQuery({
     queryKey: ['published_courses'],
@@ -35,15 +38,21 @@ export function TraineeCourseCatalog() {
 
   const filteredCourses = React.useMemo(() => {
     if (!courses) return []
-    if (!searchQuery.trim()) return courses
-    const q = searchQuery.toLowerCase()
-    return courses.filter((course: any) =>
-      course.title?.toLowerCase().includes(q) ||
-      course.description?.toLowerCase().includes(q) ||
-      course.course_type?.toLowerCase().includes(q) ||
-      course.trainer?.full_name?.toLowerCase().includes(q)
-    )
-  }, [courses, searchQuery])
+    let list = courses
+    if (selectedCategory !== 'All') {
+      list = list.filter((c: any) => c.course_type?.toLowerCase() === selectedCategory.toLowerCase())
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      list = list.filter((course: any) =>
+        course.title?.toLowerCase().includes(q) ||
+        course.description?.toLowerCase().includes(q) ||
+        course.course_type?.toLowerCase().includes(q) ||
+        course.trainer?.full_name?.toLowerCase().includes(q)
+      )
+    }
+    return list
+  }, [courses, searchQuery, selectedCategory])
 
   return (
     <DashboardShell
@@ -56,68 +65,130 @@ export function TraineeCourseCatalog() {
       ]}
     >
       <div className="max-w-6xl space-y-6">
-        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex items-center justify-between">
+        {/* Header & Search Bar */}
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/15 shadow-sm">
           <div>
-            <h2 className="text-xl font-bold text-ink mb-1">Available Courses</h2>
-            <p className="text-ink/60 text-sm">Discover and enroll in new training programs.</p>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-orange-500" /> Catalog
+              </span>
+              <span className="text-xs text-midnight/50 font-medium">
+                {filteredCourses.length} {filteredCourses.length === 1 ? 'Program' : 'Programs'} available
+              </span>
+            </div>
+            <h2 className="text-2xl font-extrabold text-midnight tracking-tight">Available Courses</h2>
+            <p className="text-midnight/60 text-sm">Discover and enroll in high-impact MoES competency tracks.</p>
           </div>
           
-          <div className="relative w-64">
-            <Search className="w-4 h-4 text-ink/40 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Search courses..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-ink/5 border border-ink/10 rounded-xl pl-9 pr-4 py-2 text-sm text-ink placeholder-ink/40 focus:outline-none focus:border-ink/20 transition-colors"
-            />
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                placeholder="Search courses, trainers..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-purple-50/50 border border-purple-200 rounded-2xl pl-10 pr-4 py-2.5 text-sm text-midnight placeholder-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-500/20 transition-all shadow-sm"
+              />
+            </div>
           </div>
         </motion.div>
 
+        {/* Category Pills */}
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex items-center gap-2 overflow-x-auto pb-1">
+          {categories.map(cat => {
+            const isSelected = selectedCategory === cat
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap ${
+                  isSelected
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-md shadow-pink-500/25 scale-105'
+                    : 'bg-white border border-purple-200 text-midnight/70 hover:text-purple-700 hover:bg-purple-50'
+                }`}
+              >
+                {cat === 'All' ? 'All Courses' : `${cat} Courses`}
+              </button>
+            )
+          })}
+        </motion.div>
+
+        {/* Course Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-[300px] bg-ink/5 animate-pulse rounded-2xl border border-ink/10" />
+              <div key={i} className="h-80 bg-purple-500/5 animate-pulse rounded-3xl border border-purple-500/10" />
             ))}
           </div>
         ) : filteredCourses.length === 0 ? (
-          <div className="p-12 text-center bg-cream border border-ink/10 rounded-2xl">
-            <div className="w-16 h-16 bg-ink/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Compass className="w-8 h-8 text-ink/40" />
+          <div className="p-16 text-center bg-white border border-purple-500/15 rounded-3xl shadow-sm">
+            <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-purple-100">
+              <Compass className="w-8 h-8 text-purple-600" />
             </div>
-            <h3 className="text-lg font-medium text-ink mb-2">{searchQuery ? 'No Results Found' : 'No Courses Available'}</h3>
-            <p className="text-ink/60 text-sm">{searchQuery ? 'Try a different search term.' : 'Check back later for new published courses.'}</p>
+            <h3 className="text-lg font-bold text-midnight mb-1">{searchQuery ? 'No Matching Courses Found' : 'No Courses Available'}</h3>
+            <p className="text-midnight/60 text-sm max-w-sm mx-auto">{searchQuery ? 'Try clearing your filters or searching for different keywords.' : 'Check back shortly for newly published training programs.'}</p>
           </div>
         ) : (
           <motion.div variants={stagger} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCourses.map((course: any) => (
-              <motion.div key={course.id} variants={fadeUp} className="group flex flex-col bg-cream hover:bg-ink/5 border border-ink/10 hover:border-ink/20 rounded-2xl overflow-hidden transition-all duration-300">
-                {/* Thumbnail */}
-                <div className="h-40 bg-ink/10 border-b border-ink/10 relative overflow-hidden">
-                  <Thumbnail path={course.thumbnail_path} alt={course.title} className="opacity-80 group-hover:opacity-100 transition-opacity" />
-                  <div className="absolute top-3 left-3 bg-ink backdrop-blur-md px-2 py-1 rounded text-[10px] font-semibold text-cream uppercase tracking-wider border border-ink/10">
-                    {course.course_type}
+              <motion.div 
+                key={course.id} 
+                variants={fadeUp} 
+                className="group flex flex-col bg-white hover:bg-gradient-to-b hover:from-white hover:to-purple-50/30 border border-purple-500/15 hover:border-pink-500/40 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-pink-500/10 transition-all duration-300 hover:-translate-y-1.5"
+              >
+                {/* Thumbnail Header */}
+                <div className="h-44 relative overflow-hidden bg-purple-100">
+                  <Thumbnail path={course.thumbnail_path} alt={course.title} type={course.course_type} />
+                  
+                  {/* Top Badges Overlay */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                    <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-purple-900 uppercase tracking-wider border border-white/40 shadow-sm">
+                      {course.course_type || 'Standard'}
+                    </span>
+                    <span className="bg-midnight/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-medium text-white flex items-center gap-1 shadow-sm">
+                      <Clock className="w-3 h-3 text-orange-400" />
+                      <span>{course.duration_minutes ? `${course.duration_minutes}m` : 'Self-paced'}</span>
+                    </span>
                   </div>
                 </div>
 
-                <div className="p-5 flex-1 flex flex-col">
-                  <h3 className="text-lg font-bold text-ink mb-2 group-hover:text-ink transition-colors line-clamp-1">{course.title}</h3>
-                  <p className="text-sm text-ink/60 mb-4 line-clamp-2 flex-1">{course.description || 'No description provided.'}</p>
-                  
-                  <div className="flex items-center gap-4 text-xs text-ink/50 mb-5">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{course.duration_minutes ? `${course.duration_minutes}m` : 'Self-paced'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5" />
-                      <span className="truncate max-w-[100px]">{course.trainer?.full_name || 'Unknown'}</span>
-                    </div>
+                {/* Card Content */}
+                <div className="p-6 flex-1 flex flex-col">
+                  <div className="flex items-center gap-2 text-xs text-purple-600 font-semibold mb-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-pink-500" />
+                    <span>MoES Training Module</span>
                   </div>
 
+                  <h3 className="text-lg font-bold text-midnight mb-2 group-hover:text-purple-700 transition-colors line-clamp-1">
+                    {course.title}
+                  </h3>
+                  
+                  <p className="text-xs text-midnight/60 mb-5 line-clamp-2 leading-relaxed flex-1">
+                    {course.description || 'Comprehensive training module designed to enhance core competencies.'}
+                  </p>
+                  
+                  {/* Instructor row */}
+                  <div className="flex items-center justify-between pt-3 border-t border-purple-500/10 text-xs text-midnight/70 mb-5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                        {course.trainer?.full_name?.[0]?.toUpperCase() ?? 'T'}
+                      </div>
+                      <span className="truncate max-w-[130px] font-medium text-midnight/80">
+                        {course.trainer?.full_name || 'Assigned Trainer'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                      Verified
+                    </span>
+                  </div>
+
+                  {/* Action Button */}
                   <Link to={`/trainee/courses/${course.id}`} className="w-full">
-                    <button className="w-full py-2.5 rounded-xl bg-ink/5 hover:bg-ink border border-ink/10 hover:border-transparent text-sm font-medium text-ink hover:text-cream transition-all">
-                      View Details
+                    <button className="w-full py-2.5 rounded-2xl bg-purple-50 group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:via-pink-500 group-hover:to-orange-500 text-purple-900 group-hover:text-white border border-purple-200 group-hover:border-transparent text-sm font-semibold transition-all duration-300 shadow-none group-hover:shadow-md group-hover:shadow-pink-500/25 flex items-center justify-center gap-1.5">
+                      <span>View Details</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </button>
                   </Link>
                 </div>

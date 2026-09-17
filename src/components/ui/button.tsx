@@ -10,19 +10,25 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-teal text-cream shadow hover:bg-teal/90",
+          "bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/25 hover:opacity-95 hover:shadow-lg transition-all",
         primary:
-          "bg-teal text-cream shadow-md shadow-teal/20 hover:bg-teal/90",
-        olive:
-          "bg-olive text-cream shadow-md shadow-olive/20 hover:bg-olive/90",
+          "bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/25 hover:opacity-95 transition-all",
+        purple:
+          "bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-600/25 transition-all",
+        pink:
+          "bg-pink-500 hover:bg-pink-600 text-white shadow-md shadow-pink-500/25 transition-all",
+        orange:
+          "bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/25 transition-all",
+        coral:
+          "bg-coral-500 hover:bg-coral-600 text-white shadow-md shadow-coral-500/25 transition-all",
         destructive:
-          "bg-red-600 text-white shadow-sm hover:bg-red-700",
+          "bg-red-600 text-white shadow-sm hover:bg-red-700 transition-all",
         outline:
-          "border border-obsidian/20 bg-transparent shadow-sm hover:bg-obsidian/5 text-obsidian",
+          "border border-purple-500/20 bg-white/90 shadow-sm hover:bg-purple-50 hover:border-purple-500/40 text-midnight transition-all",
         secondary:
-          "bg-ice text-obsidian shadow-sm hover:bg-ice-300",
-        ghost: "hover:bg-obsidian/5 hover:text-obsidian",
-        link: "text-teal underline-offset-4 hover:underline",
+          "bg-purple-500/10 text-purple-700 hover:bg-purple-500/15 border border-purple-500/20 transition-all",
+        ghost: "hover:bg-purple-50 hover:text-purple-600 text-midnight/80 transition-all",
+        link: "text-pink-600 underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",
