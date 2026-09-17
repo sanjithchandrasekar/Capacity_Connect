@@ -143,10 +143,10 @@ export function LandingPage() {
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/register">
                 <Button size="lg" className="group relative h-14 px-10 text-base font-semibold bg-teal hover:bg-teal/90 text-cream shadow-xl shadow-teal/25 border-0 hover:-translate-y-0.5 transition-all duration-300 rounded-xl overflow-hidden">
-                    <span className="relative z-10 flex items-center gap-2">
-                      Join the Platform
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </span>
+                  <span className="relative z-10 flex items-center gap-2">
+                    Join the Platform
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </span>
                 </Button>
               </Link>
               <Link to="/login">
@@ -247,8 +247,8 @@ export function LandingPage() {
       <footer className="relative z-10 border-t border-obsidian/10 py-10 bg-cream">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-obsidian flex items-center justify-center">
-              <Globe className="w-4 h-4 text-cream" />
+            <div className="w-7 h-7 flex items-center justify-center shrink-0">
+              <img src="/logo.png" alt="Capacity Connect" className="w-full h-full object-contain" />
             </div>
             <span className="text-sm font-semibold">
               <span className="text-obsidian">Capacity</span>
