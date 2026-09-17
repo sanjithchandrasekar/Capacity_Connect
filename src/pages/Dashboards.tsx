@@ -50,10 +50,10 @@ export function DashboardShell({
   }
 
   const roleColor: Record<string, string> = {
-    admin: 'bg-ink/10 text-ink border-ink/20',
-    super_admin: 'bg-ink/5 text-ink/60 border-ink/10',
-    trainer: 'bg-ink/10 text-ink border-ink/20',
-    trainee: 'bg-ink/10 text-ink border-ink/20',
+    admin: 'bg-olive/15 text-olive border-olive/30',
+    super_admin: 'bg-teal/15 text-teal border-teal/30',
+    trainer: 'bg-ice text-obsidian border-ice-400/40',
+    trainee: 'bg-teal/10 text-teal border-teal/20',
   }
   const statusColor: Record<string, string> = {
     approved: 'bg-green-50 text-green-700 border-green-200',
@@ -65,7 +65,7 @@ export function DashboardShell({
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="h-16 flex items-center px-5 border-b border-ink/10">
+      <div className="h-16 flex items-center px-5 border-b border-obsidian/10">
         <Link to="/" className="flex items-center gap-2.5">
           <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain shrink-0" />
           {(!sidebarCollapsed || mobileOpen) && (
@@ -74,8 +74,8 @@ export function DashboardShell({
               animate={{ opacity: 1, x: 0 }}
               className="text-sm font-bold whitespace-nowrap"
             >
-              <span className="text-ink">Capacity</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-ink to-ink/70"> Connect</span>
+              <span className="text-obsidian">Capacity</span>
+              <span className="text-teal"> Connect</span>
             </motion.span>
           )}
         </Link>

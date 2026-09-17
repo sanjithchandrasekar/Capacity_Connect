@@ -85,19 +85,19 @@ export function SetupPassword() {
           <div className="inline-flex items-center gap-2.5 mb-6">
             <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
             <span className="text-lg font-bold">
-              <span className="text-ink">Capacity</span>
-              <span className="text-ink"> Connect</span>
+              <span className="text-obsidian">Capacity</span>
+              <span className="text-teal"> Connect</span>
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold text-ink tracking-tight">Set up Password</h1>
-          <p className="text-ink/60 mt-2 text-sm">Your account has been approved!</p>
+          <h1 className="text-3xl font-extrabold text-obsidian tracking-tight">Set up Password</h1>
+          <p className="text-obsidian/60 mt-2 text-sm">Your account has been approved!</p>
         </div>
 
-        <div className="bg-cream border border-ink/10 rounded-2xl p-8 shadow-sm">
+        <div className="bg-cream border border-obsidian/10 rounded-2xl p-8 shadow-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-ink/70 text-sm">New Password</Label>
+              <Label htmlFor="password" className="text-obsidian/70 text-sm">New Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -107,7 +107,7 @@ export function SetupPassword() {
                   className={`${inputClass(!!errors.password)} pr-10`}
                   disabled={isLoading}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-ink/50 hover:text-ink transition-colors" tabIndex={-1}>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-obsidian/50 hover:text-obsidian transition-colors" tabIndex={-1}>
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -115,14 +115,14 @@ export function SetupPassword() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" className="text-ink/70 text-sm">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-obsidian/70 text-sm">Confirm Password</Label>
               <Input id="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...register('confirmPassword')} className={inputClass(!!errors.confirmPassword)} disabled={isLoading} />
               {errors.confirmPassword && <p className="text-xs text-red-600">{errors.confirmPassword.message}</p>}
             </div>
 
             <Button
               type="submit"
-              className="w-full h-11 bg-ink hover:bg-ink/90 text-cream border-0 transition-all font-semibold mt-4"
+              className="w-full h-11 bg-teal hover:bg-teal/90 text-cream border-0 transition-all font-semibold mt-4 shadow-md shadow-teal/20"
               disabled={isLoading}
             >
               {isLoading ? (

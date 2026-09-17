@@ -47,8 +47,8 @@ export function ForgotPassword() {
           <Link to="/" className="inline-flex items-center gap-2.5 mb-6">
             <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
             <span className="text-lg font-bold">
-              <span className="text-ink">Capacity</span>
-              <span className="text-ink"> Connect</span>
+              <span className="text-obsidian">Capacity</span>
+              <span className="text-teal"> Connect</span>
             </span>
           </Link>
           <h1 className="text-3xl font-extrabold text-ink tracking-tight">Reset Password</h1>
