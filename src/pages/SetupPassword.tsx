@@ -93,8 +93,8 @@ export function SetupPassword() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500"> Connect</span>
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold text-midnight tracking-tight">Set up Password</h1>
-          <p className="text-midnight/60 mt-2 text-sm">Your account has been approved!</p>
+          <h1 className="text-3xl font-extrabold text-midnight tracking-tight">Set New Password</h1>
+          <p className="text-midnight/60 mt-2 text-sm">Please enter a new password for your account.</p>
         </div>
 
         <div className="bg-white/90 backdrop-blur-xl border border-purple-500/15 rounded-2xl p-8 shadow-2xl shadow-purple-500/10">

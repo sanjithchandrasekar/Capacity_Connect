@@ -44,6 +44,19 @@ export function DashboardShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  const handleResetPassword = async () => {
+    if (!profile?.email) return;
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+        redirectTo: `${window.location.origin}/setup-password`,
+      });
+      if (error) throw error;
+      toast.success('Secure password reset email sent! Please check your inbox.');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to send reset email.');
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
@@ -214,6 +227,13 @@ export function DashboardShell({
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-pink-500 rounded-full" />
             </button>
+            <button 
+              onClick={handleResetPassword}
+              title="Reset Password"
+              className="p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all"
+            >
+              <Shield className="w-4 h-4" />
+            </button>
             <button className="p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all">
               <Settings className="w-4 h-4" />
             </button>
@@ -334,6 +354,19 @@ function ProgressBar({ value, max = 100, color = 'from-purple-600 via-pink-500 t
 /* ─── Trainee Dashboard ─────────────────────────────────────── */
 export function TraineeDashboard() {
   const { profile } = useAuth()
+
+  const handleResetPassword = async () => {
+    if (!profile?.email) return;
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+        redirectTo: `${window.location.origin}/setup-password`,
+      });
+      if (error) throw error;
+      toast.success('Secure password reset email sent! Please check your inbox.');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to send reset email.');
+    }
+  };
 
   const stats = [
     { label: 'Enrolled Courses', value: '3', icon: BookOpen, gradient: 'from-purple-600 to-purple-800', badgeText: 'Active', subtext: '+1 this month' },
@@ -519,7 +552,16 @@ export function TraineeDashboard() {
               <span className="text-xs text-midnight/60">Verification Status:</span>
               <StatusBadge status={profile?.approval_status ?? 'pending'} />
             </div>
-            <span className="text-xs text-midnight/50">MoES Capacity Connect</span>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={handleResetPassword}
+                className="text-xs font-semibold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-purple-200/60"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                Reset Password
+              </button>
+              <span className="text-xs text-midnight/50">MoES Capacity Connect</span>
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -771,11 +813,9 @@ export function AdminDashboard() {
 
   const handleRejectUser = async (userId: string) => {
     try {
-      const user = users.find(u => u.id === userId)
-      if (user?.proof_path) {
-        await supabase.storage.from('proofs').remove([user.proof_path])
-      }
-
+      // For MoES, we deliberately DO NOT delete the proof file from storage here 
+      // in order to preserve the audit trail.
+      
       const { error } = await supabase.rpc('admin_delete_user', {
         target_user_id: userId,
       })
@@ -785,6 +825,22 @@ export function AdminDashboard() {
       fetchData()
     } catch (e) {
       toast.error('Failed to reject user. Check Supabase connection.')
+      console.error(e)
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) return;
+    try {
+      const { error } = await supabase.rpc('admin_delete_user', {
+        target_user_id: userId,
+      })
+      if (error) throw error
+      
+      toast.success('User account completely deleted.')
+      fetchData()
+    } catch (e) {
+      toast.error('Failed to delete user. Check Supabase connection.')
       console.error(e)
     }
   }
@@ -987,9 +1043,15 @@ export function AdminDashboard() {
                               </td>
                               <td className="px-3 py-3">
                                 {u.proof_path ? (
-                                  <button onClick={() => handleViewProof(u.proof_path!)} className="text-xs px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-bold transition-all">
-                                    View
-                                  </button>
+                                  <div className="flex flex-col gap-1.5">
+                                    <div className="flex items-center gap-1 text-[10px] text-midnight/60 bg-purple-50/50 px-1.5 py-0.5 rounded border border-purple-500/10 w-fit" title="Securely stored in MoES Cloud">
+                                      <Shield className="w-3 h-3 text-emerald-600" />
+                                      <span className="truncate max-w-[100px]">{u.proof_path.split('/').pop()}</span>
+                                    </div>
+                                    <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-bold transition-all w-fit">
+                                      View Document
+                                    </button>
+                                  </div>
                                 ) : (
                                   <span className="text-xs text-midnight/40">—</span>
                                 )}
@@ -1027,6 +1089,15 @@ export function AdminDashboard() {
                                       className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold transition-all"
                                     >
                                       Suspend
+                                    </button>
+                                  )}
+                                  {u.approval_status !== 'pending' && (
+                                    <button 
+                                      onClick={() => handleDeleteUser(u.id)} 
+                                      className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all"
+                                      title="Permanently Delete Account"
+                                    >
+                                      Delete
                                     </button>
                                   )}
                                   {isSuperAdmin && u.approval_status === 'approved' && u.role !== 'admin' && u.role !== 'super_admin' && (
