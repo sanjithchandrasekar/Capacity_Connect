@@ -3,7 +3,14 @@ import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/integrations/supabase/types'
 
-export type Profile = Database['public']['Tables']['profiles']['Row']
+export type Profile = Database['public']['Tables']['profiles']['Row'] & {
+  admin_level?: string | null;
+  permissions_granted_at?: string | null;
+  expertise_areas?: string[] | null;
+  years_of_experience?: number | null;
+  bio?: string | null;
+  learning_goals?: string | null;
+}
 
 type AuthContextType = {
   session: Session | null
@@ -27,18 +34,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: baseProfile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
       
-      if (error) {
+      if (error || !baseProfile) {
         console.error('Failed to load profile:', error)
         setProfile(null)
-      } else {
-        setProfile(data)
+        return
       }
+
+      let extendedData = {}
+      if (baseProfile.role === 'admin' || baseProfile.role === 'super_admin') {
+        const { data } = await (supabase.from as any)('admins').select('*').eq('id', userId).single()
+        if (data) extendedData = data
+      } else if (baseProfile.role === 'trainer') {
+        const { data } = await (supabase.from as any)('trainers').select('*').eq('id', userId).single()
+        if (data) extendedData = data
+      } else if (baseProfile.role === 'trainee') {
+        const { data } = await (supabase.from as any)('trainees').select('*').eq('id', userId).single()
+        if (data) extendedData = data
+      }
+
+      setProfile({ ...baseProfile, ...extendedData } as Profile)
     } catch (e) {
       console.error('Unexpected error loading profile:', e)
       setProfile(null)

@@ -875,15 +875,16 @@ export function AdminDashboard() {
     }
   }
 
+  const isSuperAdmin = profile?.role === 'super_admin'
+
   const tabs = [
     { key: 'trainees', label: 'Trainees', icon: Users },
     { key: 'trainers', label: 'Trainers', icon: Users },
-    { key: 'admins', label: 'Admins', icon: Shield },
+    ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins', icon: Shield }] : []),
     { key: 'courses', label: 'Courses', icon: BookOpen },
-    { key: 'logs', label: 'Audit Logs', icon: BarChart3 },
+    ...(isSuperAdmin ? [{ key: 'logs', label: 'Audit Logs', icon: BarChart3 }] : []),
   ] as const
 
-  const isSuperAdmin = profile?.role === 'super_admin'
   const pendingCount = users.filter(u => u.approval_status === 'pending').length
 
   const stats = [
@@ -902,10 +903,10 @@ export function AdminDashboard() {
 
   return (
     <DashboardShell
-      title="Admin Dashboard"
+      title={isSuperAdmin ? "Super Admin Dashboard" : "Admin Dashboard"}
       icon={Shield}
       navLinks={[
-        { to: '/admin', label: 'Overview', icon: BarChart3, badge: pendingCount },
+        { to: isSuperAdmin ? '/super-admin' : '/admin', label: 'Overview', icon: BarChart3, badge: pendingCount },
       ]}
     >
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-6xl">
@@ -922,7 +923,7 @@ export function AdminDashboard() {
                 <span>Administration & Governance</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2">
-                Administrator Control Center
+                {isSuperAdmin ? "Super Administrator Control Center" : "Administrator Control Center"}
               </h2>
               <p className="text-white/80 text-sm">
                 {pendingCount > 0
@@ -955,7 +956,7 @@ export function AdminDashboard() {
               {tabs.map(tab => (
                 <button
                   key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => setActiveTab(tab.key as any)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap ${
                     activeTab === tab.key
                       ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/25 scale-[1.02]'
@@ -1208,4 +1209,8 @@ export function AdminDashboard() {
       </motion.div>
     </DashboardShell>
   )
+}
+
+export function SuperAdminDashboard() {
+  return <AdminDashboard />
 }

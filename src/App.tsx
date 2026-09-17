@@ -14,7 +14,7 @@ import { AccountSuspendedPage } from './pages/AccountSuspendedPage'
 import { AccessDeniedPage } from './pages/AccessDeniedPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { SupabaseTest } from './pages/SupabaseTest'
-import { TraineeDashboard, AdminDashboard } from './pages/Dashboards'
+import { TraineeDashboard, AdminDashboard, SuperAdminDashboard } from './pages/Dashboards'
 import { TraineeCourseCatalog } from './features/courses/TraineeCourseCatalog'
 import { TraineeCourseDetails } from './features/courses/TraineeCourseDetails'
 import { TraineeMyLearning } from './features/courses/TraineeMyLearning'
@@ -36,7 +36,8 @@ function DashboardRedirect() {
   const { session, profile, loading } = useAuth()
   if (loading) return <div className="min-h-screen bg-cream flex items-center justify-center"><div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin" /></div>
   if (!session) return <Navigate to="/login" replace />
-  if (profile?.role === 'admin' || profile?.role === 'super_admin') return <Navigate to="/admin" replace />
+  if (profile?.role === 'super_admin') return <Navigate to="/super-admin" replace />
+  if (profile?.role === 'admin') return <Navigate to="/admin" replace />
   if (profile?.role === 'trainer') return <Navigate to="/trainer" replace />
   return <Navigate to="/trainee" replace />
 }
@@ -92,6 +93,11 @@ export default function App() {
                 {/* Admin routes */}
                 <Route element={<RoleRoute allowedRoles={['admin', 'super_admin']} />}>
                   <Route path="/admin" element={<AdminDashboard />} />
+                </Route>
+
+                {/* Super Admin routes */}
+                <Route element={<RoleRoute allowedRoles={['super_admin']} />}>
+                  <Route path="/super-admin" element={<SuperAdminDashboard />} />
                 </Route>
 
               </Route>
