@@ -23,6 +23,7 @@ export interface Database {
           years_of_experience: number | null
           qualifications: string | null
           availability: string | null
+          proof_path: string | null
           created_at: string
           updated_at: string
         }
@@ -39,6 +40,7 @@ export interface Database {
           years_of_experience?: number | null
           qualifications?: string | null
           availability?: string | null
+          proof_path?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -55,6 +57,7 @@ export interface Database {
           years_of_experience?: number | null
           qualifications?: string | null
           availability?: string | null
+          proof_path?: string | null
           created_at?: string
           updated_at?: string
         }

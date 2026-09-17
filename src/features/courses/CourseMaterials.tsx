@@ -223,7 +223,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
         if (signedUrlData) {
           const response = await fetch(signedUrlData.signedUrl)
           const blob = await response.blob()
-          const file = new File([blob], material.file_name, { type: material.mime_type })
+          const file = new window.File([blob], material.file_name, { type: material.mime_type })
           content = await extractTextFromFile(file, material.mime_type)
         }
       } else if (material.url) {
@@ -275,6 +275,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
             course_id: courseId,
             title: 'Course Assessment',
             passing_score: 60,
+            created_by: user!.id,
           })
           .select('id')
           .single()

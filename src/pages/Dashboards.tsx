@@ -620,7 +620,7 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<Profile[]>([])
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'users' | 'courses' | 'logs' | 'staff'>('users')
+  const [activeTab, setActiveTab] = useState<'trainees' | 'trainers' | 'admins' | 'courses' | 'logs'>('trainees')
   const [searchQuery, setSearchQuery] = useState('')
 
   const fetchData = async () => {

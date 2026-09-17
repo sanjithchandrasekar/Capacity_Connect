@@ -148,7 +148,7 @@ export function AdminCourses() {
           ) : (
             <div className="space-y-3">
               {courses.map(course => {
-                const trainer = course.trainer as any
+                const trainer = (course as any).trainer
                 return (
                   <div key={course.id} className="flex items-center gap-4 p-4 rounded-xl bg-cream border border-ink/10 hover:border-ink/20 transition-all">
                     {/* Thumbnail */}
@@ -342,7 +342,7 @@ export function AdminCourses() {
                                     variant="ghost"
                                     size="sm"
                                     className="h-7 px-2 text-ink/60 hover:text-ink"
-                                    onClick={() => window.open(mat.url, '_blank')}
+                                    onClick={() => mat.url && window.open(mat.url, '_blank')}
                                   >
                                     <ExternalLink className="w-3.5 h-3.5" />
                                   </Button>
@@ -353,7 +353,7 @@ export function AdminCourses() {
                                     className="h-7 px-2 text-ink/60 hover:text-ink"
                                     onClick={async () => {
                                       try {
-                                        const { data, error } = await supabase.storage.from('materials').createSignedUrl(mat.storage_path)
+                                        const { data, error } = await supabase.storage.from('materials').createSignedUrl(mat.storage_path, 60)
                                         if (error) {
                                           console.error('Signed URL error:', error)
                                           toast.error(`Cannot access file: ${error.message}`)

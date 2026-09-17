@@ -82,14 +82,14 @@ export function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream text-ink overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-cream text-ink font-sans">
 
       {/* === NAVBAR === */}
-      <header className="relative z-20 sticky top-0 border-b border-navy/10 bg-white/90 backdrop-blur-2xl">
+      <header className="sticky top-0 z-50 border-b border-navy/10 bg-white/90 backdrop-blur-2xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-navy flex items-center justify-center shadow-sm shadow-navy/20">
-              <Globe className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 flex items-center justify-center shrink-0">
+              <img src="/logo.png" alt="Capacity Connect" className="w-full h-full object-contain" />
             </div>
             <span className="text-lg font-bold tracking-tight">
               <span className="text-navy">Capacity</span>

@@ -81,7 +81,7 @@ export function CourseEditPage() {
         setCourseSkills(csRes.data)
         setSelectedSkills(csRes.data.map(cs => cs.skill_id))
       }
-      if (matRes.count !== undefined) setMaterialCount(matRes.count)
+      if (matRes.count !== null && matRes.count !== undefined) setMaterialCount(matRes.count)
     } catch (err) {
       toast.error('Failed to load course')
       navigate('/trainer/courses')
