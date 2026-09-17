@@ -1,12 +1,18 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Clock, LogOut, Globe } from 'lucide-react'
+import { Clock, LogOut, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export function PendingApprovalPage() {
   const { signOut, profile } = useAuth()
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center p-4 relative overflow-hidden">
@@ -29,14 +35,12 @@ export function PendingApprovalPage() {
             You'll receive access once an admin reviews your registration.
           </p>
           <div className="space-y-3">
-            <Button onClick={signOut} className="w-full h-10 bg-ink/5 hover:bg-ink/10 text-ink border border-ink/10 transition-all">
+            <Button onClick={handleSignOut} className="w-full h-10 bg-ink/5 hover:bg-ink/10 text-ink border border-ink/10 transition-all">
               <LogOut className="w-4 h-4 mr-2" /> Sign Out
             </Button>
-            <Link to="/">
-              <Button variant="ghost" className="w-full text-ink/50 hover:text-ink text-sm">
-                <Globe className="w-4 h-4 mr-2" /> Back to Home
-              </Button>
-            </Link>
+            <Button variant="ghost" onClick={() => navigate('/')} className="w-full text-ink/50 hover:text-ink text-sm">
+              <Home className="w-4 h-4 mr-2" /> Back to Home
+            </Button>
           </div>
         </div>
       </motion.div>

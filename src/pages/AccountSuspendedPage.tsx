@@ -1,12 +1,18 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Ban, LogOut, Globe } from 'lucide-react'
+import { Ban, LogOut, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 export function AccountSuspendedPage() {
   const { signOut } = useAuth()
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="min-h-screen bg-cream flex items-center justify-center p-4 relative overflow-hidden">
@@ -26,14 +32,12 @@ export function AccountSuspendedPage() {
             Please contact support if you believe this is an error.
           </p>
           <div className="space-y-3">
-            <Button onClick={signOut} className="w-full h-10 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-all">
+            <Button onClick={handleSignOut} className="w-full h-10 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-all">
               <LogOut className="w-4 h-4 mr-2" /> Sign Out
             </Button>
-            <Link to="/">
-              <Button variant="ghost" className="w-full text-ink/50 hover:text-ink text-sm">
-                <Globe className="w-4 h-4 mr-2" /> Back to Home
-              </Button>
-            </Link>
+            <Button variant="ghost" onClick={() => navigate('/')} className="w-full text-ink/50 hover:text-ink text-sm">
+              <Home className="w-4 h-4 mr-2" /> Back to Home
+            </Button>
           </div>
         </div>
       </motion.div>
