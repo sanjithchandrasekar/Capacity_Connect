@@ -3,14 +3,27 @@ import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/integrations/supabase/types'
 
-export type Profile = Database['public']['Tables']['profiles']['Row'] & {
+export type Profile = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  role: 'trainee' | 'trainer' | 'admin' | 'super_admin';
+  approval_status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  avatar_path: string | null;
+  created_at: string;
+  updated_at: string;
+  
+  // Role-specific fields
+  department?: string | null;
+  designation?: string | null;
+  proof_path?: string | null;
+  bio?: string | null;
+  years_of_experience?: number | null;
+  expertise_areas?: string[] | null;
+  learning_goals?: string | null;
   admin_level?: string | null;
   permissions_granted_at?: string | null;
-  expertise_areas?: string[] | null;
-  years_of_experience?: number | null;
-  bio?: string | null;
-  learning_goals?: string | null;
-}
+};
 
 type AuthContextType = {
   session: Session | null
@@ -34,34 +47,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
-      const { data: baseProfile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-      
-      if (error || !baseProfile) {
-        console.error('Failed to load profile:', error)
-        setProfile(null)
-        return
+      // Try to find the user in any of the three role tables concurrently
+      const [adminRes, trainerRes, traineeRes] = await Promise.all([
+        supabase.from('admins').select('*').eq('id', userId).maybeSingle(),
+        supabase.from('trainers').select('*').eq('id', userId).maybeSingle(),
+        supabase.from('trainees').select('*').eq('id', userId).maybeSingle()
+      ]);
+
+      const foundProfile = adminRes.data || trainerRes.data || traineeRes.data;
+
+      if (!foundProfile) {
+        console.error('Failed to load profile from any role table for user:', userId);
+        setProfile(null);
+        return;
       }
 
-      let extendedData = {}
-      if (baseProfile.role === 'admin' || baseProfile.role === 'super_admin') {
-        const { data } = await (supabase.from as any)('admins').select('*').eq('id', userId).single()
-        if (data) extendedData = data
-      } else if (baseProfile.role === 'trainer') {
-        const { data } = await (supabase.from as any)('trainers').select('*').eq('id', userId).single()
-        if (data) extendedData = data
-      } else if (baseProfile.role === 'trainee') {
-        const { data } = await (supabase.from as any)('trainees').select('*').eq('id', userId).single()
-        if (data) extendedData = data
-      }
-
-      setProfile({ ...baseProfile, ...extendedData } as Profile)
+      setProfile(foundProfile as Profile);
     } catch (e) {
-      console.error('Unexpected error loading profile:', e)
-      setProfile(null)
+      console.error('Unexpected error loading profile:', e);
+      setProfile(null);
     }
   }, [])
 

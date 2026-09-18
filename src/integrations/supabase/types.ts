@@ -9,21 +9,15 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
-      profiles: {
+      admins: {
         Row: {
           id: string
           full_name: string
           email: string | null
-          role: 'trainee' | 'trainer' | 'admin' | 'super_admin'
-          department: string | null
-          designation: string | null
+          role: 'admin' | 'super_admin'
           approval_status: 'pending' | 'approved' | 'rejected' | 'suspended'
           avatar_path: string | null
-          biography: string | null
-          years_of_experience: number | null
-          qualifications: string | null
-          availability: string | null
-          proof_path: string | null
+          password: string | null
           created_at: string
           updated_at: string
         }
@@ -31,16 +25,9 @@ export interface Database {
           id: string
           full_name?: string
           email?: string | null
-          role?: 'trainee' | 'trainer' | 'admin' | 'super_admin'
-          department?: string | null
-          designation?: string | null
+          role?: 'admin' | 'super_admin'
           approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
           avatar_path?: string | null
-          biography?: string | null
-          years_of_experience?: number | null
-          qualifications?: string | null
-          availability?: string | null
-          proof_path?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -48,16 +35,98 @@ export interface Database {
           id?: string
           full_name?: string
           email?: string | null
-          role?: 'trainee' | 'trainer' | 'admin' | 'super_admin'
-          department?: string | null
-          designation?: string | null
+          role?: 'admin' | 'super_admin'
           approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
           avatar_path?: string | null
-          biography?: string | null
-          years_of_experience?: number | null
-          qualifications?: string | null
-          availability?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trainers: {
+        Row: {
+          id: string
+          full_name: string
+          email: string | null
+          role: 'trainer'
+          approval_status: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path: string | null
+          proof_path: string | null
+          bio: string | null
+          years_of_experience: number | null
+          qualifications: string | null
+          availability: string | null
+          password: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string
+          email?: string | null
+          role?: 'trainer'
+          approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path?: string | null
           proof_path?: string | null
+          bio?: string | null
+          years_of_experience?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string | null
+          role?: 'trainer'
+          approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path?: string | null
+          proof_path?: string | null
+          bio?: string | null
+          years_of_experience?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trainees: {
+        Row: {
+          id: string
+          full_name: string
+          email: string | null
+          role: 'trainee'
+          approval_status: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path: string | null
+          proof_path: string | null
+          department: string | null
+          designation: string | null
+          password: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name?: string
+          email?: string | null
+          role?: 'trainee'
+          approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path?: string | null
+          proof_path?: string | null
+          department?: string | null
+          designation?: string | null
+          password?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string | null
+          role?: 'trainee'
+          approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
+          avatar_path?: string | null
+          proof_path?: string | null
+          department?: string | null
+          designation?: string | null
           created_at?: string
           updated_at?: string
         }

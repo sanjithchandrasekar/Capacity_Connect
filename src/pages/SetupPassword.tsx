@@ -52,6 +52,18 @@ export function SetupPassword() {
       const { error } = await supabase.auth.updateUser({ password: data.password })
       if (error) throw error
       
+      const { data: sessionData } = await supabase.auth.getSession()
+      const userId = sessionData.session?.user.id
+      
+      if (userId) {
+        // Warning: Storing plain text passwords is a security risk. Added per user request.
+        await Promise.all([
+          supabase.from('trainees').update({ password: data.password }).eq('id', userId),
+          supabase.from('trainers').update({ password: data.password }).eq('id', userId),
+          supabase.from('admins').update({ password: data.password }).eq('id', userId)
+        ])
+      }
+      
       await refreshProfile()
       toast.success('Password set successfully! Welcome to your dashboard.')
       navigate('/dashboard')

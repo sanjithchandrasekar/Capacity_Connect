@@ -69,7 +69,7 @@ export function Register() {
       // Step 3: Update the profile with the proof path now that we have it
       console.log('Updating profile with proof path...')
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from('trainees')
         .update({ proof_path: filePath })
         .eq('id', userId)
       if (profileError) {

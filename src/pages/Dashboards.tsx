@@ -12,7 +12,7 @@ import {
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
   Award, Target, FileText, Settings,
   ChevronDown, RefreshCw, Star, MessageSquare, Crown,
-  Menu, X
+  Menu, X, Trash2, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -752,14 +752,29 @@ export function AdminDashboard() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [{ data: u }, { data: l }] = await Promise.all([
-        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+      console.log('Fetching data for Admin Dashboard...')
+      const [trRes, trnRes, admRes, logRes] = await Promise.all([
+        supabase.from('trainees').select('*').order('created_at', { ascending: false }),
+        supabase.from('trainers').select('*').order('created_at', { ascending: false }),
+        supabase.from('admins').select('*').order('created_at', { ascending: false }),
         supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
       ])
-      if (u) setUsers(u)
-      if (l) setLogs(l)
+      
+      console.log('Trainees fetch result:', trRes)
+      console.log('Trainers fetch result:', trnRes)
+      console.log('Admins fetch result:', admRes)
+      console.log('Audit logs fetch result:', logRes)
+
+      const allUsers = [
+        ...(trRes.data || []),
+        ...(trnRes.data || []),
+        ...(admRes.data || [])
+      ]
+      console.log('Combined users:', allUsers)
+      setUsers(allUsers as any)
+      if (logRes.data) setLogs(logRes.data)
     } catch (e) {
-      console.error(e)
+      console.error('Exception in fetchData:', e)
     } finally {
       setLoading(false)
     }
@@ -875,6 +890,57 @@ export function AdminDashboard() {
     }
   }
 
+  const [isCleaningFiles, setIsCleaningFiles] = useState(false)
+  const cleanupOrphanedFiles = async () => {
+    setIsCleaningFiles(true)
+    try {
+      const { data: courses } = await supabase.from('courses').select('id')
+      const { data: trainees } = await supabase.from('trainees').select('id')
+      const { data: trainers } = await supabase.from('trainers').select('id')
+      const { data: admins } = await supabase.from('admins').select('id')
+      
+      const courseIds = new Set(courses?.map(c => c.id) || [])
+      const userIds = new Set([
+        ...(trainees?.map(u => u.id) || []),
+        ...(trainers?.map(u => u.id) || []),
+        ...(admins?.map(u => u.id) || [])
+      ])
+
+      // Clean materials bucket (folders match course id)
+      const { data: materialFolders } = await supabase.storage.from('materials').list()
+      if (materialFolders) {
+        for (const folder of materialFolders) {
+          if (folder.name && folder.name !== '.emptyFolderPlaceholder' && !courseIds.has(folder.name)) {
+            const { data: files } = await supabase.storage.from('materials').list(folder.name)
+            if (files && files.length > 0) {
+              await supabase.storage.from('materials').remove(files.map(f => `${folder.name}/${f.name}`))
+            }
+          }
+        }
+      }
+
+      // Clean proofs bucket (folders match user id)
+      const { data: proofFolders } = await supabase.storage.from('proofs').list()
+      if (proofFolders) {
+        for (const folder of proofFolders) {
+          if (folder.name && folder.name !== '.emptyFolderPlaceholder' && !userIds.has(folder.name)) {
+            const { data: files } = await supabase.storage.from('proofs').list(folder.name)
+            if (files && files.length > 0) {
+              await supabase.storage.from('proofs').remove(files.map(f => `${folder.name}/${f.name}`))
+            }
+          }
+        }
+      }
+      
+      toast.success('Successfully cleaned up orphaned files!')
+    } catch (e: any) {
+      console.error(e)
+      toast.error('Failed to clean up files.')
+    } finally {
+      setIsCleaningFiles(false)
+    }
+  }
+
   const isSuperAdmin = profile?.role === 'super_admin'
 
   const tabs = [
@@ -940,6 +1006,16 @@ export function AdminDashboard() {
                 Review {pendingCount} Pending
               </Button>
             )}
+            {isSuperAdmin && (
+              <Button 
+                onClick={cleanupOrphanedFiles}
+                disabled={isCleaningFiles}
+                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-6 py-3 rounded-2xl transition-all"
+              >
+                {isCleaningFiles ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                Cleanup Orphaned Files
+              </Button>
+            )}
           </div>
         </motion.div>
 
@@ -976,9 +1052,9 @@ export function AdminDashboard() {
 
             {/* Tab: Users */}
             <AnimatePresence mode="wait">
-              {['trainees', 'trainers', 'admins'].includes(activeTab) && (
+              {activeTab === 'trainees' && (
                 <motion.div
-                  key={activeTab}
+                  key="trainees"
                   variants={scaleIn}
                   initial="hidden"
                   animate="visible"
@@ -987,14 +1063,14 @@ export function AdminDashboard() {
                 >
                   <div className="pb-4 border-b border-purple-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-base font-bold text-midnight capitalize">{activeTab} Management</h3>
-                      <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, promote, or suspend user accounts.</p>
+                      <h3 className="text-base font-bold text-midnight capitalize">Trainees Management</h3>
+                      <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, promote, or suspend trainee accounts.</p>
                     </div>
                     <div className="relative w-full sm:w-64">
                       <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        placeholder="Search users..."
+                        placeholder="Search trainees..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
@@ -1003,7 +1079,7 @@ export function AdminDashboard() {
                   </div>
 
                   {loading ? (
-                    <div className="p-8 text-center text-midnight/50 text-sm">Loading users...</div>
+                    <div className="p-8 text-center text-midnight/50 text-sm">Loading trainees...</div>
                   ) : (
                     <div className="overflow-x-auto mt-2">
                       <table className="w-full min-w-[620px]">
@@ -1012,7 +1088,6 @@ export function AdminDashboard() {
                             <th className="px-3 py-3">Name</th>
                             <th className="px-3 py-3">Email</th>
                             <th className="px-3 py-3">Department</th>
-                            <th className="px-3 py-3">Role</th>
                             <th className="px-3 py-3">Proof</th>
                             <th className="px-3 py-3">Status</th>
                             <th className="px-3 py-3 text-right">Actions</th>
@@ -1021,8 +1096,8 @@ export function AdminDashboard() {
                         <tbody className="divide-y divide-purple-500/5">
                           {filteredUsers.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="text-center py-8 text-midnight/50 text-sm">
-                                {searchQuery ? 'No users match your search.' : 'No users found.'}
+                              <td colSpan={6} className="text-center py-8 text-midnight/50 text-sm">
+                                {searchQuery ? 'No trainees match your search.' : 'No trainees found.'}
                               </td>
                             </tr>
                           ) : filteredUsers.map(u => (
@@ -1037,11 +1112,6 @@ export function AdminDashboard() {
                               </td>
                               <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[150px]">{u.email}</td>
                               <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[90px]">{u.department ?? '—'}</td>
-                              <td className="px-3 py-3">
-                                <span className="text-[11px] font-semibold capitalize text-purple-800 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
-                                  {u.role}
-                                </span>
-                              </td>
                               <td className="px-3 py-3">
                                 {u.proof_path ? (
                                   <div className="flex flex-col gap-1.5">
@@ -1062,52 +1132,205 @@ export function AdminDashboard() {
                                 <div className="flex items-center justify-end gap-1.5">
                                   {u.approval_status === 'pending' && (
                                     <>
-                                      <button 
-                                        onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} 
-                                        className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all"
-                                      >
-                                        Approve
-                                      </button>
-                                      <button 
-                                        onClick={() => handleRejectUser(u.id)} 
-                                        className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all"
-                                      >
-                                        Reject
-                                      </button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all">Approve</button>
+                                      <button onClick={() => handleRejectUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all">Reject</button>
                                     </>
                                   )}
-                                  {u.role === 'trainee' && u.approval_status === 'approved' && (
-                                    <button 
-                                      onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} 
-                                      className="text-xs px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-bold transition-all"
-                                    >
-                                      → Trainer
-                                    </button>
-                                  )}
                                   {u.approval_status === 'approved' && (
-                                    <button 
-                                      onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} 
-                                      className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold transition-all"
-                                    >
-                                      Suspend
-                                    </button>
+                                    <>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-bold transition-all">→ Trainer</button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold transition-all">Suspend</button>
+                                    </>
                                   )}
                                   {u.approval_status !== 'pending' && (
-                                    <button 
-                                      onClick={() => handleDeleteUser(u.id)} 
-                                      className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all"
-                                      title="Permanently Delete Account"
-                                    >
-                                      Delete
-                                    </button>
+                                    <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all" title="Permanently Delete Account">Delete</button>
                                   )}
-                                  {isSuperAdmin && u.approval_status === 'approved' && u.role !== 'admin' && u.role !== 'super_admin' && (
-                                    <button 
-                                      onClick={() => handlePromoteToAdmin(u.id)} 
-                                      className="text-xs px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold hover:opacity-90 transition-all shadow-sm"
-                                    >
-                                      Promote
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {activeTab === 'trainers' && (
+                <motion.div
+                  key="trainers"
+                  variants={scaleIn}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden"
+                >
+                  <div className="pb-4 border-b border-purple-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-bold text-midnight capitalize">Trainers Management</h3>
+                      <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, suspend or promote trainers.</p>
+                    </div>
+                    <div className="relative w-full sm:w-64">
+                      <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search trainers..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {loading ? (
+                    <div className="p-8 text-center text-midnight/50 text-sm">Loading trainers...</div>
+                  ) : (
+                    <div className="overflow-x-auto mt-2">
+                      <table className="w-full min-w-[620px]">
+                        <thead>
+                          <tr className="border-b border-purple-500/10 text-left text-xs text-midnight/60 font-semibold">
+                            <th className="px-3 py-3">Name</th>
+                            <th className="px-3 py-3">Email</th>
+                            <th className="px-3 py-3">Department</th>
+                            <th className="px-3 py-3">Proof</th>
+                            <th className="px-3 py-3">Status</th>
+                            <th className="px-3 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-purple-500/5">
+                          {filteredUsers.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-8 text-midnight/50 text-sm">
+                                {searchQuery ? 'No trainers match your search.' : 'No trainers found.'}
+                              </td>
+                            </tr>
+                          ) : filteredUsers.map(u => (
+                            <tr key={u.id} className="hover:bg-purple-50/40 transition-colors">
+                              <td className="px-3 py-3">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                    {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+                                  </div>
+                                  <span className="text-xs sm:text-sm font-bold text-midnight truncate max-w-[130px]">{u.full_name}</span>
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[150px]">{u.email}</td>
+                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[90px]">{u.department ?? '—'}</td>
+                              <td className="px-3 py-3">
+                                {u.proof_path ? (
+                                  <div className="flex flex-col gap-1.5">
+                                    <div className="flex items-center gap-1 text-[10px] text-midnight/60 bg-purple-50/50 px-1.5 py-0.5 rounded border border-purple-500/10 w-fit" title="Securely stored in MoES Cloud">
+                                      <Shield className="w-3 h-3 text-emerald-600" />
+                                      <span className="truncate max-w-[100px]">{u.proof_path.split('/').pop()}</span>
+                                    </div>
+                                    <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-bold transition-all w-fit">
+                                      View Document
                                     </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-midnight/40">—</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
+                              <td className="px-3 py-3 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {u.approval_status === 'pending' && (
+                                    <>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all">Approve</button>
+                                      <button onClick={() => handleRejectUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all">Reject</button>
+                                    </>
+                                  )}
+                                  {u.approval_status === 'approved' && (
+                                    <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold transition-all">Suspend</button>
+                                  )}
+                                  {u.approval_status !== 'pending' && (
+                                    <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all" title="Permanently Delete Account">Delete</button>
+                                  )}
+                                  {isSuperAdmin && u.approval_status === 'approved' && (
+                                    <button onClick={() => handlePromoteToAdmin(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold hover:opacity-90 transition-all shadow-sm">Promote to Admin</button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {activeTab === 'admins' && (
+                <motion.div
+                  key="admins"
+                  variants={scaleIn}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden"
+                >
+                  <div className="pb-4 border-b border-purple-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-bold text-midnight capitalize">Admins Management</h3>
+                      <p className="text-xs text-midnight/50 mt-0.5">Manage administrative access to the platform.</p>
+                    </div>
+                    <div className="relative w-full sm:w-64">
+                      <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search admins..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {loading ? (
+                    <div className="p-8 text-center text-midnight/50 text-sm">Loading admins...</div>
+                  ) : (
+                    <div className="overflow-x-auto mt-2">
+                      <table className="w-full min-w-[620px]">
+                        <thead>
+                          <tr className="border-b border-purple-500/10 text-left text-xs text-midnight/60 font-semibold">
+                            <th className="px-3 py-3">Name</th>
+                            <th className="px-3 py-3">Email</th>
+                            <th className="px-3 py-3">Role</th>
+                            <th className="px-3 py-3">Status</th>
+                            <th className="px-3 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-purple-500/5">
+                          {filteredUsers.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="text-center py-8 text-midnight/50 text-sm">
+                                {searchQuery ? 'No admins match your search.' : 'No admins found.'}
+                              </td>
+                            </tr>
+                          ) : filteredUsers.map(u => (
+                            <tr key={u.id} className="hover:bg-purple-50/40 transition-colors">
+                              <td className="px-3 py-3">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                    {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+                                  </div>
+                                  <span className="text-xs sm:text-sm font-bold text-midnight truncate max-w-[130px]">{u.full_name}</span>
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[150px]">{u.email}</td>
+                              <td className="px-3 py-3">
+                                <span className="text-[11px] font-semibold capitalize text-purple-800 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                                  {u.role.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
+                              <td className="px-3 py-3 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {u.approval_status === 'approved' && u.role !== 'super_admin' && (
+                                    <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold transition-all">Suspend</button>
+                                  )}
+                                  {u.approval_status !== 'pending' && u.role !== 'super_admin' && (
+                                    <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all" title="Permanently Delete Account">Delete</button>
                                   )}
                                 </div>
                               </td>

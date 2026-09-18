@@ -74,9 +74,9 @@ export function SupabaseTest() {
         return
       }
 
-      const { error } = await supabase.from('profiles').select('id').limit(1)
+      const { error } = await supabase.from('trainees').select('id').limit(1)
       if (!error) {
-        next[2] = { label: 'RLS Protection Active', status: 'warn', detail: 'Profiles table readable without auth — check RLS policies!' }
+        next[2] = { label: 'RLS Protection Active', status: 'warn', detail: 'Trainees table readable without auth — check RLS policies!' }
       } else if (error.code === '42501' || error.message?.includes('permission denied')) {
         next[2] = { label: 'RLS Protection Active', status: 'ok', detail: 'Permission denied for anon — RLS is enforced correctly ✓' }
       } else if (error.code === 'PGRST301') {

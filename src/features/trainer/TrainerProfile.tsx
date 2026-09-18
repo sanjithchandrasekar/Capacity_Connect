@@ -21,9 +21,7 @@ export function TrainerProfile() {
   const [form, setForm] = useState({
     full_name: '',
     email: '',
-    department: '',
-    designation: '',
-    biography: '',
+    bio: '',
     years_of_experience: '',
     qualifications: '',
     availability: 'available',
@@ -35,7 +33,7 @@ export function TrainerProfile() {
     const loadProfile = async () => {
       try {
         const { data } = await supabase
-          .from('profiles')
+          .from('trainers')
           .select('*')
           .eq('id', user.id)
           .single()
@@ -43,9 +41,7 @@ export function TrainerProfile() {
           setForm({
             full_name: data.full_name ?? '',
             email: data.email ?? '',
-            department: data.department ?? '',
-            designation: data.designation ?? '',
-            biography: data.biography ?? '',
+            bio: data.bio ?? '',
             years_of_experience: data.years_of_experience?.toString() ?? '',
             qualifications: data.qualifications ?? '',
             availability: data.availability ?? 'available',
@@ -65,12 +61,10 @@ export function TrainerProfile() {
     setSaving(true)
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('trainers')
         .update({
           full_name: form.full_name,
-          department: form.department,
-          designation: form.designation,
-          biography: form.biography || null,
+          bio: form.bio || null,
           years_of_experience: form.years_of_experience ? parseInt(form.years_of_experience) : null,
           qualifications: form.qualifications || null,
           availability: form.availability,
@@ -127,19 +121,9 @@ export function TrainerProfile() {
                   <Input value={form.email} disabled className="bg-ink/5 border-ink/20 text-ink/50 h-10" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Department</Label>
-                  <Input value={form.department} onChange={e => update('department', e.target.value)} className="bg-ink/5 border-ink/20 text-ink h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Designation</Label>
-                  <Input value={form.designation} onChange={e => update('designation', e.target.value)} className="bg-ink/5 border-ink/20 text-ink h-10" />
-                </div>
-              </div>
               <div className="space-y-1.5">
                 <Label className="text-ink/80 text-xs">Biography</Label>
-                <Textarea value={form.biography} onChange={e => update('biography', e.target.value)} rows={3} placeholder="Tell us about your expertise and background..." className="bg-ink/5 border-ink/20 text-ink" />
+                <Textarea value={form.bio} onChange={e => update('bio', e.target.value)} rows={3} placeholder="Tell us about your expertise and background..." className="bg-ink/5 border-ink/20 text-ink" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
