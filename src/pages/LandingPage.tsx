@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import {
   BookOpen, GraduationCap, ShieldCheck, ArrowRight,
-  Zap, Globe, Users, BarChart3, Lock, Star, ChevronRight, Sparkles
+  Zap, Globe, Users, BarChart3, Lock, Star, ChevronRight, Sparkles, Compass
 } from 'lucide-react';
 
 const fadeUp = {
@@ -151,6 +151,12 @@ export function LandingPage() {
                     Join the Platform
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </span>
+                </Button>
+              </Link>
+              <Link to="/courses">
+                <Button size="lg" variant="outline" className="group h-14 px-8 text-base font-semibold border-pink-500/30 bg-pink-500/5 hover:bg-pink-500/10 text-pink-900 hover:-translate-y-0.5 transition-all duration-300 rounded-xl">
+                  Browse Courses
+                  <Compass className="w-4 h-4 ml-1.5 group-hover:rotate-12 transition-transform" />
                 </Button>
               </Link>
               <Link to="/login">

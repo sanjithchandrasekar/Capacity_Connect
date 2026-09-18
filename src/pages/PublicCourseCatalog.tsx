@@ -1,0 +1,205 @@
+import React from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { supabase } from '@/lib/supabase'
+import { Compass, Clock, Search, ArrowRight, Sparkles, LogIn } from 'lucide-react'
+import { Thumbnail } from '@/components/ui/Thumbnail'
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+}
+const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }
+
+const categories = ['All', 'Standard', 'Scenario']
+
+export function PublicCourseCatalog() {
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [selectedCategory, setSelectedCategory] = React.useState('All')
+
+  const { data: courses, isLoading } = useQuery({
+    queryKey: ['public_published_courses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('courses')
+        .select(`
+          *,
+          trainer:trainers!courses_trainer_id_fkey(full_name)
+        `)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data
+    }
+  })
+
+  const filteredCourses = React.useMemo(() => {
+    if (!courses) return []
+    let list = courses
+    if (selectedCategory !== 'All') {
+      list = list.filter((c: any) => c.course_type?.toLowerCase() === selectedCategory.toLowerCase())
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      list = list.filter((course: any) =>
+        course.title?.toLowerCase().includes(q) ||
+        course.description?.toLowerCase().includes(q) ||
+        course.course_type?.toLowerCase().includes(q) ||
+        course.trainer?.full_name?.toLowerCase().includes(q)
+      )
+    }
+    return list
+  }, [courses, searchQuery, selectedCategory])
+
+  return (
+    <div className="min-h-screen bg-cream text-midnight font-sans relative">
+      {/* Decorative ambient gradients */}
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent blur-[100px] -z-10" />
+
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-purple-500/10 bg-white/80 backdrop-blur-2xl">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+              <img src="/logo.png" alt="Capacity Connect" className="w-full h-full object-contain" />
+            </div>
+            <span className="text-lg font-bold tracking-tight">
+              <span className="text-purple-900">Capacity</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-coral-500 to-orange-500"> Connect</span>
+            </span>
+          </Link>
+          <Link to="/login" className="text-sm font-semibold text-purple-700 hover:text-pink-600 transition-colors flex items-center gap-1.5">
+            <LogIn className="w-4 h-4" /> Login
+          </Link>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+        {/* Header & Search Bar */}
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/80 backdrop-blur-md p-8 rounded-3xl border border-purple-500/15 shadow-sm">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-orange-500" /> Catalog
+              </span>
+            </div>
+            <h1 className="text-3xl font-extrabold text-midnight tracking-tight mb-2">Explore Courses</h1>
+            <p className="text-midnight/60 text-sm max-w-md">Discover high-impact MoES competency tracks available on the Capacity Connect platform.</p>
+          </div>
+          
+          <div className="relative w-full md:w-80 shrink-0">
+            <Search className="w-5 h-5 text-purple-600/60 absolute left-4 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              placeholder="Search courses, trainers..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-purple-50/50 border border-purple-200 rounded-2xl pl-12 pr-4 py-3 text-sm text-midnight placeholder-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white focus:ring-2 focus:ring-pink-500/20 transition-all shadow-sm"
+            />
+          </div>
+        </motion.div>
+
+        {/* Category Pills */}
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex items-center gap-2 overflow-x-auto pb-2">
+          {categories.map(cat => {
+            const isSelected = selectedCategory === cat
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                  isSelected
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-md shadow-pink-500/25 scale-105'
+                    : 'bg-white border border-purple-200 text-midnight/70 hover:text-purple-700 hover:bg-purple-50'
+                }`}
+              >
+                {cat === 'All' ? 'All Courses' : `${cat} Courses`}
+              </button>
+            )
+          })}
+        </motion.div>
+
+        {/* Course Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-80 bg-purple-500/5 animate-pulse rounded-3xl border border-purple-500/10" />
+            ))}
+          </div>
+        ) : filteredCourses.length === 0 ? (
+          <div className="p-16 text-center bg-white border border-purple-500/15 rounded-3xl shadow-sm">
+            <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-purple-100">
+              <Compass className="w-8 h-8 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-bold text-midnight mb-1">{searchQuery ? 'No Matching Courses Found' : 'No Courses Available'}</h3>
+            <p className="text-midnight/60 text-sm max-w-sm mx-auto">{searchQuery ? 'Try clearing your filters or searching for different keywords.' : 'Check back shortly for newly published training programs.'}</p>
+          </div>
+        ) : (
+          <motion.div variants={stagger} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCourses.map((course: any) => (
+              <motion.div 
+                key={course.id} 
+                variants={fadeUp} 
+                className="group flex flex-col bg-white hover:bg-gradient-to-b hover:from-white hover:to-purple-50/30 border border-purple-500/15 hover:border-pink-500/40 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-pink-500/10 transition-all duration-300 hover:-translate-y-1.5"
+              >
+                {/* Thumbnail Header */}
+                <div className="h-44 relative overflow-hidden bg-purple-100">
+                  <Thumbnail path={course.thumbnail_path} alt={course.title} type={course.course_type} />
+                  
+                  {/* Top Badges Overlay */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                    <span className="bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-purple-900 uppercase tracking-wider border border-white/40 shadow-sm">
+                      {course.course_type || 'Standard'}
+                    </span>
+                    <span className="bg-midnight/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-medium text-white flex items-center gap-1 shadow-sm">
+                      <Clock className="w-3 h-3 text-orange-400" />
+                      <span>{course.duration_minutes ? `${course.duration_minutes}m` : 'Self-paced'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card Content */}
+                <div className="p-6 flex-1 flex flex-col">
+                  <div className="flex items-center gap-2 text-xs text-purple-600 font-semibold mb-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-pink-500" />
+                    <span>MoES Training Module</span>
+                  </div>
+
+                  <h3 className="text-lg font-bold text-midnight mb-2 group-hover:text-purple-700 transition-colors line-clamp-1">
+                    {course.title}
+                  </h3>
+                  
+                  <p className="text-xs text-midnight/60 mb-5 line-clamp-2 leading-relaxed flex-1">
+                    {course.description || 'Comprehensive training module designed to enhance core competencies.'}
+                  </p>
+                  
+                  {/* Instructor row */}
+                  <div className="flex items-center justify-between pt-3 border-t border-purple-500/10 text-xs text-midnight/70 mb-5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                        {course.trainer?.full_name?.[0]?.toUpperCase() ?? 'T'}
+                      </div>
+                      <span className="truncate max-w-[130px] font-medium text-midnight/80">
+                        {course.trainer?.full_name || 'Assigned Trainer'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Button */}
+                  <Link to={`/courses/${course.id}`} className="w-full">
+                    <button className="w-full py-2.5 rounded-2xl bg-purple-50 group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:via-pink-500 group-hover:to-orange-500 text-purple-900 group-hover:text-white border border-purple-200 group-hover:border-transparent text-sm font-semibold transition-all duration-300 shadow-none group-hover:shadow-md group-hover:shadow-pink-500/25 flex items-center justify-center gap-1.5">
+                      <span>View Details</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </Link>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </main>
+    </div>
+  )
+}

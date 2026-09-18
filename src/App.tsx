@@ -31,6 +31,8 @@ import { NotificationsPage } from './features/trainer/NotificationsPage'
 import { CourseDetailPage } from './features/trainer/CourseDetailPage'
 import { SettingsPage } from './features/trainer/SettingsPage'
 import { LandingPage } from './pages/LandingPage'
+import { PublicCourseCatalog } from './pages/PublicCourseCatalog'
+import { PublicCourseDetails } from './pages/PublicCourseDetails'
 
 function DashboardRedirect() {
   const { session, profile, loading } = useAuth()
@@ -56,6 +58,10 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/supabase-test" element={<SupabaseTest />} />
             <Route path="/db" element={<SupabaseTest />} />
+            
+            {/* Public Course Pages */}
+            <Route path="/courses" element={<PublicCourseCatalog />} />
+            <Route path="/courses/:courseId" element={<PublicCourseDetails />} />
             
             {/* Auth Fallbacks */}
             <Route path="/pending-approval" element={<PendingApprovalPage />} />

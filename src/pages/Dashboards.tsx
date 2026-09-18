@@ -762,7 +762,7 @@ export function AdminDashboard() {
         supabase.from('trainees').select('*').order('created_at', { ascending: false }),
         supabase.from('trainers').select('*').order('created_at', { ascending: false }),
         supabase.from('admins').select('*').order('created_at', { ascending: false }),
-        supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
+        supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(50),
       ])
       
       console.log('Trainees fetch result:', trRes)
@@ -831,23 +831,6 @@ export function AdminDashboard() {
     }
   }
 
-  const handleRejectUser = async (userId: string) => {
-    try {
-      // For MoES, we deliberately DO NOT delete the proof file from storage here 
-      // in order to preserve the audit trail.
-      
-      const { error } = await supabase.rpc('admin_delete_user', {
-        target_user_id: userId,
-      })
-      if (error) throw error
-      
-      toast.success('User rejected and application deleted.')
-      fetchData()
-    } catch (e) {
-      toast.error('Failed to reject user. Check Supabase connection.')
-      console.error(e)
-    }
-  }
 
   const handleDeleteUser = async (userId: string) => {
     if (!window.confirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) return;
@@ -1138,7 +1121,7 @@ export function AdminDashboard() {
                                   {u.approval_status === 'pending' && (
                                     <>
                                       <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all">Approve</button>
-                                      <button onClick={() => handleRejectUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all">Reject</button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'rejected')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all">Reject</button>
                                     </>
                                   )}
                                   {u.approval_status === 'approved' && (
@@ -1242,7 +1225,7 @@ export function AdminDashboard() {
                                   {u.approval_status === 'pending' && (
                                     <>
                                       <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all">Approve</button>
-                                      <button onClick={() => handleRejectUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all">Reject</button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'rejected')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all">Reject</button>
                                     </>
                                   )}
                                   {u.approval_status === 'approved' && (

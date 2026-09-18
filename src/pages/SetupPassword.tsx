@@ -66,7 +66,7 @@ export function SetupPassword() {
       
       await refreshProfile()
       toast.success('Password set successfully! Welcome to your dashboard.')
-      navigate('/dashboard')
+      window.location.href = '/dashboard'
     } catch (err: any) {
       toast.error(err.message || 'Failed to set password. Please try again.')
     } finally {
