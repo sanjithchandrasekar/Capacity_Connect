@@ -11,13 +11,13 @@ import { ArrowLeft, Users, BarChart3, Target, BookOpen, Loader2, TrendingUp, Ale
 
 type Course = Database['public']['Tables']['courses']['Row']
 type Enrollment = Database['public']['Tables']['enrollments']['Row']
-type Profile = Database['public']['Tables']['profiles']['Row']
+type Trainee = Database['public']['Tables']['trainees']['Row']
 type AssessmentAttempt = Database['public']['Tables']['assessment_attempts']['Row']
 type Question = Database['public']['Tables']['questions']['Row']
 
 interface TraineeRow {
   enrollment: Enrollment
-  profile: Profile | null
+  trainee: Trainee | null
   attempts: AssessmentAttempt[]
   bestScore: number | null
   attemptCount: number
@@ -38,8 +38,8 @@ export function PerformancePage() {
       const { data: c } = await supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single()
       if (c) setCourse(c)
 
-      const { data: e } = await supabase.from('enrollments').select('*, profiles(*)').eq('course_id', courseId)
-      const enrollments = (e ?? []) as any as (Enrollment & { profiles: Profile | null })[]
+      const { data: e } = await supabase.from('enrollments').select('*, trainees(*)').eq('course_id', courseId)
+      const enrollments = (e ?? []) as any as (Enrollment & { trainees: Trainee | null })[]
 
       const { data: assessment } = await supabase
         .from('assessments')
@@ -59,7 +59,7 @@ export function PerformancePage() {
         const scores = userAttempts.filter(at => at.score !== null).map(at => at.score ?? 0)
         return {
           enrollment: en,
-          profile: en.profiles,
+          trainee: en.trainees,
           attempts: userAttempts,
           bestScore: scores.length > 0 ? Math.max(...scores) : null,
           attemptCount: userAttempts.length,
@@ -136,7 +136,7 @@ export function PerformancePage() {
                   <div className="mt-1 space-y-1">
                     {needsSupport.map(r => (
                       <p key={r.enrollment.user_id} className="text-xs text-yellow-700/70">
-                        {r.profile?.full_name ?? 'Unknown'} — Score: {r.bestScore}% (Pass: {course?.passing_score}%)
+                        {r.trainee?.full_name ?? 'Unknown'} — Score: {r.bestScore}% (Pass: {course?.passing_score}%)
                       </p>
                     ))}
                   </div>
@@ -168,11 +168,11 @@ export function PerformancePage() {
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-ink to-ink/80 flex items-center justify-center text-cream text-xs font-bold">
-                            {r.profile?.full_name?.charAt(0) ?? '?'}
+                            {r.trainee?.full_name?.charAt(0) ?? '?'}
                           </div>
                           <div>
-                            <p className="text-sm text-ink font-medium">{r.profile?.full_name ?? 'Unknown'}</p>
-                            <p className="text-xs text-ink/50">{r.profile?.email}</p>
+                            <p className="text-sm text-ink font-medium">{r.trainee?.full_name ?? 'Unknown'}</p>
+                            <p className="text-xs text-ink/50">{r.trainee?.email}</p>
                           </div>
                         </div>
                       </td>

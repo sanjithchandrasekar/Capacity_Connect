@@ -16,8 +16,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-type Profile = Database['public']['Tables']['profiles']['Row']
 type AuditLog = Database['public']['Tables']['audit_logs']['Row']
+type Profile = (
+  | Database['public']['Tables']['admins']['Row']
+  | Database['public']['Tables']['trainers']['Row']
+  | Database['public']['Tables']['trainees']['Row']
+) & { department?: string | null; proof_path?: string | null }
+
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },

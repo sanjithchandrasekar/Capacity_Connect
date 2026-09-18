@@ -28,6 +28,7 @@ export interface Database {
           role?: 'admin' | 'super_admin'
           approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
           avatar_path?: string | null
+          password?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -38,6 +39,7 @@ export interface Database {
           role?: 'admin' | 'super_admin'
           approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
           avatar_path?: string | null
+          password?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -70,6 +72,9 @@ export interface Database {
           proof_path?: string | null
           bio?: string | null
           years_of_experience?: number | null
+          qualifications?: string | null
+          availability?: string | null
+          password?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -83,6 +88,9 @@ export interface Database {
           proof_path?: string | null
           bio?: string | null
           years_of_experience?: number | null
+          qualifications?: string | null
+          availability?: string | null
+          password?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -127,6 +135,7 @@ export interface Database {
           proof_path?: string | null
           department?: string | null
           designation?: string | null
+          password?: string | null
           created_at?: string
           updated_at?: string
         }
