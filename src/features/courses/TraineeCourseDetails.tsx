@@ -8,6 +8,7 @@ import { DashboardShell } from '@/pages/Dashboards'
 import { Compass, BookOpen, Clock, User, ArrowLeft, CheckCircle2, Loader2, BookMarked, Layers } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Calendar, Video, FileText, Lock, Target } from 'lucide-react'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -23,7 +24,7 @@ export function TraineeCourseDetails() {
   const { data: course, isLoading: isCourseLoading } = useQuery({
     queryKey: ['course', courseId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: courseData, error } = await supabase
         .from('courses')
         .select(`
           *,
@@ -33,7 +34,24 @@ export function TraineeCourseDetails() {
         .single() as any
 
       if (error) throw error
-      return data
+
+      const { data: sessionsData } = await supabase
+        .from('course_sessions')
+        .select('*')
+        .eq('course_id', courseId!)
+        .order('order_index')
+
+      const { data: materialsData } = await supabase
+        .from('materials')
+        .select('*')
+        .eq('course_id', courseId!)
+        .order('created_at')
+
+      return {
+        ...courseData,
+        sessions: sessionsData || [],
+        materials: materialsData || []
+      }
     },
     enabled: !!courseId
   })
@@ -52,6 +70,20 @@ export function TraineeCourseDetails() {
       return data
     },
     enabled: !!courseId && !!profile?.id
+  })
+
+  const { data: enrollmentCount } = useQuery({
+    queryKey: ['enrollments-count', courseId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_id', courseId!)
+
+      if (error) throw error
+      return count || 0
+    },
+    enabled: !!courseId
   })
 
   const enrollMutation = useMutation({
@@ -130,6 +162,14 @@ export function TraineeCourseDetails() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Layers className="w-4 h-4 text-coral-400" />
+                    <span>{course.sessions?.length || 0} Modules</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Video className="w-4 h-4 text-purple-300" />
+                    <span className="capitalize">{course.delivery_mode || 'recorded'} Delivery</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-emerald-400" />
                     <span>Passing Score: {course.passing_score}%</span>
                   </div>
                 </div>
@@ -144,19 +184,76 @@ export function TraineeCourseDetails() {
                         Go to My Learning
                       </Button>
                     </div>
+
+                  ) : course.max_trainees && (enrollmentCount ?? 0) >= course.max_trainees ? (
+                    <div>
+                      <Button disabled className="bg-slate-200 text-slate-500 font-bold rounded-2xl px-6 py-3 cursor-not-allowed">
+                        Course Full
+                      </Button>
+                      <div className="mt-2 text-sm text-rose-500 font-medium">This course has reached its capacity limit of {course.max_trainees} trainees.</div>
+                    </div>
                   ) : (
-                    <Button 
-                      onClick={() => enrollMutation.mutate()} 
-                      disabled={enrollMutation.isPending}
-                      className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-extrabold text-base rounded-2xl px-8 py-6 shadow-xl shadow-pink-500/30 hover:scale-105 active:scale-95 transition-all"
-                    >
-                      {enrollMutation.isPending ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
-                      Enroll in Course
-                    </Button>
+                    <div>
+                      <Button 
+                        onClick={() => enrollMutation.mutate()} 
+                        disabled={enrollMutation.isPending}
+                        className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-extrabold text-base rounded-2xl px-8 py-6 shadow-xl shadow-pink-500/30 hover:scale-105 active:scale-95 transition-all"
+                      >
+                        {enrollMutation.isPending ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
+                        Enroll in Course
+                      </Button>
+                      {course.status !== 'published' && (
+                        <div className="mt-2 text-sm text-yellow-200">This course is currently not published.</div>
+                      )}
+                      {course.max_trainees && (
+                        <div className="mt-2 text-sm text-pink-300 font-medium">
+                          {course.max_trainees - (enrollmentCount ?? 0)} spots remaining!
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* Schedule & Important Dates Section */}
+            {(course.start_date || course.end_date || course.live_class_timing || course.mock_test_timing || course.final_exam_timing) && (
+              <div className="bg-white rounded-3xl p-6 md:p-8 border border-purple-500/10 shadow-sm">
+                <h2 className="text-xl font-bold text-midnight flex items-center gap-2 mb-6">
+                  <Calendar className="w-5 h-5 text-purple-600" /> Schedule & Important Dates
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(course.start_date || course.end_date) && (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-xs font-semibold text-slate-500 mb-1">Course Duration</div>
+                      <div className="text-sm font-medium text-midnight">
+                        {course.start_date && new Date(course.start_date).toLocaleDateString()}
+                        {course.start_date && course.end_date && ' - '}
+                        {course.end_date && new Date(course.end_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                  )}
+                  {course.live_class_timing && (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-xs font-semibold text-slate-500 mb-1">Live Class Timings</div>
+                      <div className="text-sm font-medium text-midnight">{course.live_class_timing}</div>
+                    </div>
+                  )}
+                  {course.mock_test_timing && (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-xs font-semibold text-slate-500 mb-1">Mock Test</div>
+                      <div className="text-sm font-medium text-midnight">{new Date(course.mock_test_timing).toLocaleString()}</div>
+                    </div>
+                  )}
+                  {course.final_exam_timing && (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-xs font-semibold text-slate-500 mb-1">Final Exam</div>
+                      <div className="text-sm font-medium text-midnight">{new Date(course.final_exam_timing).toLocaleString()}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Description & Details */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -182,6 +279,68 @@ export function TraineeCourseDetails() {
                 </div>
               </div>
             </div>
+
+            {/* Course Content / Sessions */}
+            {course.sessions && course.sessions.length > 0 && (
+              <div className="bg-white border border-purple-500/15 rounded-3xl p-8 shadow-sm">
+                <h2 className="text-lg font-bold text-midnight mb-6">Course Content</h2>
+                <div className="space-y-4">
+                  {course.sessions.map((session: any, index: number) => {
+                    const sessionMaterials = course.materials?.filter((m: any) => m.session_id === session.id) || []
+                    return (
+                      <div key={session.id} className="border border-purple-500/10 rounded-2xl overflow-hidden group">
+                        <div className="p-4 bg-purple-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-purple-500/10">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Module {index + 1}</span>
+                              <h4 className="text-base font-bold text-midnight">{session.title}</h4>
+                            </div>
+                            {session.description && <p className="text-xs text-midnight/60">{session.description}</p>}
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-3 text-xs font-semibold shrink-0">
+                            {session.session_type && (
+                              <span className={`px-2 py-1 rounded-lg border ${session.session_type === 'live' ? 'bg-orange-50 text-orange-700 border-orange-200' : session.session_type === 'recorded' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-pink-50 text-pink-700 border-pink-200'} capitalize`}>
+                                {session.session_type === 'recorded' ? 'Video' : session.session_type} Class
+                              </span>
+                            )}
+                            {session.start_time && (
+                              <span className="flex items-center gap-1.5 text-midnight/60 bg-white px-2 py-1 rounded-lg border border-purple-500/10">
+                                <Calendar className="w-3.5 h-3.5 text-purple-500" />
+                                {new Date(session.start_time).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                              </span>
+                            )}
+                            {session.meet_link && enrollment && (session.session_type === 'live' || session.session_type === 'hybrid') && (
+                              <a href={session.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
+                                <Video className="w-3.5 h-3.5" /> Join Live
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 bg-white">
+                          {sessionMaterials.length === 0 ? (
+                            <p className="text-xs text-midnight/40 italic">No materials available yet.</p>
+                          ) : (
+                            <ul className="space-y-2 text-sm text-midnight/70">
+                              {sessionMaterials.map((m: any) => (
+                                <li key={m.id} className="flex items-center gap-3 p-2 hover:bg-purple-50/50 rounded-xl transition-colors">
+                                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+                                    <FileText className="w-4 h-4 text-purple-600" />
+                                  </div>
+                                  <span className="truncate flex-1">{m.file_name}</span>
+                                  {!enrollment && <Lock className="w-3.5 h-3.5 text-midnight/30 shrink-0" />}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
           </motion.div>
         )}

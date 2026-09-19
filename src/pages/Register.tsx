@@ -196,6 +196,19 @@ export function Register() {
         if (profileError) throw new Error(`Profile update failed: ${profileError.message}`)
       }
 
+      // Step 3: Create a notification for admins
+      const { data: admins } = await supabase.from('admins').select('id')
+      if (admins && admins.length > 0) {
+        const roleName = role === 'trainee' ? 'Trainee' : 'Trainer'
+        const notifications = admins.map(admin => ({
+          user_id: admin.id,
+          type: 'new_registration',
+          title: `New ${roleName} Registered`,
+          message: `${data.fullName} has registered as a new ${roleName}. Pending review.`,
+        }))
+        await supabase.from('notifications').insert(notifications)
+      }
+
       setRegistrationSuccess(true)
       toast.success('Account registered successfully!')
     } catch (err: any) {

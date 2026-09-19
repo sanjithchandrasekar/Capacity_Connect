@@ -94,7 +94,9 @@ export function CourseListPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-base font-semibold text-ink truncate">{course.title}</h3>
+                      <Link to={`/trainer/courses/${course.id}`} className="hover:underline">
+                        <h3 className="text-base font-semibold text-ink truncate">{course.title}</h3>
+                      </Link>
                       <Badge className={`shrink-0 text-[10px] ${statusColors[course.status] ?? statusColors.draft}`}>
                         {statusLabels[course.status] ?? course.status}
                       </Badge>
@@ -108,6 +110,11 @@ export function CourseListPage() {
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
+                    <Link to={`/trainer/courses/${course.id}`}>
+                      <Button size="sm" variant="outline" className="border-ink/20 text-ink hover:bg-ink/5">
+                        <BookOpen className="w-3.5 h-3.5 mr-1" /> Manage
+                      </Button>
+                    </Link>
                     <Link to={`/trainer/courses/${course.id}/edit`}>
                       <Button size="sm" variant="outline" className="border-ink/20 text-ink hover:bg-ink/5">
                         <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit

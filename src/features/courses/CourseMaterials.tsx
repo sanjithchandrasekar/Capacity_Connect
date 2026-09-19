@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { generateQuestionsFromMaterial, extractTextFromFile } from '@/lib/ai'
@@ -55,6 +55,8 @@ interface CourseMaterialsProps {
 
 export function CourseMaterials({ embedded = false, onMaterialCountChange }: CourseMaterialsProps) {
   const { courseId } = useParams<{ courseId: string }>()
+  const [searchParams] = useSearchParams()
+  const sessionId = searchParams.get('session')
   const { user } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
   const [materials, setMaterials] = useState<Material[]>([])
@@ -87,11 +89,14 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
         .single()
       if (courseData) setCourse(courseData)
 
-      const { data: materialsData } = await supabase
+      let query = supabase
         .from('materials')
         .select('*')
         .eq('course_id', courseId)
-        .order('created_at', { ascending: false })
+      if (sessionId) {
+        query = query.eq('session_id', sessionId)
+      }
+      const { data: materialsData } = await query.order('created_at', { ascending: false })
       if (materialsData) {
         setMaterials(materialsData)
         onMaterialCountChange?.(materialsData.length)
@@ -144,6 +149,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
           mime_type: file.type || 'application/octet-stream',
           file_size: file.size,
           extraction_status: 'pending',
+          session_id: sessionId || null
         })
       if (dbError) throw dbError
 
@@ -195,6 +201,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
         url,
         mime_type: 'text/uri-list',
         extraction_status: 'completed',
+        session_id: sessionId || null
       })
       if (error) throw error
       toast.success('Link added')

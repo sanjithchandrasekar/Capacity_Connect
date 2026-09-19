@@ -18,7 +18,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
-  ArrowLeft, Save, Send, Loader2, FileText, Target, Award, BarChart3, Plus, AlertCircle
+  ArrowLeft, Upload, Target, CheckCircle2, Video, 
+  Trash2, Send, Save, AlertCircle, Play, FileText, LayoutDashboard, Settings, Loader2, Calendar,
+  BarChart3, Award, Users, BookOpen, Plus
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CourseMaterials } from '@/features/courses/CourseMaterials'
@@ -34,6 +36,9 @@ const courseSchema = z.object({
   department: z.string().optional(),
   duration_minutes: z.coerce.number().positive().optional(),
   passing_score: z.coerce.number().min(1).max(100).optional(),
+  meet_link: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
 })
 
 type CourseFormData = z.infer<typeof courseSchema>
@@ -74,7 +79,10 @@ export function CourseEditPage() {
         course_type: courseRes.data.course_type as 'standard' | 'scenario',
         department: courseRes.data.department ?? '',
         duration_minutes: courseRes.data.duration_minutes ?? undefined,
-        passing_score: courseRes.data.passing_score,
+        passing_score: courseRes.data.passing_score ?? undefined,
+        meet_link: courseRes.data.meet_link ?? '',
+        start_date: courseRes.data.start_date ? new Date(courseRes.data.start_date).toISOString().slice(0, 16) : '',
+        end_date: courseRes.data.end_date ? new Date(courseRes.data.end_date).toISOString().slice(0, 16) : '',
       })
       if (skillsRes.data) setSkills(skillsRes.data)
       if (csRes.data) {
@@ -111,9 +119,15 @@ export function CourseEditPage() {
     setSaving(true)
     try {
       const data = watch()
+      const updateData = {
+        ...data,
+        status,
+        start_date: data.start_date ? new Date(data.start_date).toISOString() : null,
+        end_date: data.end_date ? new Date(data.end_date).toISOString() : null,
+      }
       const { error } = await supabase
         .from('courses')
-        .update({ ...data, status })
+        .update(updateData)
         .eq('id', course.id)
       if (error) throw error
 
@@ -235,6 +249,19 @@ export function CourseEditPage() {
                     <Label className="text-ink/80">Passing Score (%)</Label>
                     <Input type="number" {...register('passing_score')} className="bg-ink/5 border-ink/20 text-ink" />
                   </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label className="text-ink/80">Live Meeting Link</Label>
+                    <Input type="url" {...register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-ink/5 border-ink/20 text-ink" />
+                    {errors.meet_link && <p className="text-xs text-red-600">{errors.meet_link.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80">Start Date</Label>
+                    <Input type="datetime-local" {...register('start_date')} className="bg-ink/5 border-ink/20 text-ink" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80">End Date</Label>
+                    <Input type="datetime-local" {...register('end_date')} className="bg-ink/5 border-ink/20 text-ink" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -326,7 +353,11 @@ export function CourseEditPage() {
           </Card>
         </motion.div>
 
-        <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Link to={`/trainer/courses/${courseId}/sessions`} className="p-4 rounded-xl bg-ink/5 border border-ink/10 hover:border-ink/30 transition-all text-center group">
+            <Calendar className="w-5 h-5 text-ink mx-auto mb-2 group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-ink font-medium">Sessions</span>
+          </Link>
           <Link to={`/trainer/courses/${courseId}/materials`} className="p-4 rounded-xl bg-ink/5 border border-ink/10 hover:border-ink/30 transition-all text-center group">
             <FileText className="w-5 h-5 text-ink mx-auto mb-2 group-hover:scale-110 transition-transform" />
             <span className="text-xs text-ink font-medium">Materials</span>

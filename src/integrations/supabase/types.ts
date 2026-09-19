@@ -173,7 +173,7 @@ export interface Database {
           trainer_id: string | null
           department: string | null
           duration_minutes: number | null
-          passing_score: number
+          passing_score: number | null
           status: 'draft' | 'pending_review' | 'published' | 'archived'
           thumbnail_path: string | null
           learning_objectives: Json | null
@@ -181,6 +181,19 @@ export interface Database {
           created_at: string
           updated_at: string
           published_at: string | null
+          meet_link: string | null
+          start_date: string | null
+          end_date: string | null
+          delivery_mode: string | null
+          live_class_timing: string | null
+          mock_test_timing: string | null
+          final_exam_timing: string | null
+          final_test_date: string | null
+          final_test_start_time: string | null
+          final_test_end_time: string | null
+          planned_assessments_count: number | null
+          planned_mock_tests_count: number | null
+          max_trainees: number | null
         }
         Insert: {
           id?: string
@@ -198,6 +211,19 @@ export interface Database {
           created_at?: string
           updated_at?: string
           published_at?: string | null
+          meet_link?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          delivery_mode?: string | null
+          live_class_timing?: string | null
+          mock_test_timing?: string | null
+          final_exam_timing?: string | null
+          final_test_date?: string | null
+          final_test_start_time?: string | null
+          final_test_end_time?: string | null
+          planned_assessments_count?: number | null
+          planned_mock_tests_count?: number | null
+          max_trainees?: number | null
         }
         Update: {
           id?: string
@@ -215,8 +241,71 @@ export interface Database {
           created_at?: string
           updated_at?: string
           published_at?: string | null
+          meet_link?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          delivery_mode?: string | null
+          live_class_timing?: string | null
+          mock_test_timing?: string | null
+          final_exam_timing?: string | null
+          final_test_date?: string | null
+          final_test_start_time?: string | null
+          final_test_end_time?: string | null
+          planned_assessments_count?: number | null
+          planned_mock_tests_count?: number | null
+          max_trainees?: number | null
         }
         Relationships: []
+      }
+      course_sessions: {
+        Row: {
+          id: string
+          course_id: string
+          title: string
+          description: string | null
+          start_time: string | null
+          end_time: string | null
+          meet_link: string | null
+          order_index: number
+          created_at: string
+          updated_at: string
+          session_type: string | null
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          title: string
+          description?: string | null
+          start_time?: string | null
+          end_time?: string | null
+          meet_link?: string | null
+          order_index?: number
+          created_at?: string
+          updated_at?: string
+          session_type?: string | null
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          title?: string
+          description?: string | null
+          start_time?: string | null
+          end_time?: string | null
+          meet_link?: string | null
+          order_index?: number
+          created_at?: string
+          updated_at?: string
+          session_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       materials: {
         Row: {
@@ -232,6 +321,7 @@ export interface Database {
           material_type: 'file' | 'link' | 'video'
           url: string | null
           created_at: string
+          session_id: string | null
         }
         Insert: {
           id?: string
@@ -246,6 +336,7 @@ export interface Database {
           material_type?: 'file' | 'link' | 'video'
           url?: string | null
           created_at?: string
+          session_id?: string | null
         }
         Update: {
           id?: string
@@ -260,6 +351,7 @@ export interface Database {
           material_type?: 'file' | 'link' | 'video'
           url?: string | null
           created_at?: string
+          session_id?: string | null
         }
         Relationships: []
       }
@@ -304,6 +396,12 @@ export interface Database {
           created_by: string
           created_at: string
           updated_at: string
+          assessment_type: string
+          requires_sea: boolean
+          sea_link: string | null
+          scheduled_date: string | null
+          start_time: string | null
+          end_time: string | null
         }
         Insert: {
           id?: string
@@ -315,6 +413,12 @@ export interface Database {
           created_by: string
           created_at?: string
           updated_at?: string
+          assessment_type?: string
+          requires_sea?: boolean
+          sea_link?: string | null
+          scheduled_date?: string | null
+          start_time?: string | null
+          end_time?: string | null
         }
         Update: {
           id?: string
@@ -326,6 +430,12 @@ export interface Database {
           created_by?: string
           created_at?: string
           updated_at?: string
+          assessment_type?: string
+          requires_sea?: boolean
+          sea_link?: string | null
+          scheduled_date?: string | null
+          start_time?: string | null
+          end_time?: string | null
         }
         Relationships: []
       }

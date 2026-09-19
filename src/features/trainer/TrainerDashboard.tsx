@@ -152,7 +152,7 @@ export function TrainerDashboard() {
                       return (
                         <tr key={course.id} className="hover:bg-ink/5 transition-colors">
                           <td className="px-3 md:px-4 py-2.5">
-                            <Link to={`/trainer/courses/${course.id}/edit`} className="text-xs md:text-sm text-ink hover:text-ink transition-colors font-medium truncate max-w-[150px] block">
+                            <Link to={`/trainer/courses/${course.id}`} className="text-xs md:text-sm text-ink hover:text-ink transition-colors font-medium truncate max-w-[150px] block">
                               {course.title}
                             </Link>
                           </td>

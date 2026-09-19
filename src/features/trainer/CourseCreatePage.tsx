@@ -11,7 +11,9 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { Label } from 
+
+'@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -36,6 +38,16 @@ const detailsSchema = z.object({
 const settingsSchema = z.object({
   duration_minutes: z.coerce.number().positive('Duration must be positive').optional(),
   passing_score: z.coerce.number().min(1).max(100).optional(),
+  meet_link: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
+  planned_assessments_count: z.coerce.number().min(0).optional(),
+  planned_mock_tests_count: z.coerce.number().min(0).optional(),
+  final_test_date: z.string().optional(),
+  final_test_start_time: z.string().optional(),
+  final_test_end_time: z.string().optional(),
+  delivery_mode: z.enum(['recorded', 'live', 'hybrid']),
+  max_trainees: z.coerce.number().positive('Capacity must be positive').optional(),
 })
 
 const objectivesSchema = z.object({
@@ -87,6 +99,7 @@ const STEPS = [
 export function CourseCreatePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
+
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [skills, setSkills] = useState<Skill[]>([])
@@ -112,13 +125,27 @@ export function CourseCreatePage() {
 
   const settingsForm = useForm<SettingsData>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: { passing_score: 60 },
+    defaultValues: { passing_score: 60, delivery_mode: 'recorded' },
   })
 
   const objectivesForm = useForm<ObjectivesData>({
     resolver: zodResolver(objectivesSchema),
     defaultValues: { understand: '', able_to_do: '', competencies_built: '' },
   })
+
+  // Calculate final exam duration dynamically
+  const startTime = settingsForm.watch('final_test_start_time')
+  const endTime = settingsForm.watch('final_test_end_time')
+  let examDuration = ''
+  if (startTime && endTime) {
+    const [startH, startM] = startTime.split(':').map(Number)
+    const [endH, endM] = endTime.split(':').map(Number)
+    let diffMins = (endH * 60 + endM) - (startH * 60 + startM)
+    if (diffMins < 0) diffMins += 24 * 60 // handle overnight
+    const h = Math.floor(diffMins / 60)
+    const m = diffMins % 60
+    examDuration = `${h > 0 ? `${h}h ` : ''}${m > 0 ? `${m}m` : ''}` || '0m'
+  }
 
   useEffect(() => {
     supabase.from('skills').select('*').order('name').then(({ data }) => {
@@ -267,6 +294,16 @@ export function CourseCreatePage() {
             able_to_do: o.able_to_do,
             competencies_built: o.competencies_built,
           },
+          meet_link: s.meet_link || null,
+          start_date: s.start_date ? new Date(s.start_date).toISOString() : null,
+          end_date: s.end_date ? new Date(s.end_date).toISOString() : null,
+          planned_assessments_count: s.planned_assessments_count || 0,
+          planned_mock_tests_count: s.planned_mock_tests_count || 0,
+          final_test_date: s.final_test_date ? new Date(s.final_test_date).toISOString() : null,
+          final_test_start_time: s.final_test_start_time ? new Date(s.final_test_start_time).toISOString() : null,
+          final_test_end_time: s.final_test_end_time ? new Date(s.final_test_end_time).toISOString() : null,
+          delivery_mode: s.delivery_mode,
+          max_trainees: s.max_trainees || null,
         })
         .select()
         .single()
@@ -487,6 +524,83 @@ export function CourseCreatePage() {
                     <Label className="text-ink/80 text-xs">Passing Score (%)</Label>
                     <Input type="number" {...settingsForm.register('passing_score')} placeholder="60" className="bg-ink/5 border-ink/20 text-ink h-10" />
                     <p className="text-[10px] text-ink/40">Minimum score to pass</p>
+                  </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label className="text-ink/80 text-xs">Live Meeting Link</Label>
+                    <Input type="url" {...settingsForm.register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    {settingsForm.formState.errors.meet_link && <p className="text-[10px] text-red-600">{settingsForm.formState.errors.meet_link.message}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80 text-xs">Start Date</Label>
+                    <Input type="date" {...settingsForm.register('start_date')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    {settingsForm.formState.errors.start_date && (
+                      <p className="text-[10px] text-red-500">{settingsForm.formState.errors.start_date.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80 text-xs">End Date</Label>
+                    <Input type="date" {...settingsForm.register('end_date')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    {settingsForm.formState.errors.end_date && (
+                      <p className="text-[10px] text-red-500">{settingsForm.formState.errors.end_date.message}</p>
+                    )}
+                  </div>
+                  
+                  {/* Capacity */}
+                  <div className="space-y-1.5 col-span-2">
+                    <Label className="text-ink/80 text-xs">Trainee Capacity Limit</Label>
+                    <Input type="number" {...settingsForm.register('max_trainees')} placeholder="e.g. 50" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <p className="text-[10px] text-ink/40">Leave empty for unlimited trainees</p>
+                  </div>
+                  
+                  {/* Test Planning */}
+                  <div className="space-y-1.5 col-span-2 mt-2 pt-4 border-t border-ink/10">
+                    <Label className="text-ink font-medium">Test & Assessment Plan</Label>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80 text-xs">Planned Daily Assessments</Label>
+                    <Input type="number" {...settingsForm.register('planned_assessments_count')} placeholder="e.g. 10" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80 text-xs">Planned Mock Tests</Label>
+                    <Input type="number" {...settingsForm.register('planned_mock_tests_count')} placeholder="e.g. 2" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                  </div>
+                  <div className="space-y-1.5 col-span-2">
+                    <Label className="text-ink/80 text-xs font-semibold mt-2">Final Exam Details</Label>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80 text-xs">Date</Label>
+                    <Input type="date" {...settingsForm.register('final_test_date')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 col-span-1">
+                    <div className="space-y-1.5">
+                      <Label className="text-ink/80 text-xs">Start Time</Label>
+                      <Input type="time" {...settingsForm.register('final_test_start_time')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-ink/80 text-xs">End Time</Label>
+                      <Input type="time" {...settingsForm.register('final_test_end_time')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    </div>
+                  </div>
+                  {examDuration && (
+                    <div className="col-span-2 text-xs font-medium text-ink/70">
+                      Duration: <span className="text-brand">{examDuration}</span>
+                    </div>
+                  )}
+                  
+                  {/* Delivery & Schedule Fields */}
+                  <div className="space-y-1.5 col-span-2 mt-2 pt-4 border-t border-ink/10">
+                    <Label className="text-ink font-medium">Delivery & Schedule</Label>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80 text-xs">Delivery Mode</Label>
+                    <Select value={settingsForm.watch('delivery_mode')} onValueChange={v => settingsForm.setValue('delivery_mode', v as any)}>
+                      <SelectTrigger className="bg-ink/5 border-ink/20 text-ink h-10"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="recorded">Pre-recorded Videos</SelectItem>
+                        <SelectItem value="live">Live Online Classes</SelectItem>
+                        <SelectItem value="hybrid">Hybrid (Both)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-1.5">

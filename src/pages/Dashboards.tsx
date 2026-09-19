@@ -15,6 +15,16 @@ import {
   Menu, X, Trash2, Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useNotifications } from '@/hooks/useNotifications'
+import { formatDistanceToNow } from 'date-fns'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type AuditLog = Database['public']['Tables']['audit_logs']['Row']
 type Profile = (
@@ -48,6 +58,7 @@ export function DashboardShell({
   const location = useLocation()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { notifications, loading: notifsLoading, unreadCount, markAsRead } = useNotifications()
 
   const handleResetPassword = async () => {
     if (!profile?.email) return;
@@ -228,20 +239,51 @@ export function DashboardShell({
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-1 md:gap-2">
-            <button className="relative p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-pink-500 rounded-full" />
-            </button>
-            <button 
-              onClick={handleResetPassword}
-              title="Reset Password"
-              className="p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all"
-            >
-              <Shield className="w-4 h-4" />
-            </button>
-            <button className="p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="relative p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all group">
+                  <Bell className="w-4 h-4 group-hover:text-purple-600" />
+                  {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-pink-500 rounded-full animate-pulse" />}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 max-h-96 overflow-y-auto">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                
+                {notifsLoading ? (
+                  <div className="p-4 text-center text-xs text-midnight/50">Loading...</div>
+                ) : notifications.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-midnight/50">No new notifications</div>
+                ) : (
+                  notifications.map((notif) => (
+                    <React.Fragment key={notif.id}>
+                      <DropdownMenuItem 
+                        className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notif.read_at ? 'bg-purple-50/50' : ''}`}
+                        onClick={() => !notif.read_at && markAsRead(notif.id)}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          {!notif.read_at && <div className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0" />}
+                          <span className="text-sm font-semibold text-midnight truncate">{notif.title}</span>
+                        </div>
+                        <span className="text-xs text-midnight/60">{notif.message}</span>
+                        <span className="text-[10px] text-midnight/40 mt-1">
+                          {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </React.Fragment>
+                  ))
+                )}
+                
+                <DropdownMenuItem className="text-center text-xs font-medium text-purple-600 justify-center cursor-pointer">
+                  View all notifications
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Link to={`/${profile?.role}/settings`} className="p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all">
               <Settings className="w-4 h-4" />
-            </button>
+            </Link>
           </div>
         </header>
         <main className="p-4 md:p-6 lg:p-8">

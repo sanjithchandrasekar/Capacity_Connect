@@ -8,11 +8,12 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2 } from 'lucide-react'
+import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar, Video } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 
 type Course = Database['public']['Tables']['courses']['Row']
 type CourseSkill = Database['public']['Tables']['course_skills']['Row'] & { skills: { name: string } | null }
+type Session = Database['public']['Tables']['course_sessions']['Row']
 type Material = Database['public']['Tables']['materials']['Row']
 type Assessment = Database['public']['Tables']['assessments']['Row']
 
@@ -28,6 +29,7 @@ export function CourseDetailPage() {
   const { user } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
   const [courseSkills, setCourseSkills] = useState<CourseSkill[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
   const [assessment, setAssessment] = useState<Assessment | null>(null)
   const [enrollmentCount, setEnrollmentCount] = useState(0)
@@ -37,18 +39,20 @@ export function CourseDetailPage() {
     if (!user || !courseId) return
     setLoading(true)
     try {
-      const [cRes, csRes, mRes, aRes, eRes] = await Promise.all([
+      const [cRes, csRes, mRes, aRes, eRes, sRes] = await Promise.all([
         supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single(),
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', courseId),
         supabase.from('materials').select('*').eq('course_id', courseId),
         supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).single(),
         supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+        supabase.from('course_sessions').select('*').eq('course_id', courseId).order('order_index'),
       ])
       if (cRes.data) setCourse(cRes.data)
       if (csRes.data) setCourseSkills(csRes.data as any)
       if (mRes.data) setMaterials(mRes.data)
       if (aRes.data) setAssessment(aRes.data)
       setEnrollmentCount(eRes.count ?? 0)
+      if (sRes.data) setSessions(sRes.data)
     } catch (err) {
       console.error(err)
     } finally {
@@ -104,13 +108,73 @@ export function CourseDetailPage() {
                   </RouterLink>
                 </div>
                 <p className="text-sm text-ink/60 mb-4">{course.description}</p>
-                <div className="flex flex-wrap items-center gap-4 text-xs text-ink/50">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-ink/50 mb-4">
                   <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {course.duration_minutes ?? 0} min</span>
                   <span>{course.course_type === 'standard' ? 'Standard' : 'Scenario'} Training</span>
                   <span>{course.department || 'General'}</span>
+                  <span className="capitalize flex items-center gap-1"><Video className="w-3.5 h-3.5" /> {course.delivery_mode || 'recorded'}</span>
                   <span>Pass: {course.passing_score}%</span>
-                  <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {enrollmentCount} enrolled</span>
+                  <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {enrollmentCount} {course.max_trainees ? `/ ${course.max_trainees}` : ''} enrolled</span>
                 </div>
+                {(course.start_date || course.end_date || course.meet_link || course.live_class_timing || course.mock_test_timing || course.final_exam_timing) && (
+                  <div className="bg-ink/5 p-4 rounded-lg space-y-3 mt-4">
+                    <h4 className="text-xs font-bold text-ink flex items-center gap-2"><Calendar className="w-4 h-4" /> Schedule & Dates</h4>
+                    {(course.start_date || course.end_date) && (
+                      <div className="flex items-center gap-2 text-xs text-ink/70">
+                        <span className="font-medium text-ink w-24">Course Span:</span> 
+                        {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'TBD'} 
+                        {' - '} 
+                        {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'TBD'}
+                      </div>
+                    )}
+                    {course.meet_link && (
+                      <div className="flex items-center gap-2 text-xs text-ink/70">
+                        <span className="font-medium text-ink w-24">Meeting Link:</span> 
+                        <a href={course.meet_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">
+                          {course.meet_link}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {((course.planned_assessments_count || 0) > 0 || (course.planned_mock_tests_count || 0) > 0 || course.final_test_date) && (
+                  <Card className="bg-white border-ink/10 mt-4">
+                    <CardContent className="p-6 space-y-4">
+                      <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
+                        <Target className="w-4 h-4 text-ink/60" /> Test & Assessment Plan
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        {(course.planned_assessments_count || 0) > 0 && (
+                          <div>
+                            <span className="text-ink/60 block text-xs">Daily Assessments</span>
+                            <span className="text-ink font-medium">{course.planned_assessments_count} Planned</span>
+                          </div>
+                        )}
+                        {(course.planned_mock_tests_count || 0) > 0 && (
+                          <div>
+                            <span className="text-ink/60 block text-xs">Mock Tests</span>
+                            <span className="text-ink font-medium">{course.planned_mock_tests_count} Planned</span>
+                          </div>
+                        )}
+                        {course.final_test_date && (
+                          <div className="col-span-2">
+                            <span className="text-ink/60 block text-xs">Final Exam</span>
+                            <div className="flex flex-col text-ink font-medium mt-1">
+                              <span>{new Date(course.final_test_date).toLocaleDateString()}</span>
+                              {(course.final_test_start_time || course.final_test_end_time) && (
+                                <span className="text-xs text-ink/70">
+                                  {course.final_test_start_time ? new Date(course.final_test_start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} 
+                                  {course.final_test_end_time ? ` - ${new Date(course.final_test_end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           </div>
@@ -146,7 +210,48 @@ export function CourseDetailPage() {
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {sessions.length > 0 && (
+          <motion.div variants={fadeUp}>
+            <Card className="bg-white border-ink/10">
+              <CardContent className="p-6">
+                <h3 className="text-sm font-semibold text-ink mb-4">Course Sessions</h3>
+                <div className="space-y-3">
+                  {sessions.map((session, index) => (
+                    <div key={session.id} className="p-3 rounded-xl bg-ink/5 border border-ink/10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="text-[10px]">Session {index + 1}</Badge>
+                        <h4 className="text-sm font-semibold text-ink">{session.title}</h4>
+                      </div>
+                      {session.description && <p className="text-xs text-ink/70 mt-1">{session.description}</p>}
+                      <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-ink/60">
+                        {session.start_time && (
+                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(session.start_time).toLocaleString()}</span>
+                        )}
+                        {session.meet_link && (
+                          <a href={session.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                            <Video className="w-3 h-3" /> Live Class
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <motion.div variants={fadeUp}>
+            <RouterLink to={`/trainer/courses/${courseId}/sessions`}>
+              <Card className="bg-white border-ink/10 hover:border-ink/20 transition-all cursor-pointer h-full">
+                <CardContent className="p-5 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-ink/10 flex items-center justify-center"><Calendar className="w-5 h-5 text-ink" /></div>
+                  <div><p className="text-sm font-medium text-ink">Sessions</p><p className="text-xs text-ink/50">{sessions.length} sessions</p></div>
+                </CardContent>
+              </Card>
+            </RouterLink>
+          </motion.div>
           <motion.div variants={fadeUp}>
             <RouterLink to={`/trainer/courses/${courseId}/materials`}>
               <Card className="bg-white border-ink/10 hover:border-ink/20 transition-all cursor-pointer h-full">

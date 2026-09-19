@@ -1,74 +1,21 @@
-import React, { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { Database } from '@/integrations/supabase/types'
+import React, { useState } from 'react'
+import { useNotifications } from '@/hooks/useNotifications'
 import { TrainerLayout, fadeUp, stagger } from './TrainerLayout'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Loader2, Inbox } from 'lucide-react'
-import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
-type Notification = Database['public']['Tables']['notifications']['Row']
-
 export function NotificationsPage() {
-  const { user } = useAuth()
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [loading, setLoading] = useState(true)
+  const { notifications, loading, markAsRead, markAllAsRead, unreadCount } = useNotifications()
   const [markingId, setMarkingId] = useState<string | null>(null)
 
-  const fetchData = useCallback(async () => {
-    if (!user) return
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      setNotifications(data ?? [])
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [user])
-
-  useEffect(() => { fetchData() }, [fetchData])
-
-  const markAsRead = async (id: string) => {
+  const handleMarkAsRead = async (id: string) => {
     setMarkingId(id)
-    try {
-      await supabase
-        .from('notifications')
-        .update({ read_at: new Date().toISOString() })
-        .eq('id', id)
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
-    } catch {
-      toast.error('Failed to mark as read')
-    } finally {
-      setMarkingId(null)
-    }
+    await markAsRead(id)
+    setMarkingId(null)
   }
-
-  const markAllRead = async () => {
-    if (!user) return
-    try {
-      await supabase
-        .from('notifications')
-        .update({ read_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .is('read_at', null)
-      setNotifications(prev => prev.map(n => n.read_at ? n : { ...n, read_at: new Date().toISOString() }))
-      toast.success('All marked as read')
-    } catch {
-      toast.error('Failed')
-    }
-  }
-
-  const unreadCount = notifications.filter(n => !n.read_at).length
 
   if (loading) {
     return <TrainerLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div></TrainerLayout>
@@ -83,7 +30,7 @@ export function NotificationsPage() {
             <p className="text-ink/60 text-sm mt-1">{unreadCount} unread</p>
           </div>
           {unreadCount > 0 && (
-            <Button onClick={markAllRead} variant="outline" size="sm" className="border-ink/10 text-ink">
+            <Button onClick={markAllAsRead} variant="outline" size="sm" className="border-ink/10 text-ink">
               <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Mark all read
             </Button>
           )}
@@ -116,7 +63,7 @@ export function NotificationsPage() {
                     <p className="text-[10px] text-ink/40 mt-1">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
                   </div>
                   {!n.read_at && (
-                    <button onClick={() => markAsRead(n.id)} disabled={markingId === n.id} className="text-xs text-ink/50 hover:text-ink transition-colors shrink-0">
+                    <button onClick={() => handleMarkAsRead(n.id)} disabled={markingId === n.id} className="text-xs text-ink/50 hover:text-ink transition-colors shrink-0">
                       {markingId === n.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Mark read'}
                     </button>
                   )}

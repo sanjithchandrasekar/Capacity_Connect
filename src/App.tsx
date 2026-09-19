@@ -25,14 +25,16 @@ import { CourseCreatePage } from './features/trainer/CourseCreatePage'
 import { CourseEditPage } from './features/trainer/CourseEditPage'
 import { AssessmentsPage } from './features/trainer/AssessmentsPage'
 import { PerformancePage } from './features/trainer/PerformancePage'
+import { CourseSessionsPage } from './features/trainer/CourseSessionsPage'
 import { TrainerProfile } from './features/trainer/TrainerProfile'
 import { TrainerSkills } from './features/trainer/TrainerSkills'
 import { NotificationsPage } from './features/trainer/NotificationsPage'
 import { CourseDetailPage } from './features/trainer/CourseDetailPage'
-import { SettingsPage } from './features/trainer/SettingsPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { LandingPage } from './pages/LandingPage'
 import { PublicCourseCatalog } from './pages/PublicCourseCatalog'
 import { PublicCourseDetails } from './pages/PublicCourseDetails'
+import { ChatBot } from './components/ChatBot'
 
 function DashboardRedirect() {
   const { session, profile, loading } = useAuth()
@@ -78,6 +80,7 @@ export default function App() {
                   <Route path="/trainee/courses" element={<TraineeCourseCatalog />} />
                   <Route path="/trainee/courses/:courseId" element={<TraineeCourseDetails />} />
                   <Route path="/trainee/my-learning" element={<TraineeMyLearning />} />
+                  <Route path="/trainee/settings" element={<SettingsPage />} />
                 </Route>
 
                 {/* Trainer routes */}
@@ -87,6 +90,7 @@ export default function App() {
                   <Route path="/trainer/courses/new" element={<CourseCreatePage />} />
                   <Route path="/trainer/courses/:courseId" element={<CourseDetailPage />} />
                   <Route path="/trainer/courses/:courseId/edit" element={<CourseEditPage />} />
+                  <Route path="/trainer/courses/:courseId/sessions" element={<CourseSessionsPage />} />
                   <Route path="/trainer/courses/:courseId/materials" element={<CourseMaterials />} />
                   <Route path="/trainer/courses/:courseId/assessments" element={<AssessmentsPage />} />
                   <Route path="/trainer/courses/:courseId/performance" element={<PerformancePage />} />
@@ -99,11 +103,13 @@ export default function App() {
                 {/* Admin routes */}
                 <Route element={<RoleRoute allowedRoles={['admin', 'super_admin']} />}>
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/settings" element={<SettingsPage />} />
                 </Route>
 
                 {/* Super Admin routes */}
                 <Route element={<RoleRoute allowedRoles={['super_admin']} />}>
                   <Route path="/super-admin" element={<SuperAdminDashboard />} />
+                  <Route path="/super-admin/settings" element={<SettingsPage />} />
                 </Route>
 
               </Route>
@@ -111,6 +117,7 @@ export default function App() {
 
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          <ChatBot />
           <Toaster position="top-right" richColors />
         </BrowserRouter>
       </AuthProvider>
