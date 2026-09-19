@@ -825,7 +825,7 @@ export function AdminDashboard() {
         toast.success('User updated successfully')
       }
       fetchData()
-    } catch (e) {
+    } catch (e: any) {
       toast.error(`Failed to update user: ${e?.message || JSON.stringify(e)}`)
       console.error('Update user error:', e)
     }

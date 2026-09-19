@@ -74,7 +74,7 @@ export function Register() {
 
   // Inline Verification Helpers
   const handleSendEmailOtp = async () => {
-    const email = currentForm.getValues('email')
+    const email = role === 'trainee' ? traineeForm.getValues('email') : trainerForm.getValues('email')
     if (!email || currentForm.formState.errors.email) {
       toast.error('Please enter a valid email first.')
       return
@@ -105,7 +105,7 @@ export function Register() {
 
   const handleVerifyEmailOtp = async () => {
     if (emailOtpInput.length < 6) return toast.error('Enter 6-digit OTP')
-    const email = currentForm.getValues('email')
+    const email = role === 'trainee' ? traineeForm.getValues('email') : trainerForm.getValues('email')
     
     setIsSendingEmailOtp(true)
     try {
