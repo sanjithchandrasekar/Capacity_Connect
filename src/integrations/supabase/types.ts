@@ -54,10 +54,14 @@ export interface Database {
           approval_status: 'pending' | 'approved' | 'rejected' | 'suspended'
           avatar_path: string | null
           proof_path: string | null
+          biodata_path: string | null
+          study_details: string | null
           bio: string | null
           years_of_experience: number | null
           qualifications: string | null
           availability: string | null
+          mobile_number: string | null
+          is_mobile_verified: boolean
           password: string | null
           created_at: string
           updated_at: string
@@ -70,10 +74,15 @@ export interface Database {
           approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
           avatar_path?: string | null
           proof_path?: string | null
+          biodata_path?: string | null
+          study_details?: string | null
           bio?: string | null
           years_of_experience?: number | null
           qualifications?: string | null
           availability?: string | null
+          mobile_number?: string | null
+          is_mobile_verified?: boolean
+          is_email_verified?: boolean
           password?: string | null
           created_at?: string
           updated_at?: string
@@ -86,10 +95,15 @@ export interface Database {
           approval_status?: 'pending' | 'approved' | 'rejected' | 'suspended'
           avatar_path?: string | null
           proof_path?: string | null
+          biodata_path?: string | null
+          study_details?: string | null
           bio?: string | null
           years_of_experience?: number | null
           qualifications?: string | null
           availability?: string | null
+          mobile_number?: string | null
+          is_mobile_verified?: boolean
+          is_email_verified?: boolean
           password?: string | null
           created_at?: string
           updated_at?: string
@@ -107,6 +121,9 @@ export interface Database {
           proof_path: string | null
           department: string | null
           designation: string | null
+          mobile_number: string | null
+          is_mobile_verified: boolean
+          is_email_verified: boolean
           password: string | null
           created_at: string
           updated_at: string
@@ -121,6 +138,9 @@ export interface Database {
           proof_path?: string | null
           department?: string | null
           designation?: string | null
+          mobile_number?: string | null
+          is_mobile_verified?: boolean
+          is_email_verified?: boolean
           password?: string | null
           created_at?: string
           updated_at?: string
@@ -135,6 +155,9 @@ export interface Database {
           proof_path?: string | null
           department?: string | null
           designation?: string | null
+          mobile_number?: string | null
+          is_mobile_verified?: boolean
+          is_email_verified?: boolean
           password?: string | null
           created_at?: string
           updated_at?: string
@@ -678,6 +701,44 @@ export interface Database {
           new_status: string
         }
         Returns: void
+      }
+      generate_mobile_otp: {
+        Args: {
+          p_mobile: string
+        }
+        Returns: string
+      }
+      verify_mobile_otp: {
+        Args: {
+          p_mobile: string
+          p_otp: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      generate_otp: {
+        Args: {
+          p_identifier: string
+          p_type: string
+        }
+        Returns: string
+      }
+      verify_otp: {
+        Args: {
+          p_identifier: string
+          p_otp: string
+          p_user_id: string
+          p_type: string
+        }
+        Returns: boolean
+      }
+      check_otp_match: {
+        Args: {
+          p_identifier: string
+          p_otp: string
+          p_type: string
+        }
+        Returns: boolean
       }
     }
     Enums: {}

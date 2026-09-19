@@ -826,8 +826,8 @@ export function AdminDashboard() {
       }
       fetchData()
     } catch (e) {
-      toast.error('Failed to update user. Check Supabase connection.')
-      console.error(e)
+      toast.error(`Failed to update user: ${e?.message || JSON.stringify(e)}`)
+      console.error('Update user error:', e)
     }
   }
 
