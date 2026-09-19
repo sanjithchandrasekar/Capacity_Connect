@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -9,6 +9,7 @@ import { Compass, BookOpen, Clock, User, ArrowLeft, CheckCircle2, Loader2, BookM
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Calendar, Video, FileText, Lock, Target } from 'lucide-react'
+import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -21,6 +22,10 @@ export function TraineeCourseDetails() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
+  const [previewMaterial, setPreviewMaterial] = useState<any | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
   const { data: course, isLoading: isCourseLoading } = useQuery({
     queryKey: ['course', courseId],
     queryFn: async () => {
@@ -28,7 +33,7 @@ export function TraineeCourseDetails() {
         .from('courses')
         .select(`
           *,
-          trainer:profiles!courses_trainer_id_fkey(full_name, department)
+          trainer:trainers!courses_trainer_id_fkey(full_name)
         `)
         .eq('id', courseId!)
         .single() as any
@@ -110,6 +115,51 @@ export function TraineeCourseDetails() {
       toast.error(error.message || 'Failed to enroll')
     }
   })
+
+  const handleDownload = async (material: any) => {
+    setDownloadingId(material.id)
+    try {
+      const { data, error } = await supabase.storage
+        .from('materials')
+        .createSignedUrl(material.storage_path, 3600)
+      if (error) throw error
+
+      const link = document.createElement('a')
+      link.href = data.signedUrl
+      link.download = material.file_name
+      link.target = '_blank'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch {
+      toast.error('Failed to generate download link')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
+  const handlePreview = async (material: any) => {
+    if (!enrollment) {
+      toast.error('Please enroll to access materials')
+      return
+    }
+    if (material.material_type === 'link') {
+      window.open(material.url!, '_blank')
+      return
+    }
+    setPreviewMaterial(material)
+    setPreviewUrl(null)
+    try {
+      const { data, error } = await supabase.storage
+        .from('materials')
+        .createSignedUrl(material.storage_path, 3600)
+      if (error) throw error
+      setPreviewUrl(data.signedUrl)
+    } catch {
+      toast.error('Failed to load preview')
+      setPreviewMaterial(null)
+    }
+  }
 
   const isLoading = isCourseLoading || isEnrollmentLoading
 
@@ -280,6 +330,39 @@ export function TraineeCourseDetails() {
               </div>
             </div>
 
+            {/* Session Flow */}
+            {(course.session_flow_text || course.session_flow_document_path) && (
+              <div className="bg-white border border-purple-500/15 rounded-3xl p-8 shadow-sm">
+                <h2 className="text-lg font-bold text-midnight flex items-center gap-2 mb-4">
+                  <BookOpen className="w-5 h-5 text-purple-600" /> Session Flow
+                </h2>
+                <div className="space-y-4">
+                  {course.session_flow_text && (
+                    <div className="text-midnight/70 leading-relaxed whitespace-pre-wrap text-sm">
+                      {course.session_flow_text}
+                    </div>
+                  )}
+                  {course.session_flow_document_path && (
+                    <Button variant="outline" onClick={async () => {
+                      try {
+                        const { data, error } = await supabase.storage.from('materials').createSignedUrl(course.session_flow_document_path!, 3600)
+                        if (error) throw error
+                        if (data?.signedUrl) {
+                          setPreviewUrl(data.signedUrl)
+                          setPreviewMaterial({ file_name: 'Session Flow Document', material_type: 'file', storage_path: course.session_flow_document_path } as any)
+                        }
+                      } catch (err) {
+                        toast.error('Failed to open document')
+                      }
+                    }}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      View Session Flow Document
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Course Content / Sessions */}
             {course.sessions && course.sessions.length > 0 && (
               <div className="bg-white border border-purple-500/15 rounded-3xl p-8 shadow-sm">
@@ -324,11 +407,15 @@ export function TraineeCourseDetails() {
                           ) : (
                             <ul className="space-y-2 text-sm text-midnight/70">
                               {sessionMaterials.map((m: any) => (
-                                <li key={m.id} className="flex items-center gap-3 p-2 hover:bg-purple-50/50 rounded-xl transition-colors">
+                                <li 
+                                  key={m.id} 
+                                  onClick={() => handlePreview(m)}
+                                  className={`flex items-center gap-3 p-2 rounded-xl transition-colors ${enrollment ? 'cursor-pointer hover:bg-purple-50/50 hover:text-purple-700' : 'opacity-70'}`}
+                                >
                                   <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
                                     <FileText className="w-4 h-4 text-purple-600" />
                                   </div>
-                                  <span className="truncate flex-1">{m.file_name}</span>
+                                  <span className="truncate flex-1 font-medium">{m.file_name}</span>
                                   {!enrollment && <Lock className="w-3.5 h-3.5 text-midnight/30 shrink-0" />}
                                 </li>
                               ))}
@@ -345,6 +432,13 @@ export function TraineeCourseDetails() {
           </motion.div>
         )}
       </div>
+      
+      <MaterialPreviewDialog 
+        material={previewMaterial}
+        previewUrl={previewUrl}
+        onClose={() => setPreviewMaterial(null)}
+        onDownload={() => previewMaterial && handleDownload(previewMaterial)}
+      />
     </DashboardShell>
   )
 }

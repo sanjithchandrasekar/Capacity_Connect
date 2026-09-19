@@ -185,6 +185,8 @@ export interface Database {
           start_date: string | null
           end_date: string | null
           delivery_mode: string | null
+          session_flow_text: string | null
+          session_flow_document_path: string | null
           live_class_timing: string | null
           mock_test_timing: string | null
           final_exam_timing: string | null
@@ -215,6 +217,8 @@ export interface Database {
           start_date?: string | null
           end_date?: string | null
           delivery_mode?: string | null
+          session_flow_text?: string | null
+          session_flow_document_path?: string | null
           live_class_timing?: string | null
           mock_test_timing?: string | null
           final_exam_timing?: string | null
@@ -245,6 +249,8 @@ export interface Database {
           start_date?: string | null
           end_date?: string | null
           delivery_mode?: string | null
+          session_flow_text?: string | null
+          session_flow_document_path?: string | null
           live_class_timing?: string | null
           mock_test_timing?: string | null
           final_exam_timing?: string | null

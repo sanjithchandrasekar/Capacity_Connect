@@ -15,7 +15,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import { Thumbnail } from '@/components/ui/Thumbnail'
-import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download } from 'lucide-react'
+import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
+import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -61,9 +62,13 @@ export function AdminCourses() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [materials, setMaterials] = useState<Material[]>([])
+  const [sessions, setSessions] = useState<any[]>([])
   const [skills, setSkills] = useState<CourseSkill[]>([])
   const [enrollmentCount, setEnrollmentCount] = useState(0)
   const [updating, setUpdating] = useState<string | null>(null)
+  
+  const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const fetchCourses = useCallback(async () => {
     setLoading(true)
@@ -72,7 +77,7 @@ export function AdminCourses() {
         .from('courses')
         .select(`
           *,
-          trainer:profiles!courses_trainer_id_fkey(full_name, department)
+          trainer:trainers!courses_trainer_id_fkey(full_name)
         `)
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -92,14 +97,16 @@ export function AdminCourses() {
     setDetailOpen(true)
     setDetailLoading(true)
     try {
-      const [mRes, sRes, eRes] = await Promise.all([
+      const [mRes, sRes, eRes, sessRes] = await Promise.all([
         supabase.from('materials').select('*').eq('course_id', course.id).order('created_at', { ascending: false }),
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', course.id),
         supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', course.id),
+        supabase.from('course_sessions').select('*').eq('course_id', course.id).order('order_index'),
       ])
       setMaterials(mRes.data ?? [])
       setSkills(sRes.data as any ?? [])
       setEnrollmentCount(eRes.count ?? 0)
+      setSessions(sessRes.data ?? [])
     } catch {
       toast.error('Failed to load course details')
     } finally {
@@ -147,10 +154,20 @@ export function AdminCourses() {
             <p className="text-midnight/40 text-sm text-center py-12">No courses found.</p>
           ) : (
             <div className="space-y-3.5">
-              {courses.map(course => {
+              {courses
+                .map(course => {
+                  const isUrgent = course.status === 'pending_review' && course.start_date && (new Date(course.start_date).getTime() < Date.now() + 30 * 24 * 60 * 60 * 1000);
+                  return { ...course, isUrgent };
+                })
+                .sort((a, b) => {
+                  if (a.isUrgent && !b.isUrgent) return -1;
+                  if (!a.isUrgent && b.isUrgent) return 1;
+                  return 0; // maintain original created_at order
+                })
+                .map(course => {
                 const trainer = (course as any).trainer
                 return (
-                  <div key={course.id} className="flex items-center gap-4 p-4 rounded-2xl bg-purple-50/40 hover:bg-purple-50/80 border border-purple-500/10 hover:border-purple-500/20 transition-all">
+                  <div key={course.id} className={`flex items-center gap-4 p-4 rounded-2xl ${course.isUrgent ? 'bg-red-50/40 hover:bg-red-50/80 border-red-500/30' : 'bg-purple-50/40 hover:bg-purple-50/80 border-purple-500/10'} border hover:border-purple-500/20 transition-all`}>
                     {/* Thumbnail */}
                     <div className="w-20 h-16 rounded-xl bg-purple-100 border border-purple-200/60 overflow-hidden shrink-0">
                       <Thumbnail path={course.thumbnail_path} alt={course.title} fallbackIcon={<BookOpen className="w-6 h-6 text-purple-400" />} />
@@ -161,6 +178,7 @@ export function AdminCourses() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-sm font-bold text-midnight truncate">{course.title}</h3>
                         <StatusBadge status={course.status} />
+                        {course.isUrgent && <Badge className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200 text-[10px]">🚨 URGENT</Badge>}
                       </div>
                       <p className="text-xs text-midnight/60 line-clamp-1 mb-1.5">{course.description || 'No description provided.'}</p>
                       <div className="flex items-center gap-3 text-[11px] text-midnight/50 font-medium">
@@ -265,6 +283,107 @@ export function AdminCourses() {
                     </div>
                   </div>
 
+                  {/* Schedule & Dates */}
+                  {(selectedCourse.start_date || selectedCourse.end_date || selectedCourse.meet_link) && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                        <Clock className="w-3.5 h-3.5" /> Schedule & Dates
+                      </div>
+                      <div className="bg-ink/5 rounded-lg p-4 space-y-2 text-sm">
+                        {(selectedCourse.start_date || selectedCourse.end_date) && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-ink/60 w-24 block">Course Span:</span>
+                            <span className="text-ink font-medium">
+                              {selectedCourse.start_date ? new Date(selectedCourse.start_date).toLocaleDateString() : 'TBD'} -{' '}
+                              {selectedCourse.end_date ? new Date(selectedCourse.end_date).toLocaleDateString() : 'TBD'}
+                            </span>
+                            {selectedCourse.start_date && selectedCourse.end_date && (
+                              <span className="text-xs text-ink/50 ml-2">
+                                ({Math.max(1, Math.ceil((new Date(selectedCourse.end_date).getTime() - new Date(selectedCourse.start_date).getTime()) / (1000 * 60 * 60 * 24)))} days)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {selectedCourse.meet_link && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-ink/60 w-24 block">Meeting Link:</span>
+                            <a href={selectedCourse.meet_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">
+                              {selectedCourse.meet_link}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Test & Assessment Plan */}
+                  {((selectedCourse.planned_assessments_count || 0) > 0 || (selectedCourse.planned_mock_tests_count || 0) > 0 || selectedCourse.final_test_date) && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                        <Target className="w-3.5 h-3.5" /> Test & Assessment Plan
+                      </div>
+                      <div className="bg-ink/5 rounded-lg p-4 grid grid-cols-2 gap-4 text-sm">
+                        {(selectedCourse.planned_assessments_count || 0) > 0 && (
+                          <div>
+                            <span className="text-ink/60 block text-xs">Daily Assessments</span>
+                            <span className="text-ink font-medium">{selectedCourse.planned_assessments_count} Planned</span>
+                          </div>
+                        )}
+                        {(selectedCourse.planned_mock_tests_count || 0) > 0 && (
+                          <div>
+                            <span className="text-ink/60 block text-xs">Mock Tests</span>
+                            <span className="text-ink font-medium">{selectedCourse.planned_mock_tests_count} Planned</span>
+                          </div>
+                        )}
+                        {selectedCourse.final_test_date && (
+                          <div className="col-span-2">
+                            <span className="text-ink/60 block text-xs">Final Exam</span>
+                            <div className="flex flex-col text-ink font-medium mt-1">
+                              <span>{new Date(selectedCourse.final_test_date).toLocaleDateString()}</span>
+                              {(selectedCourse.final_test_start_time || selectedCourse.final_test_end_time) && (
+                                <span className="text-xs text-ink/70">
+                                  {selectedCourse.final_test_start_time ? new Date(`2000-01-01T${selectedCourse.final_test_start_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} 
+                                  {selectedCourse.final_test_end_time ? ` - ${new Date(`2000-01-01T${selectedCourse.final_test_end_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Session Flow */}
+                  {(selectedCourse.session_flow_text || selectedCourse.session_flow_document_path) && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                        <BookOpen className="w-3.5 h-3.5" /> Session Flow
+                      </div>
+                      <div className="bg-ink/5 rounded-lg p-4 text-sm space-y-3">
+                        {selectedCourse.session_flow_text && (
+                          <p className="text-ink/80 whitespace-pre-wrap">{selectedCourse.session_flow_text}</p>
+                        )}
+                        {selectedCourse.session_flow_document_path && (
+                          <Button variant="outline" size="sm" onClick={async () => {
+                            try {
+                              const { data, error } = await supabase.storage.from('materials').createSignedUrl(selectedCourse.session_flow_document_path!, 3600)
+                              if (error) throw error
+                              if (data?.signedUrl) {
+                                setPreviewUrl(data.signedUrl)
+                                setPreviewMaterial({ file_name: 'Session Flow Document', material_type: 'file', storage_path: selectedCourse.session_flow_document_path } as any)
+                              }
+                            } catch (err) {
+                              toast.error('Failed to open document')
+                            }
+                          }}>
+                            <FileText className="w-4 h-4 mr-2" />
+                            View Session Flow Document
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Learning Objectives */}
                   {objectives && (
                     <div className="space-y-2">
@@ -299,6 +418,36 @@ export function AdminCourses() {
                             </span>
                           ))}
                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Course Sessions */}
+                  {sessions.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                        <Layers className="w-3.5 h-3.5" /> Course Sessions ({sessions.length})
+                      </div>
+                      <div className="bg-ink/5 rounded-lg p-4 space-y-3">
+                        {sessions.map((session, index) => (
+                          <div key={session.id} className="p-3 rounded-xl bg-white border border-ink/10 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline" className="text-[10px] h-4 bg-ink/5">Session {index + 1}</Badge>
+                              <h4 className="text-sm font-semibold text-ink">{session.title}</h4>
+                            </div>
+                            {session.description && <p className="text-xs text-ink/70 mt-1">{session.description}</p>}
+                            <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-ink/60">
+                              {session.start_time && (
+                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(session.start_time).toLocaleString()}</span>
+                              )}
+                              {session.meet_link && (
+                                <a href={session.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                                  <Video className="w-3 h-3" /> Live Class
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -347,32 +496,44 @@ export function AdminCourses() {
                                     <ExternalLink className="w-3.5 h-3.5" />
                                   </Button>
                                 ) : mat.storage_path ? (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 text-ink/60 hover:text-ink"
-                                    onClick={async () => {
-                                      try {
-                                        const { data, error } = await supabase.storage.from('materials').createSignedUrl(mat.storage_path, 60)
-                                        if (error) {
-                                          console.error('Signed URL error:', error)
-                                          toast.error(`Cannot access file: ${error.message}`)
-                                          return
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2 text-ink/60 hover:text-ink"
+                                      onClick={async () => {
+                                        try {
+                                          const { data, error } = await supabase.storage.from('materials').createSignedUrl(mat.storage_path!, 3600)
+                                          if (error) throw error
+                                          if (data?.signedUrl) {
+                                            setPreviewUrl(data.signedUrl)
+                                            setPreviewMaterial(mat)
+                                          }
+                                        } catch (err) {
+                                          toast.error('Failed to preview file')
                                         }
-                                        if (!data?.signedUrl) {
-                                          toast.error('No signed URL returned')
-                                          return
+                                      }}
+                                    >
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 px-2 text-ink/60 hover:text-ink"
+                                      onClick={async () => {
+                                        try {
+                                          const { data, error } = await supabase.storage.from('materials').createSignedUrl(mat.storage_path!, 60, { download: true })
+                                          if (error) throw error
+                                          if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+                                        } catch (err) {
+                                          toast.error('Failed to download file')
                                         }
-                                        window.open(data.signedUrl, '_blank')
-                                      } catch (err) {
-                                        console.error('Download error:', err)
-                                        toast.error('Failed to open file')
-                                      }
-                                    }}
-                                    title="Download / View"
-                                  >
-                                    <Download className="w-3.5 h-3.5" />
-                                  </Button>
+                                      }}
+                                      title="Download"
+                                    >
+                                      <Download className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </>
                                 ) : null}
                               </div>
                             )
@@ -383,6 +544,8 @@ export function AdminCourses() {
                       )}
                     </div>
                   </div>
+
+
 
                   {/* Action Buttons */}
                   <DialogFooter className="gap-2">
@@ -435,6 +598,25 @@ export function AdminCourses() {
           )}
         </DialogContent>
       </Dialog>
+
+      <MaterialPreviewDialog
+        material={previewMaterial}
+        previewUrl={previewUrl}
+        onClose={() => {
+          setPreviewMaterial(null)
+          setPreviewUrl(null)
+        }}
+        onDownload={async () => {
+          if (!previewMaterial?.storage_path) return
+          try {
+            const { data, error } = await supabase.storage.from('materials').createSignedUrl(previewMaterial.storage_path, 60, { download: true })
+            if (error) throw error
+            if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+          } catch (err) {
+            toast.error('Failed to download file')
+          }
+        }}
+      />
     </>
   )
 }

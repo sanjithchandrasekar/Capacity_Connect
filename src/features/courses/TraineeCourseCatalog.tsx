@@ -26,7 +26,7 @@ export function TraineeCourseCatalog() {
         .from('courses')
         .select(`
           *,
-          trainer:profiles!courses_trainer_id_fkey(full_name)
+          trainer:trainers!courses_trainer_id_fkey(full_name)
         `)
         .eq('status', 'published')
         .order('created_at', { ascending: false })

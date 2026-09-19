@@ -18,6 +18,7 @@ import {
   AlertCircle, CheckCircle, Link2, ExternalLink, Globe, Plus, Sparkles, Brain
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { formatDistanceToNow } from 'date-fns'
 
 type Course = Database['public']['Tables']['courses']['Row']
@@ -65,6 +66,8 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
   const [uploadProgress, setUploadProgress] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [activeTab, setActiveTab] = useState<'files' | 'links'>('files')
   const [linkUrl, setLinkUrl] = useState('')
@@ -361,6 +364,25 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
     }
   }
 
+  const handlePreview = async (material: Material) => {
+    if (material.material_type === 'link') {
+      window.open(material.url!, '_blank')
+      return
+    }
+    setPreviewMaterial(material)
+    setPreviewUrl(null)
+    try {
+      const { data, error } = await supabase.storage
+        .from('materials')
+        .createSignedUrl(material.storage_path, 3600)
+      if (error) throw error
+      setPreviewUrl(data.signedUrl)
+    } catch {
+      toast.error('Failed to load preview')
+      setPreviewMaterial(null)
+    }
+  }
+
   const handleDelete = async (material: Material) => {
     if (!confirm(`Delete "${material.file_name}"?`)) return
     setDeletingId(material.id)
@@ -549,9 +571,9 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                   }`}>
                     <Icon className={`w-5 h-5 ${isLink ? 'text-ink' : isVideo ? 'text-ink' : 'text-ink'}`} />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handlePreview(material)}>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm text-ink font-medium truncate">{material.file_name}</p>
+                      <p className="text-sm text-ink font-medium truncate hover:underline">{material.file_name}</p>
                       {isLink && (
                         <Badge className="bg-ink/10 text-ink border-ink/20 text-[10px] h-4">
                           <Link2 className="w-2.5 h-2.5 mr-0.5 inline" />
@@ -561,10 +583,10 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                     </div>
                     <div className="flex items-center gap-2 text-xs text-ink/50 mt-0.5">
                       {isLink ? (
-                        <a href={material.url || '#'} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-ink truncate max-w-xs flex items-center gap-1">
+                        <span className="text-ink hover:text-ink truncate max-w-xs flex items-center gap-1">
                           {material.url}
                           <ExternalLink className="w-3 h-3 shrink-0" />
-                        </a>
+                        </span>
                       ) : (
                         <>
                           <span>{formatFileSize(material.file_size)}</span>
@@ -583,11 +605,6 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                         </Badge>
                       )}
                     </div>
-                    {isVideo && material.storage_path && !isLink && (
-                      <div className="mt-2">
-                        <VideoPreview storagePath={material.storage_path} />
-                      </div>
-                    )}
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <button
@@ -716,6 +733,13 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MaterialPreviewDialog 
+        material={previewMaterial}
+        previewUrl={previewUrl}
+        onClose={() => setPreviewMaterial(null)}
+        onDownload={() => previewMaterial && handleDownload(previewMaterial)}
+      />
     </>
   )
 }

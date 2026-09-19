@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -36,7 +36,7 @@ const detailsSchema = z.object({
 })
 
 const settingsSchema = z.object({
-  duration_minutes: z.coerce.number().positive('Duration must be positive').optional(),
+  duration_hours: z.coerce.number().positive('Duration must be positive').optional(),
   passing_score: z.coerce.number().min(1).max(100).optional(),
   meet_link: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   start_date: z.string().optional(),
@@ -48,6 +48,20 @@ const settingsSchema = z.object({
   final_test_end_time: z.string().optional(),
   delivery_mode: z.enum(['recorded', 'live', 'hybrid']),
   max_trainees: z.coerce.number().positive('Capacity must be positive').optional(),
+}).superRefine((data, ctx) => {
+  if (data.start_date) {
+    const start = new Date(data.start_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays > 62) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Course cannot start more than 2 months from today',
+        path: ['start_date']
+      })
+    }
+  }
 })
 
 const objectivesSchema = z.object({
@@ -56,9 +70,14 @@ const objectivesSchema = z.object({
   competencies_built: z.string().min(5, 'Describe the competencies this course builds'),
 })
 
+const sessionFlowSchema = z.object({
+  session_flow_text: z.string().optional(),
+})
+
 type DetailsData = z.infer<typeof detailsSchema>
 type SettingsData = z.infer<typeof settingsSchema>
 type ObjectivesData = z.infer<typeof objectivesSchema>
+type SessionFlowData = z.infer<typeof sessionFlowSchema>
 
 interface PendingMaterial {
   id: string
@@ -90,10 +109,11 @@ function formatFileSize(bytes: number) {
 
 const STEPS = [
   { id: 1, label: 'Course Details', icon: BookOpen },
-  { id: 2, label: 'Settings', icon: Settings },
-  { id: 3, label: 'Learning & Skills', icon: Target },
-  { id: 4, label: 'Materials', icon: FileText },
-  { id: 5, label: 'Review & Submit', icon: Eye },
+  { id: 2, label: 'Course Configuration', icon: Settings },
+  { id: 3, label: 'Session Flow', icon: FileText },
+  { id: 4, label: 'Learning & Skills', icon: Target },
+  { id: 5, label: 'Materials', icon: FileText },
+  { id: 6, label: 'Review & Submit', icon: Eye },
 ]
 
 export function CourseCreatePage() {
@@ -133,6 +153,34 @@ export function CourseCreatePage() {
     defaultValues: { understand: '', able_to_do: '', competencies_built: '' },
   })
 
+  const sessionFlowForm = useForm<SessionFlowData>({
+    resolver: zodResolver(sessionFlowSchema),
+    defaultValues: { session_flow_text: '' },
+  })
+
+  const [sessionFlowDoc, setSessionFlowDoc] = useState<File | null>(null)
+
+  // Calculate course days dynamically
+  const courseDays = useMemo(() => {
+    const start = settingsForm.watch('start_date')
+    const end = settingsForm.watch('end_date')
+    if (start && end) {
+      const diff = new Date(end).getTime() - new Date(start).getTime()
+      return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+    }
+    return null
+  }, [settingsForm.watch('start_date'), settingsForm.watch('end_date')])
+
+  const isUrgent = useMemo(() => {
+    const start = settingsForm.watch('start_date')
+    if (start) {
+      const diff = new Date(start).getTime() - new Date().getTime()
+      const diffDays = diff / (1000 * 60 * 60 * 24)
+      return diffDays < 30
+    }
+    return false
+  }, [settingsForm.watch('start_date')])
+
   // Calculate final exam duration dynamically
   const startTime = settingsForm.watch('final_test_start_time')
   const endTime = settingsForm.watch('final_test_end_time')
@@ -168,19 +216,20 @@ export function CourseCreatePage() {
     switch (step) {
       case 1: return await detailsForm.trigger()
       case 2: return await settingsForm.trigger()
-      case 3: return await objectivesForm.trigger()
+      case 3: return await sessionFlowForm.trigger()
+      case 4: return await objectivesForm.trigger()
       default: return true
     }
   }
 
   const handleNext = async () => {
-    if (step === 4 && pendingMaterials.length === 0) {
+    if (step === 5 && pendingMaterials.length === 0) {
       toast.error('Add at least one material (file or link) before submitting')
       return
     }
     const valid = await validateStep()
     if (!valid) return
-    setStep(s => Math.min(s + 1, 5))
+    setStep(s => Math.min(s + 1, 6))
   }
 
   const handleBack = () => {
@@ -275,9 +324,10 @@ export function CourseCreatePage() {
     try {
       const d = detailsForm.getValues()
       const s = settingsForm.getValues()
+      const f = sessionFlowForm.getValues()
       const o = objectivesForm.getValues()
 
-      // Create course first (without thumbnail)
+      // Create course first (without thumbnail or session doc path)
       const { data: course, error } = await supabase
         .from('courses')
         .insert({
@@ -285,7 +335,7 @@ export function CourseCreatePage() {
           description: d.description,
           course_type: d.course_type,
           department: d.department || null,
-          duration_minutes: s.duration_minutes || null,
+          duration_minutes: s.duration_hours ? s.duration_hours * 60 : null,
           passing_score: s.passing_score ?? 60,
           trainer_id: user!.id,
           status,
@@ -300,16 +350,29 @@ export function CourseCreatePage() {
           planned_assessments_count: s.planned_assessments_count || 0,
           planned_mock_tests_count: s.planned_mock_tests_count || 0,
           final_test_date: s.final_test_date ? new Date(s.final_test_date).toISOString() : null,
-          final_test_start_time: s.final_test_start_time ? new Date(s.final_test_start_time).toISOString() : null,
-          final_test_end_time: s.final_test_end_time ? new Date(s.final_test_end_time).toISOString() : null,
+          final_test_start_time: s.final_test_start_time || null,
+          final_test_end_time: s.final_test_end_time || null,
           delivery_mode: s.delivery_mode,
           max_trainees: s.max_trainees || null,
+          session_flow_text: f.session_flow_text || null,
         })
         .select()
         .single()
       if (error) throw error
 
-      // Upload thumbnail after course is created (needs course_id for storage RLS)
+      // Upload thumbnail & session doc after course is created (needs course_id for storage RLS)
+      let sessionDocPath = null
+      if (sessionFlowDoc && user && course) {
+        const ext = sessionFlowDoc.name.split('.').pop()
+        const storagePath = `${course.id}/session_flow_${crypto.randomUUID()}.${ext}`
+        const { error: uploadErr } = await supabase.storage
+          .from('materials')
+          .upload(storagePath, sessionFlowDoc)
+        if (!uploadErr) {
+          sessionDocPath = storagePath
+        }
+      }
+
       if (thumbnail && user && course) {
         const ext = thumbnail.name.split('.').pop()
         const thumbnailStoragePath = `${course.id}/thumbnail.${ext}`
@@ -319,12 +382,22 @@ export function CourseCreatePage() {
         if (uploadErr) {
           console.error('Thumbnail upload error:', uploadErr)
         } else {
-          // Update course with thumbnail path
+          // Update course with paths
           await supabase
             .from('courses')
-            .update({ thumbnail_path: thumbnailStoragePath })
+            .update({ 
+              thumbnail_path: thumbnailStoragePath,
+              session_flow_document_path: sessionDocPath 
+            })
             .eq('id', course.id)
         }
+      } else if (sessionDocPath && course) {
+         await supabase
+          .from('courses')
+          .update({ 
+            session_flow_document_path: sessionDocPath 
+          })
+          .eq('id', course.id)
       }
 
       // Insert skills
@@ -384,7 +457,8 @@ export function CourseCreatePage() {
         navigate('/trainer/courses')
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create course')
+      console.error('Course creation error:', err)
+      toast.error(err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Failed to create course')
     } finally {
       setSaving(false)
     }
@@ -421,7 +495,7 @@ export function CourseCreatePage() {
     description: detailsForm.watch('description'),
     course_type: detailsForm.watch('course_type'),
     department: detailsForm.watch('department'),
-    duration_minutes: settingsForm.watch('duration_minutes'),
+    duration_hours: settingsForm.watch('duration_hours'),
     passing_score: settingsForm.watch('passing_score'),
     understand: objectivesForm.watch('understand'),
     able_to_do: objectivesForm.watch('able_to_do'),
@@ -506,18 +580,18 @@ export function CourseCreatePage() {
             </Card>
           )}
 
-          {/* Step 2: Settings */}
+          {/* Step 2: Course Configuration */}
           {step === 2 && (
             <Card className="bg-cream border-ink/10">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Settings className="w-4 h-4 text-ink/60" />
-                  <h3 className="text-sm font-semibold text-ink">Course Settings</h3>
+                  <h3 className="text-sm font-semibold text-ink">Course Configuration</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Duration (minutes)</Label>
-                    <Input type="number" {...settingsForm.register('duration_minutes')} placeholder="e.g. 60" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <Label className="text-ink/80 text-xs">Duration (hours)</Label>
+                    <Input type="number" {...settingsForm.register('duration_hours')} placeholder="e.g. 20" className="bg-ink/5 border-ink/20 text-ink h-10" />
                     <p className="text-[10px] text-ink/40">Leave empty for self-paced</p>
                   </div>
                   <div className="space-y-1.5">
@@ -544,6 +618,11 @@ export function CourseCreatePage() {
                       <p className="text-[10px] text-red-500">{settingsForm.formState.errors.end_date.message}</p>
                     )}
                   </div>
+                  {isUrgent && settingsForm.watch('start_date') && !settingsForm.formState.errors.start_date && (
+                    <div className="col-span-2 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
+                      <span className="text-lg">⚠️</span> Course starts in less than 30 days! This will be flagged as <strong className="font-bold">URGENT</strong> for fast-track Admin approval.
+                    </div>
+                  )}
                   
                   {/* Capacity */}
                   <div className="space-y-1.5 col-span-2">
@@ -625,8 +704,60 @@ export function CourseCreatePage() {
             </Card>
           )}
 
-          {/* Step 3: Learning Objectives & Skills */}
+          {/* Step 3: Session Flow */}
           {step === 3 && (
+            <Card className="bg-cream border-ink/10">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-ink/60" />
+                  <h3 className="text-sm font-semibold text-ink">Session Flow</h3>
+                </div>
+                <p className="text-xs text-ink/50">Outline how the sessions will be engaged and what topics will be covered.</p>
+                
+                <div className="space-y-1.5">
+                  <Label className="text-ink/80 text-xs">Session Flow Details</Label>
+                  <Textarea {...sessionFlowForm.register('session_flow_text')} rows={6} placeholder="Describe the session flow, topics covered, and engagement plan..." className="bg-ink/5 border-ink/20 text-ink" />
+                </div>
+
+                <div className="space-y-1.5 mt-4">
+                  <Label className="text-ink/80 text-xs">Session Flow Document (Optional)</Label>
+                  {sessionFlowDoc ? (
+                    <div className="flex items-center justify-between p-3 bg-ink/5 border border-ink/20 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm text-ink truncate">
+                        <FileText className="w-4 h-4 shrink-0 text-ink/60" />
+                        <span className="truncate">{sessionFlowDoc.name}</span>
+                      </div>
+                      <button onClick={() => setSessionFlowDoc(null)} className="p-1.5 rounded-full hover:bg-red-50 text-ink/40 hover:text-red-500 transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt"
+                        className="bg-ink/5 border-ink/20 text-ink cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            if (file.size > 20 * 1024 * 1024) {
+                              toast.error('File size must be less than 20MB')
+                              return
+                            }
+                            setSessionFlowDoc(file)
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                  <p className="text-[10px] text-ink/40">Upload a PDF or Word document outlining the flow (max 20MB).</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 4: Learning Objectives & Skills */}
+          {step === 4 && (
             <div className="space-y-4">
               <Card className="bg-cream border-ink/10">
                 <CardContent className="p-6 space-y-4">
@@ -682,8 +813,8 @@ export function CourseCreatePage() {
             </div>
           )}
 
-          {/* Step 4: Materials */}
-          {step === 4 && (
+          {/* Step 5: Materials */}
+          {step === 5 && (
             <div className="space-y-4">
               <Card className="bg-cream border-ink/10">
                 <CardContent className="p-6 space-y-4">
@@ -778,8 +909,8 @@ export function CourseCreatePage() {
             </div>
           )}
 
-          {/* Step 5: Review */}
-          {step === 5 && (
+          {/* Step 6: Review */}
+          {step === 6 && (
             <div className="space-y-4">
               <Card className="bg-cream border-ink/10">
                 <CardContent className="p-6 space-y-4">
@@ -810,7 +941,7 @@ export function CourseCreatePage() {
                       <Settings className="w-3 h-3" /> Settings
                     </div>
                     <div className="bg-ink/5 rounded-lg p-3 grid grid-cols-2 gap-3">
-                      <div><span className="text-[10px] text-ink/40">Duration</span><p className="text-xs text-ink">{watchedValues.duration_minutes ? `${watchedValues.duration_minutes} min` : 'Self-paced'}</p></div>
+                      <div><span className="text-[10px] text-ink/40">Duration</span><p className="text-xs text-ink">{watchedValues.duration_hours ? `${watchedValues.duration_hours} hours` : 'Self-paced'}</p></div>
                       <div><span className="text-[10px] text-ink/40">Passing Score</span><p className="text-xs text-ink">{watchedValues.passing_score || 60}%</p></div>
                     </div>
                   </div>
@@ -896,7 +1027,7 @@ export function CourseCreatePage() {
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
           <div className="flex items-center gap-3">
-            {step < 5 ? (
+            {step < 6 ? (
               <Button onClick={handleNext} className="bg-ink hover:bg-ink/90 text-cream">
                 Next <ArrowRight className="w-4 h-4 ml-2" />
               </Button>

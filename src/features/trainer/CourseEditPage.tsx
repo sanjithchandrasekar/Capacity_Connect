@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Database } from '@/integrations/supabase/types'
+import { getSignedUrl } from '@/lib/storage'
 import { TrainerLayout, fadeUp, stagger } from './TrainerLayout'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -34,11 +35,32 @@ const courseSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters'),
   course_type: z.enum(['standard', 'scenario']),
   department: z.string().optional(),
-  duration_minutes: z.coerce.number().positive().optional(),
+  duration_hours: z.coerce.number().positive('Duration must be positive').optional(),
   passing_score: z.coerce.number().min(1).max(100).optional(),
   meet_link: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
+  session_flow_text: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.start_date) {
+    const start = new Date(data.start_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Course cannot start in the past',
+        path: ['start_date']
+      })
+    } else if (diffDays > 62) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Course cannot start more than 2 months from today',
+        path: ['start_date']
+      })
+    }
+  }
 })
 
 type CourseFormData = z.infer<typeof courseSchema>
@@ -57,9 +79,36 @@ export function CourseEditPage() {
   const [addingSkill, setAddingSkill] = useState(false)
   const [materialCount, setMaterialCount] = useState(0)
 
+  const [thumbnail, setThumbnail] = useState<File | null>(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+  const thumbRef = useRef<HTMLInputElement>(null)
+
+  const [sessionFlowDoc, setSessionFlowDoc] = useState<File | null>(null)
+  const [sessionFlowDocPath, setSessionFlowDocPath] = useState<string | null>(null)
+
   const { register, handleSubmit, setValue, watch, reset, trigger, formState: { errors } } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
   })
+
+  const courseDays = useMemo(() => {
+    const start = watch('start_date')
+    const end = watch('end_date')
+    if (start && end) {
+      const diff = new Date(end).getTime() - new Date(start).getTime()
+      return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+    }
+    return null
+  }, [watch('start_date'), watch('end_date')])
+
+  const isUrgent = useMemo(() => {
+    const start = watch('start_date')
+    if (start) {
+      const diff = new Date(start).getTime() - new Date().getTime()
+      const diffDays = diff / (1000 * 60 * 60 * 24)
+      return diffDays >= 0 && diffDays < 30
+    }
+    return false
+  }, [watch('start_date')])
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
@@ -73,17 +122,25 @@ export function CourseEditPage() {
       ])
       if (courseRes.error) throw courseRes.error
       setCourse(courseRes.data)
+      if (courseRes.data.thumbnail_path) {
+        const signedUrl = await getSignedUrl('materials', courseRes.data.thumbnail_path)
+        setThumbnailPreview(signedUrl)
+      }
       reset({
         title: courseRes.data.title,
         description: courseRes.data.description ?? '',
         course_type: courseRes.data.course_type as 'standard' | 'scenario',
         department: courseRes.data.department ?? '',
-        duration_minutes: courseRes.data.duration_minutes ?? undefined,
+        duration_hours: courseRes.data.duration_minutes ? Math.floor(courseRes.data.duration_minutes / 60) : undefined,
         passing_score: courseRes.data.passing_score ?? undefined,
         meet_link: courseRes.data.meet_link ?? '',
         start_date: courseRes.data.start_date ? new Date(courseRes.data.start_date).toISOString().slice(0, 16) : '',
         end_date: courseRes.data.end_date ? new Date(courseRes.data.end_date).toISOString().slice(0, 16) : '',
+        session_flow_text: courseRes.data.session_flow_text ?? '',
       })
+      if (courseRes.data.session_flow_document_path) {
+        setSessionFlowDocPath(courseRes.data.session_flow_document_path)
+      }
       if (skillsRes.data) setSkills(skillsRes.data)
       if (csRes.data) {
         setCourseSkills(csRes.data)
@@ -99,6 +156,17 @@ export function CourseEditPage() {
   }, [user, courseId, navigate, reset])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Thumbnail must be under 5MB')
+      return
+    }
+    setThumbnail(file)
+    setThumbnailPreview(URL.createObjectURL(file))
+  }
 
   const handleSave = async (status: 'draft' | 'pending_review') => {
     if (!course) return
@@ -118,12 +186,45 @@ export function CourseEditPage() {
 
     setSaving(true)
     try {
+      let thumbnailPath = course.thumbnail_path
+
+      if (thumbnail) {
+        const ext = thumbnail.name.split('.').pop()
+        thumbnailPath = `${course.id}/thumbnail.${ext}`
+        const { error: uploadErr } = await supabase.storage
+          .from('materials')
+          .upload(thumbnailPath, thumbnail, { upsert: true })
+        if (uploadErr) {
+          toast.error('Failed to upload thumbnail')
+          console.error(uploadErr)
+        }
+      }
+      
+      let sessionDocPathToSave = course.session_flow_document_path
+      if (sessionFlowDoc) {
+        const ext = sessionFlowDoc.name.split('.').pop()
+        sessionDocPathToSave = `${course.id}/session_flow_${crypto.randomUUID()}.${ext}`
+        const { error: uploadErr } = await supabase.storage
+          .from('materials')
+          .upload(sessionDocPathToSave, sessionFlowDoc, { upsert: true })
+        if (uploadErr) {
+          toast.error('Failed to upload session flow document')
+        }
+      } else if (sessionFlowDocPath === null) {
+        // user clicked trash to remove it
+        sessionDocPathToSave = null
+      }
+
       const data = watch()
+      const { duration_hours, ...rest } = data
       const updateData = {
-        ...data,
+        ...rest,
         status,
+        duration_minutes: duration_hours ? duration_hours * 60 : null,
         start_date: data.start_date ? new Date(data.start_date).toISOString() : null,
         end_date: data.end_date ? new Date(data.end_date).toISOString() : null,
+        thumbnail_path: thumbnailPath,
+        session_flow_document_path: sessionDocPathToSave,
       }
       const { error } = await supabase
         .from('courses')
@@ -242,8 +343,9 @@ export function CourseEditPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80">Duration (min)</Label>
-                    <Input type="number" {...register('duration_minutes')} className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-ink/80 text-xs">Duration (hours)</Label>
+                    <Input type="number" {...register('duration_hours')} placeholder="e.g. 20" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <p className="text-[10px] text-ink/40">Leave empty for self-paced</p>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-ink/80">Passing Score (%)</Label>
@@ -257,11 +359,84 @@ export function CourseEditPage() {
                   <div className="space-y-1.5">
                     <Label className="text-ink/80">Start Date</Label>
                     <Input type="datetime-local" {...register('start_date')} className="bg-ink/5 border-ink/20 text-ink" />
+                    {errors.start_date && (
+                      <p className="text-[10px] text-red-500">{errors.start_date.message as string}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-ink/80">End Date</Label>
                     <Input type="datetime-local" {...register('end_date')} className="bg-ink/5 border-ink/20 text-ink" />
+                    {errors.end_date && (
+                      <p className="text-[10px] text-red-500">{errors.end_date.message as string}</p>
+                    )}
                   </div>
+                  {isUrgent && watch('start_date') && !errors.start_date && (
+                    <div className="col-span-2 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
+                      <span className="text-lg">⚠️</span> Course starts in less than 30 days! This will be flagged as <strong className="font-bold">URGENT</strong> for fast-track Admin approval.
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 pt-4 border-t border-ink/10">
+                  <Label className="text-ink/80">Course Thumbnail</Label>
+                  <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
+                  {thumbnailPreview ? (
+                    <div className="relative w-full max-w-sm h-40 rounded-lg overflow-hidden border border-ink/20 bg-ink/5">
+                      <img src={thumbnailPreview} alt="" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => { setThumbnail(null); setThumbnailPreview(null) }} className="absolute top-2 right-2 p-1.5 rounded-full bg-ink/80 text-cream hover:bg-red-600 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => thumbRef.current?.click()} className="w-full max-w-sm h-32 border-2 border-dashed border-ink/20 rounded-lg flex flex-col items-center justify-center gap-2 text-ink/40 hover:text-ink hover:border-ink/30 transition-all bg-ink/5">
+                      <Upload className="w-6 h-6" />
+                      <span className="text-xs">Click to upload thumbnail</span>
+                      <span className="text-[10px] text-ink/30">PNG, JPG up to 5MB</span>
+                    </button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-ink/10 mt-4">
+              <CardHeader><CardTitle className="text-ink">Session Flow</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-ink/80">Session Flow Details</Label>
+                  <Textarea {...register('session_flow_text')} rows={6} className="bg-ink/5 border-ink/20 text-ink" placeholder="Describe the session flow, topics covered, and engagement plan..." />
+                </div>
+                
+                <div className="space-y-1.5">
+                  <Label className="text-ink/80">Session Flow Document</Label>
+                  {sessionFlowDocPath || sessionFlowDoc ? (
+                    <div className="flex items-center justify-between p-3 bg-ink/5 border border-ink/20 rounded-lg max-w-sm">
+                      <div className="flex items-center gap-2 text-sm text-ink truncate">
+                        <FileText className="w-4 h-4 shrink-0 text-ink/60" />
+                        <span className="truncate">{sessionFlowDoc ? sessionFlowDoc.name : sessionFlowDocPath?.split('/').pop()}</span>
+                      </div>
+                      <button type="button" onClick={() => { setSessionFlowDoc(null); setSessionFlowDocPath(null) }} className="p-1.5 rounded-full hover:bg-red-50 text-ink/40 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt"
+                        className="bg-ink/5 border-ink/20 text-ink cursor-pointer max-w-sm"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            if (file.size > 20 * 1024 * 1024) {
+                              toast.error('File size must be less than 20MB')
+                              return
+                            }
+                            setSessionFlowDoc(file)
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -379,3 +554,8 @@ export function CourseEditPage() {
     </TrainerLayout>
   )
 }
+
+
+
+
+

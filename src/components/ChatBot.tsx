@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MessageSquare, X, Send, Bot, User } from 'lucide-react'
+import { MessageSquare, X, Send, BrainCircuit, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 export function ChatBot() {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<{role: 'bot'|'user', content: string}[]>([
-    { role: 'bot', content: 'Hi there! I am the Capacity Connect AI assistant. How can I help you today?' }
+    { role: 'bot', content: 'Hi there! I am ConnectAI. How can I help you today?' }
   ])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -44,19 +44,20 @@ export function ChatBot() {
       // Filter out the initial greeting from history or keep it as model context
       const contents = formattedMessages.slice(1) // skip the initial hardcoded greeting for context, or leave it
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           systemInstruction: {
-            parts: [{ text: "You are the Capacity Connect AI assistant. You must ONLY answer questions about the Capacity Connect website, course catalog, training modules, how to use the platform, registration, and its specific features. You must politely refuse to answer any general knowledge questions, coding questions, or topics unrelated to this training website." }]
+            parts: [{ text: "You are ConnectAI, the Capacity Connect AI assistant. You must ONLY answer questions about the Capacity Connect website, course catalog, training modules, how to use the platform, registration, and its specific features. You must politely refuse to answer any general knowledge questions, coding questions, or topics unrelated to this training website." }]
           },
           contents: formattedMessages,
         })
       })
 
       if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`)
+        const errText = await response.text()
+        throw new Error(`Gemini API error: ${response.status} - ${errText}`)
       }
 
       const data = await response.json()
@@ -67,9 +68,9 @@ export function ChatBot() {
       } else {
         throw new Error('Invalid response format')
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Chatbot error:', err)
-      setMessages(prev => [...prev, { role: 'bot', content: "Oops, I encountered an error connecting to my brain. Please check your network or ensure the Gemini API key is configured correctly in the environment!" }])
+      setMessages(prev => [...prev, { role: 'bot', content: `Error: ${err.message}. API Key exists: ${!!API_KEY}` }])
     } finally {
       setIsLoading(false)
     }
@@ -89,10 +90,10 @@ export function ChatBot() {
             <div className="p-4 bg-gradient-to-r from-purple-600 to-pink-500 flex justify-between items-center text-white">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                  <Bot className="w-5 h-5" />
+                  <BrainCircuit className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">AI Assistant</h3>
+                  <h3 className="font-semibold text-sm">ConnectAI</h3>
                   <p className="text-[10px] text-white/70">Online</p>
                 </div>
               </div>
@@ -106,7 +107,7 @@ export function ChatBot() {
               {messages.map((msg, i) => (
                 <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-1 ${msg.role === 'bot' ? 'bg-purple-100 text-purple-600' : 'bg-pink-100 text-pink-600'}`}>
-                    {msg.role === 'bot' ? <Bot className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                    {msg.role === 'bot' ? <BrainCircuit className="w-3 h-3" /> : <User className="w-3 h-3" />}
                   </div>
                   <div className={`p-3 rounded-2xl max-w-[80%] text-sm ${
                     msg.role === 'user' 
@@ -120,7 +121,7 @@ export function ChatBot() {
               {isLoading && (
                 <div className="flex gap-2">
                   <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-1 bg-purple-100 text-purple-600">
-                    <Bot className="w-3 h-3" />
+                    <BrainCircuit className="w-3 h-3" />
                   </div>
                   <div className="p-3 rounded-2xl max-w-[80%] text-sm bg-white border border-slate-200 text-slate-700 rounded-tl-sm shadow-sm flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -153,7 +154,7 @@ export function ChatBot() {
         onClick={() => setIsOpen(!isOpen)}
         className="w-14 h-14 bg-gradient-to-tr from-purple-600 to-pink-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-pink-500/30 border-2 border-white/20"
       >
-        {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
+        {isOpen ? <X className="w-6 h-6" /> : <BrainCircuit className="w-6 h-6" />}
       </motion.button>
     </div>
   )

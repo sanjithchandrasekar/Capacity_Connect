@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Plus, Loader2, Edit3, Target, BarChart3, BookOpen } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 
@@ -30,6 +30,7 @@ const statusLabels: Record<string, string> = {
 
 export function CourseListPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -94,7 +95,7 @@ export function CourseListPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <Link to={`/trainer/courses/${course.id}`} className="hover:underline">
+                      <Link to={`/trainer/courses/${course.id}`} className="hover:underline min-w-0 flex-1">
                         <h3 className="text-base font-semibold text-ink truncate">{course.title}</h3>
                       </Link>
                       <Badge className={`shrink-0 text-[10px] ${statusColors[course.status] ?? statusColors.draft}`}>
@@ -109,27 +110,43 @@ export function CourseListPage() {
                       {course.department && <span>{course.department}</span>}
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Link to={`/trainer/courses/${course.id}`}>
-                      <Button size="sm" variant="outline" className="border-ink/20 text-ink hover:bg-ink/5">
-                        <BookOpen className="w-3.5 h-3.5 mr-1" /> Manage
-                      </Button>
-                    </Link>
-                    <Link to={`/trainer/courses/${course.id}/edit`}>
-                      <Button size="sm" variant="outline" className="border-ink/20 text-ink hover:bg-ink/5">
-                        <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
-                      </Button>
-                    </Link>
-                    <Link to={`/trainer/courses/${course.id}/assessments`}>
-                      <Button size="sm" variant="outline" className="border-ink/20 text-ink hover:bg-ink/5">
-                        <Target className="w-3.5 h-3.5 mr-1" /> Assess
-                      </Button>
-                    </Link>
-                    <Link to={`/trainer/courses/${course.id}/performance`}>
-                      <Button size="sm" variant="outline" className="border-ink/20 text-ink hover:bg-ink/5">
-                        <BarChart3 className="w-3.5 h-3.5 mr-1" /> Stats
-                      </Button>
-                    </Link>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="border-ink/20 text-ink hover:bg-ink/5"
+                      disabled={course.status === 'pending_review'}
+                      onClick={() => navigate(`/trainer/courses/${course.id}`)}
+                    >
+                      <BookOpen className="w-3.5 h-3.5 mr-1" /> Manage
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="border-ink/20 text-ink hover:bg-ink/5"
+                      disabled={course.status === 'pending_review'}
+                      onClick={() => navigate(`/trainer/courses/${course.id}/edit`)}
+                    >
+                      <Edit3 className="w-3.5 h-3.5 mr-1" /> Edit
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="border-ink/20 text-ink hover:bg-ink/5"
+                      disabled={course.status === 'pending_review'}
+                      onClick={() => navigate(`/trainer/courses/${course.id}/assessments`)}
+                    >
+                      <Target className="w-3.5 h-3.5 mr-1" /> Assess
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="border-ink/20 text-ink hover:bg-ink/5"
+                      disabled={course.status === 'pending_review'}
+                      onClick={() => navigate(`/trainer/courses/${course.id}/performance`)}
+                    >
+                      <BarChart3 className="w-3.5 h-3.5 mr-1" /> Stats
+                    </Button>
                   </div>
                 </div>
               </div>

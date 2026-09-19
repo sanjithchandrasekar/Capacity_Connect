@@ -8,8 +8,10 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar, Video } from 'lucide-react'
+import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar, Video, BookOpen } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
+import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
+import { toast } from 'sonner'
 
 type Course = Database['public']['Tables']['courses']['Row']
 type CourseSkill = Database['public']['Tables']['course_skills']['Row'] & { skills: { name: string } | null }
@@ -34,6 +36,8 @@ export function CourseDetailPage() {
   const [assessment, setAssessment] = useState<Assessment | null>(null)
   const [enrollmentCount, setEnrollmentCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
@@ -109,7 +113,7 @@ export function CourseDetailPage() {
                 </div>
                 <p className="text-sm text-ink/60 mb-4">{course.description}</p>
                 <div className="flex flex-wrap items-center gap-4 text-xs text-ink/50 mb-4">
-                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {course.duration_minutes ?? 0} min</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {course.duration_minutes ? Math.floor(course.duration_minutes / 60) : 0} hours</span>
                   <span>{course.course_type === 'standard' ? 'Standard' : 'Scenario'} Training</span>
                   <span>{course.department || 'General'}</span>
                   <span className="capitalize flex items-center gap-1"><Video className="w-3.5 h-3.5" /> {course.delivery_mode || 'recorded'}</span>
@@ -125,6 +129,11 @@ export function CourseDetailPage() {
                         {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'TBD'} 
                         {' - '} 
                         {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'TBD'}
+                        {course.start_date && course.end_date && (
+                          <span className="ml-2 text-brand font-medium">
+                            ({Math.max(1, Math.ceil((new Date(course.end_date).getTime() - new Date(course.start_date).getTime()) / (1000 * 60 * 60 * 24)))} days)
+                          </span>
+                        )}
                       </div>
                     )}
                     {course.meet_link && (
@@ -151,6 +160,7 @@ export function CourseDetailPage() {
                             <span className="text-ink font-medium">{course.planned_assessments_count} Planned</span>
                           </div>
                         )}
+
                         {(course.planned_mock_tests_count || 0) > 0 && (
                           <div>
                             <span className="text-ink/60 block text-xs">Mock Tests</span>
@@ -164,8 +174,8 @@ export function CourseDetailPage() {
                               <span>{new Date(course.final_test_date).toLocaleDateString()}</span>
                               {(course.final_test_start_time || course.final_test_end_time) && (
                                 <span className="text-xs text-ink/70">
-                                  {course.final_test_start_time ? new Date(course.final_test_start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} 
-                                  {course.final_test_end_time ? ` - ${new Date(course.final_test_end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}
+                                  {course.final_test_start_time ? new Date(`2000-01-01T${course.final_test_start_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} 
+                                  {course.final_test_end_time ? ` - ${new Date(`2000-01-01T${course.final_test_end_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}
                                 </span>
                               )}
                             </div>
@@ -179,6 +189,41 @@ export function CourseDetailPage() {
             </div>
           </div>
         </motion.div>
+
+        {/* Session Flow */}
+        {(course.session_flow_text || course.session_flow_document_path) && (
+          <motion.div variants={fadeUp}>
+            <Card className="bg-white border-ink/10">
+              <CardContent className="p-6 space-y-4">
+                <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-ink/60" /> Session Flow
+                </h3>
+                <div className="space-y-3">
+                  {course.session_flow_text && (
+                    <p className="text-xs text-ink/80 whitespace-pre-wrap">{course.session_flow_text}</p>
+                  )}
+                  {course.session_flow_document_path && (
+                    <Button variant="outline" size="sm" onClick={async () => {
+                      try {
+                        const { data, error } = await supabase.storage.from('materials').createSignedUrl(course.session_flow_document_path!, 3600)
+                        if (error) throw error
+                        if (data?.signedUrl) {
+                          setPreviewUrl(data.signedUrl)
+                          setPreviewMaterial({ file_name: 'Session Flow Document', material_type: 'file', storage_path: course.session_flow_document_path } as any)
+                        }
+                      } catch (err) {
+                        toast.error('Failed to open document')
+                      }
+                    }}>
+                      <FileText className="w-4 h-4 mr-2" />
+                      View Session Flow Document
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {objectives && (
           <motion.div variants={fadeUp}>
@@ -284,6 +329,19 @@ export function CourseDetailPage() {
           </motion.div>
         </div>
       </motion.div>
+      <MaterialPreviewDialog
+        material={previewMaterial}
+        previewUrl={previewUrl}
+        onClose={() => { setPreviewMaterial(null); setPreviewUrl(null) }}
+        onDownload={async () => {
+          if (!previewMaterial?.storage_path) return
+          try {
+            const { data, error } = await supabase.storage.from('materials').createSignedUrl(previewMaterial.storage_path, 60, { download: true })
+            if (error) throw error
+            if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+          } catch { toast.error('Failed to download') }
+        }}
+      />
     </TrainerLayout>
   )
 }
