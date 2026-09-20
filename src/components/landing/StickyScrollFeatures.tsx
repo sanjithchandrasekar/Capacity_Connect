@@ -166,19 +166,19 @@ export function StickyScrollFeatures() {
       <div className="pointer-events-none absolute top-1/4 -left-64 w-[600px] h-[600px] rounded-full bg-purple-600/10 blur-[140px]" />
       <div className="pointer-events-none absolute bottom-1/4 -right-64 w-[600px] h-[600px] rounded-full bg-pink-600/10 blur-[140px]" />
 
-      {/* Persistent Section Header (Always visible, never clipped) */}
-      <div className="pt-16 sm:pt-20 lg:pt-24 pb-1 sm:pb-2 px-4 sm:px-6 max-w-7xl mx-auto w-full text-center relative z-20 shrink-0">
-        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-0.5 sm:px-3.5 sm:py-1 rounded-full bg-purple-950/70 border border-purple-500/30 text-purple-300 text-[10px] sm:text-xs font-semibold tracking-wider uppercase mb-1 sm:mb-1.5 shadow-inner">
+      {/* Persistent Section Header (Always visible, perfectly clearance below navbar) */}
+      <div className="pt-16 sm:pt-16 lg:pt-16 pb-1 px-4 sm:px-6 max-w-7xl mx-auto w-full text-center relative z-20 shrink-0">
+        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-0.5 sm:px-3 sm:py-0.5 rounded-full bg-purple-950/70 border border-purple-500/30 text-purple-300 text-[10px] sm:text-xs font-semibold tracking-wider uppercase mb-1 shadow-inner">
           <Activity className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-pink-400" />
           Core Platform Architecture
         </div>
-        <h2 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-extrabold font-display tracking-tight text-white mb-0.5 sm:mb-1 leading-tight">
+        <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-extrabold font-display tracking-tight text-white mb-0.5 leading-tight">
           From Orbital Telemetry to{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
             Ground-Level Preparedness
           </span>
         </h2>
-        <p className="text-slate-400 text-[11px] sm:text-xs md:text-sm max-w-2xl mx-auto line-clamp-1 sm:line-clamp-2">
+        <p className="text-slate-400 text-[11px] sm:text-xs md:text-sm max-w-2xl mx-auto line-clamp-1">
           Built to meet the real demands of MoES field teams — from live data feeds to offline mountain outposts.
         </p>
       </div>
@@ -194,7 +194,7 @@ export function StickyScrollFeatures() {
           return (
             <div
               key={step.id}
-              className="pin-panel w-[33.333333%] px-3 sm:px-6 md:px-10 lg:px-16 flex items-center justify-center shrink-0 h-full max-h-full"
+              className="pin-panel w-[33.333333%] px-3 sm:px-6 md:px-8 lg:px-12 xl:px-16 flex items-center justify-center shrink-0 h-full max-h-full"
             >
               {/* ========================================================================= */}
               {/* MOBILE LAYOUT (< md): Unified Lengthy Portrait Card (No Clipping)         */}
@@ -259,12 +259,12 @@ export function StickyScrollFeatures() {
               </div>
 
               {/* ========================================================================= */}
-              {/* DESKTOP / TABLET LAYOUT (>= md): Expansive 2-Column Side-by-Side Grid    */}
+              {/* DESKTOP / TABLET / LAPTOP LAYOUT (>= md): Responsive 2-Column Side-by-Side */}
               {/* ========================================================================= */}
-              <div className="hidden md:grid max-w-6xl w-full mx-auto grid-cols-2 lg:grid-cols-12 gap-6 lg:gap-8 items-center my-auto">
+              <div className="hidden md:grid max-w-6xl w-full mx-auto grid-cols-2 lg:grid-cols-12 gap-4 lg:gap-6 xl:gap-8 items-center my-auto">
                 {/* Text Content Block */}
                 <div className={`w-full col-span-1 lg:col-span-6 ${isEven ? 'order-2' : 'order-1'}`}>
-                  <div className="p-6 lg:p-8 rounded-3xl bg-slate-900/90 border border-purple-500/30 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+                  <div className="p-4 sm:p-5 lg:p-6 xl:p-7 rounded-2xl lg:rounded-3xl bg-slate-900/90 border border-purple-500/30 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
                     {/* Ambient Glow */}
                     <div
                       className="absolute -top-20 -right-20 w-44 h-44 rounded-full blur-3xl pointer-events-none opacity-30"
@@ -272,37 +272,37 @@ export function StickyScrollFeatures() {
                     />
 
                     {/* Headline */}
-                    <h3 className="text-lg lg:text-2xl font-bold font-display text-white mb-1.5 tracking-tight leading-snug">
+                    <h3 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold font-display text-white mb-1 lg:mb-1.5 tracking-tight leading-snug">
                       {step.title}
                     </h3>
 
                     {/* Subtitle */}
-                    <p className="text-pink-300 text-xs lg:text-sm font-semibold mb-2 leading-relaxed">
+                    <p className="text-pink-300 text-[11px] sm:text-xs lg:text-sm font-semibold mb-1 lg:mb-2 leading-tight sm:leading-relaxed">
                       {step.subtitle}
                     </p>
 
                     {/* Description */}
-                    <p className="text-slate-300 text-xs lg:text-sm leading-relaxed mb-3 font-normal line-clamp-3">
+                    <p className="text-slate-300 text-[11px] sm:text-xs lg:text-sm leading-relaxed mb-2 lg:mb-3 font-normal line-clamp-2 xl:line-clamp-3">
                       {step.description}
                     </p>
 
                     {/* Feature Highlights */}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5 lg:space-y-2">
                       {step.highlights.map((item) => {
                         const HIcon = item.icon;
                         return (
                           <div
                             key={item.title}
-                            className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/20 flex items-start gap-2.5 group/item hover:border-purple-500/40 transition-colors"
+                            className="p-2 lg:p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/20 flex items-start gap-2 lg:gap-2.5 group/item hover:border-purple-500/40 transition-colors"
                           >
-                            <div className="w-6 h-6 rounded-lg bg-pink-500/10 border border-pink-500/30 flex items-center justify-center shrink-0 mt-0.5 text-pink-400">
-                              <HIcon className="w-3.5 h-3.5" />
+                            <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-lg bg-pink-500/10 border border-pink-500/30 flex items-center justify-center shrink-0 mt-0.5 text-pink-400">
+                              <HIcon className="w-3 h-3 lg:w-3.5 lg:h-3.5" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <h4 className="text-xs font-semibold text-white mb-0.5 leading-none">
+                              <h4 className="text-[11px] lg:text-xs font-semibold text-white mb-0.5 leading-none">
                                 {item.title}
                               </h4>
-                              <p className="text-[11px] text-slate-400 leading-relaxed">
+                              <p className="text-[10px] lg:text-[11px] text-slate-400 leading-tight lg:leading-relaxed line-clamp-1 sm:line-clamp-none">
                                 {item.desc}
                               </p>
                             </div>
@@ -315,8 +315,8 @@ export function StickyScrollFeatures() {
 
                 {/* Visual Image Block */}
                 <div className={`w-full col-span-1 lg:col-span-6 ${isEven ? 'order-1' : 'order-2'}`}>
-                  <div className="relative w-full aspect-[4/3] max-h-[280px] lg:max-h-[340px] rounded-3xl p-1.5 bg-gradient-to-br from-purple-500/40 via-pink-500/30 to-orange-500/40 shadow-2xl overflow-hidden group mx-auto">
-                    <div className="relative w-full h-full rounded-[22px] overflow-hidden bg-slate-950">
+                  <div className="relative w-full aspect-[16/10] sm:aspect-[4/3] max-h-[220px] lg:max-h-[280px] xl:max-h-[320px] rounded-2xl lg:rounded-3xl p-1 sm:p-1.5 bg-gradient-to-br from-purple-500/40 via-pink-500/30 to-orange-500/40 shadow-2xl overflow-hidden group mx-auto">
+                    <div className="relative w-full h-full rounded-[14px] sm:rounded-[22px] overflow-hidden bg-slate-950">
                       <img
                         src={step.image}
                         alt={step.imageAlt}
@@ -337,7 +337,7 @@ export function StickyScrollFeatures() {
       </div>
 
       {/* Bottom spacer for viewport balance */}
-      <div className="pb-1 sm:pb-3" />
+      <div className="pb-1 sm:pb-2" />
     </section>
   );
 }
