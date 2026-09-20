@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/integrations/supabase/types'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
-import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers } from 'lucide-react'
+import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -56,8 +57,10 @@ function formatFileSize(bytes: number | null) {
 }
 
 export function AdminCourses() {
+  const navigate = useNavigate()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'admin_created' | 'trainer_submitted'>('all')
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -77,7 +80,8 @@ export function AdminCourses() {
         .from('courses')
         .select(`
           *,
-          trainer:trainers!courses_trainer_id_fkey(full_name)
+          trainer:trainers!courses_trainer_id_fkey(full_name),
+          course_assignments(id)
         `)
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -138,12 +142,36 @@ export function AdminCourses() {
   return (
     <>
       <Card className="bg-white border-purple-500/15 rounded-3xl shadow-sm overflow-hidden">
-        <CardHeader className="border-b border-purple-500/10">
-          <CardTitle className="flex items-center gap-2 text-midnight text-base font-bold">
-            <BookOpen className="h-5 w-5 text-purple-600" />
-            Course Management
-          </CardTitle>
-          <CardDescription className="text-midnight/50 text-xs">Review, approve, publish or archive courses submitted by trainers.</CardDescription>
+        <CardHeader className="border-b border-purple-500/10 space-y-4 pb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-midnight text-base font-bold">
+                <BookOpen className="h-5 w-5 text-purple-600" />
+                Course Management
+              </CardTitle>
+              <CardDescription className="text-midnight/50 text-xs">Review, approve, publish or archive courses.</CardDescription>
+            </div>
+            <Button
+              onClick={() => navigate('/admin/courses/new')}
+              className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold rounded-xl px-4 py-2 h-9 text-xs shadow-md shadow-purple-500/20 hover:scale-105 transition-all"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Course
+            </Button>
+          </div>
+          
+          <div className="flex bg-purple-50/50 p-1 rounded-xl border border-purple-100 w-fit">
+            {(['all', 'admin_created', 'trainer_submitted'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  filter === f ? 'bg-white text-purple-700 shadow-sm' : 'text-midnight/60 hover:text-midnight hover:bg-purple-100/50'
+                }`}
+              >
+                {f === 'all' ? 'All Courses' : f === 'admin_created' ? 'Admin Created' : 'Trainer Submitted'}
+              </button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent className="p-6">
           {loading ? (
@@ -155,6 +183,12 @@ export function AdminCourses() {
           ) : (
             <div className="space-y-3.5">
               {courses
+                .filter(course => {
+                  const isAdminCreated = (course as any).course_assignments && (course as any).course_assignments.length > 0;
+                  if (filter === 'admin_created') return isAdminCreated;
+                  if (filter === 'trainer_submitted') return !isAdminCreated;
+                  return true;
+                })
                 .map(course => {
                   const isUrgent = course.status === 'pending_review' && course.start_date && (new Date(course.start_date).getTime() < Date.now() + 30 * 24 * 60 * 60 * 1000);
                   return { ...course, isUrgent };
@@ -184,7 +218,10 @@ export function AdminCourses() {
                       <div className="flex items-center gap-3 text-[11px] text-midnight/50 font-medium">
                         <span className="capitalize px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">{course.course_type}</span>
                         <span>{course.department || 'General'}</span>
-                        {trainer?.full_name && <span>by {trainer.full_name}</span>}
+                        {trainer?.full_name && <span>taught by {trainer.full_name}</span>}
+                        {((course as any).course_assignments && (course as any).course_assignments.length > 0) && (
+                          <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[9px] font-bold tracking-wider uppercase">Admin Created</span>
+                        )}
                         <span>{course.created_at ? formatDistanceToNow(new Date(course.created_at), { addSuffix: true }) : ''}</span>
                       </div>
                     </div>
@@ -269,11 +306,11 @@ export function AdminCourses() {
                     )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-bold text-ink">{selectedCourse.title}</h3>
+                        <h3 className="text-lg font-bold text-midnight">{selectedCourse.title}</h3>
                         <StatusBadge status={selectedCourse.status} />
                       </div>
-                      <p className="text-sm text-ink/60 mb-2">{selectedCourse.description}</p>
-                      <div className="flex flex-wrap gap-3 text-xs text-ink/50">
+                      <p className="text-sm text-midnight/60 mb-2">{selectedCourse.description}</p>
+                      <div className="flex flex-wrap gap-3 text-xs text-midnight/50">
                         <span className="capitalize">{selectedCourse.course_type} Training</span>
                         <span>{selectedCourse.department || 'General'}</span>
                         <span>{selectedCourse.duration_minutes ? `${selectedCourse.duration_minutes} min` : 'Self-paced'}</span>

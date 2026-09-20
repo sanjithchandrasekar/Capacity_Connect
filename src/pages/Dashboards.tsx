@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/integrations/supabase/types'
 import { AdminCourses } from '@/features/courses/AdminCourses'
+import { TrainerAssignmentBanner } from '@/features/admin/TrainerAssignmentBanner'
 import { Button } from '@/components/ui/button'
 import {
   Globe, LogOut, Users, BookOpen, BarChart3, Shield,
@@ -13,7 +14,7 @@ import {
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
   Award, Target, FileText, Settings,
   ChevronDown, RefreshCw, Star, MessageSquare, Crown,
-  Menu, X, Trash2, Loader2
+  Menu, X, Trash2, Loader2, LayoutDashboard
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNotifications } from '@/hooks/useNotifications'
@@ -52,7 +53,7 @@ export function DashboardShell({
   title: string
   icon: React.ElementType
   children: React.ReactNode
-  navLinks?: { to: string; label: string; icon: React.ElementType; badge?: number }[]
+  navLinks?: { id?: string; to?: string; label: string; icon: React.ElementType; badge?: number; isActive?: boolean; onClick?: () => void }[]
 }) {
   const { signOut, profile } = useAuth()
   const navigate = useNavigate()
@@ -114,29 +115,43 @@ export function DashboardShell({
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-thin">
         {navLinks?.map(link => {
-          const isActive = location.pathname === link.to
-          return (
-            <Link key={link.to} to={link.to} onClick={() => setMobileOpen(false)}>
-              <button className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm group ${
-                isActive
-                  ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/20'
-                  : 'text-midnight/70 hover:text-midnight hover:bg-purple-50 border border-transparent'
-              }`}>
-                <link.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'group-hover:text-purple-600'} transition-colors`} />
-                {(!sidebarCollapsed || mobileOpen) && (
-                  <>
-                    <span className="flex-1 text-left">{link.label}</span>
-                    {link.badge !== undefined && link.badge > 0 && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold bg-orange-500 text-white rounded-full">
-                        {link.badge > 99 ? '99+' : link.badge}
-                      </span>
-                    )}
-                    <ChevronRight className={`w-3.5 h-3.5 transition-opacity ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
-                  </>
-                )}
-              </button>
-            </Link>
+          const isActive = link.isActive !== undefined ? link.isActive : (link.to ? location.pathname === link.to : false)
+          
+          const buttonContent = (
+            <button 
+              onClick={() => {
+                if (link.onClick) link.onClick()
+                setMobileOpen(false)
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm group ${
+              isActive
+                ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/20'
+                : 'text-midnight/70 hover:text-midnight hover:bg-purple-50 border border-transparent'
+            }`}>
+              <link.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'group-hover:text-purple-600'} transition-colors`} />
+              {(!sidebarCollapsed || mobileOpen) && (
+                <>
+                  <span className="flex-1 text-left">{link.label}</span>
+                  {link.badge !== undefined && link.badge > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-orange-500 text-white rounded-full">
+                      {link.badge > 99 ? '99+' : link.badge}
+                    </span>
+                  )}
+                  <ChevronRight className={`w-3.5 h-3.5 transition-opacity ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                </>
+              )}
+            </button>
           )
+
+          if (link.to) {
+            return (
+              <Link key={link.to || link.id || link.label} to={link.to}>
+                {buttonContent}
+              </Link>
+            )
+          }
+
+          return <div key={link.id || link.label}>{buttonContent}</div>
         })}
       </nav>
 
@@ -570,7 +585,7 @@ export function TraineeDashboard() {
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
       ]}
     >
-      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-6xl">
+      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-full">
         {/* Welcome Hero Banner */}
         <motion.div 
           variants={fadeUp} 
@@ -810,7 +825,7 @@ export function TrainerDashboard() {
         { to: '/trainer/courses', label: 'My Courses', icon: BookOpen },
       ]}
     >
-      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-6xl">
+      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-full">
         {/* Welcome Banner */}
         <motion.div 
           variants={fadeUp} 
@@ -835,6 +850,9 @@ export function TrainerDashboard() {
             </Link>
           </div>
         </motion.div>
+
+        {/* Assignment Announcement Banner */}
+        <TrainerAssignmentBanner />
 
         {/* Stats Grid */}
         <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -943,12 +961,14 @@ export function TrainerDashboard() {
 
 /* ─── Admin Dashboard ───────────────────────────────────────── */
 export function AdminDashboard() {
+  const navigate = useNavigate()
   const { profile } = useAuth()
   const [users, setUsers] = useState<Profile[]>([])
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'trainees' | 'trainers' | 'admins' | 'courses' | 'logs'>('trainees')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended'>('all')
 
   const fetchData = async () => {
     setLoading(true)
@@ -989,14 +1009,19 @@ export function AdminDashboard() {
     else if (activeTab === 'trainers') filtered = users.filter(u => u.role === 'trainer')
     else if (activeTab === 'admins') filtered = users.filter(u => u.role === 'admin' || u.role === 'super_admin')
 
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(u => u.approval_status === statusFilter)
+    }
+
     if (!searchQuery) return filtered
     const q = searchQuery.toLowerCase()
     return filtered.filter(u =>
       u.full_name?.toLowerCase().includes(q) ||
       u.email?.toLowerCase().includes(q) ||
-      u.department?.toLowerCase().includes(q)
+      u.department?.toLowerCase().includes(q) ||
+      (u as any).qualifications?.toLowerCase().includes(q)
     )
-  }, [users, searchQuery, activeTab])
+  }, [users, searchQuery, activeTab, statusFilter])
 
   const handleUpdateUser = async (userId: string, email: string | null, role: Profile['role'], status: Profile['approval_status']) => {
     try {
@@ -1128,6 +1153,7 @@ export function AdminDashboard() {
   const isSuperAdmin = profile?.role === 'super_admin'
 
   const tabs = [
+    { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'trainees', label: 'Trainees', icon: Users },
     { key: 'trainers', label: 'Trainers', icon: Users },
     ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins', icon: Shield }] : []),
@@ -1155,11 +1181,16 @@ export function AdminDashboard() {
     <DashboardShell
       title={isSuperAdmin ? "Super Admin Dashboard" : "Admin Dashboard"}
       icon={Shield}
-      navLinks={[
-        { to: isSuperAdmin ? '/super-admin' : '/admin', label: 'Overview', icon: BarChart3, badge: pendingCount },
-      ]}
+      navLinks={tabs.map(tab => ({
+        id: tab.key,
+        label: tab.label,
+        icon: tab.icon,
+        badge: tab.key === 'trainees' ? pendingCount : undefined,
+        isActive: activeTab === tab.key,
+        onClick: () => setActiveTab(tab.key as any)
+      }))}
     >
-      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-6xl">
+      <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-full">
         {/* Welcome Banner */}
         <motion.div 
           variants={fadeUp} 
@@ -1203,36 +1234,86 @@ export function AdminDashboard() {
           </div>
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {stats.map(s => <StatCard key={s.label} {...s} />)}
-        </motion.div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tabs + Content */}
-          <motion.div variants={fadeUp} className="lg:col-span-2 space-y-4">
-            {/* Tabs Bar */}
-            <div className="flex items-center gap-1.5 p-1.5 bg-white border border-purple-500/15 rounded-2xl shadow-sm w-full md:w-fit overflow-x-auto">
-              {tabs.map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap ${
-                    activeTab === tab.key
-                      ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/25 scale-[1.02]'
-                      : 'text-midnight/70 hover:text-purple-700 hover:bg-purple-50'
-                  }`}
+          {/* Tabs moved to sidebar */}
+          <motion.div variants={fadeUp} className="lg:col-span-2 space-y-4 min-w-0">
+
+            {/* Tab: Overview */}
+            <AnimatePresence mode="wait">
+              {activeTab === 'overview' && (
+                <motion.div
+                  key="overview"
+                  variants={scaleIn}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="space-y-6"
                 >
-                  <tab.icon className="w-4 h-4" />
-                  {tab.label}
-                  {tab.key === 'trainees' && pendingCount > 0 && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-orange-500 text-white rounded-full">
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {stats.map(s => <StatCard key={s.label} {...s} />)}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div 
+                      onClick={() => navigate('/admin/courses/new')}
+                      className="group cursor-pointer p-5 rounded-3xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md shadow-pink-500/20 hover:scale-105 transition-all flex flex-col justify-between h-32"
+                    >
+                      <BookOpen className="w-6 h-6 text-white/80 group-hover:text-white group-hover:scale-110 transition-transform" />
+                      <div>
+                        <h4 className="font-bold text-sm">Create Course</h4>
+                        <p className="text-xs text-white/70">Assign a trainer & publish</p>
+                      </div>
+                    </div>
+                    <div 
+                      onClick={() => setActiveTab('trainees')}
+                      className="group cursor-pointer p-5 rounded-3xl bg-gradient-to-br from-orange-400 to-rose-400 text-white shadow-md shadow-orange-500/20 hover:scale-105 transition-all flex flex-col justify-between h-32 relative overflow-hidden"
+                    >
+                      <Users className="w-6 h-6 text-white/80 group-hover:text-white group-hover:scale-110 transition-transform" />
+                      <div>
+                        <h4 className="font-bold text-sm">Review Trainees</h4>
+                        <p className="text-xs text-white/70">Manage user accounts</p>
+                      </div>
+                      {pendingCount > 0 && (
+                        <div className="absolute top-4 right-4 bg-white/20 px-2 py-1 rounded-lg text-xs font-bold backdrop-blur-sm">
+                          {pendingCount} Pending
+                        </div>
+                      )}
+                    </div>
+                    <div 
+                      onClick={() => setActiveTab('logs')}
+                      className="group cursor-pointer p-5 rounded-3xl bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-md shadow-slate-500/20 hover:scale-105 transition-all flex flex-col justify-between h-32"
+                    >
+                      <BarChart3 className="w-6 h-6 text-white/80 group-hover:text-white group-hover:scale-110 transition-transform" />
+                      <div>
+                        <h4 className="font-bold text-sm">Audit Logs</h4>
+                        <p className="text-xs text-white/70">View platform activity</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden">
+                    <div className="pb-4 border-b border-purple-500/10 mb-4">
+                      <h3 className="text-base font-bold text-midnight">Recent Activity</h3>
+                      <p className="text-xs text-midnight/50 mt-0.5">Latest actions across the platform.</p>
+                    </div>
+                    <div className="space-y-4">
+                      {activities.map((act, i) => (
+                        <div key={i} className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${act.iconBg}`}>
+                            <act.icon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-midnight">{act.title}</p>
+                            <p className="text-xs text-midnight/60">{act.desc}</p>
+                          </div>
+                          <span className="text-xs text-midnight/40">{act.time}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Tab: Users */}
             <AnimatePresence mode="wait">
@@ -1245,20 +1326,35 @@ export function AdminDashboard() {
                   exit="hidden"
                   className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden"
                 >
-                  <div className="pb-4 border-b border-purple-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-bold text-midnight capitalize">Trainees Management</h3>
-                      <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, promote, or suspend trainee accounts.</p>
+                  <div className="pb-4 border-b border-purple-500/10 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-base font-bold text-midnight capitalize">Trainees Management</h3>
+                        <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, promote, or suspend trainee accounts.</p>
+                      </div>
+                      <div className="relative w-full sm:w-64 shrink-0">
+                        <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search trainees..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
+                        />
+                      </div>
                     </div>
-                    <div className="relative w-full sm:w-64">
-                      <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search trainees..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
-                      />
+                    <div className="flex bg-purple-50/50 p-1 rounded-xl border border-purple-100 w-full sm:w-fit overflow-x-auto hide-scrollbar">
+                      {(['all', 'pending', 'approved', 'suspended'] as const).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setStatusFilter(f)}
+                          className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize whitespace-nowrap ${
+                            statusFilter === f ? 'bg-white text-purple-700 shadow-sm' : 'text-midnight/60 hover:text-midnight hover:bg-purple-100/50'
+                          }`}
+                        >
+                          {f}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -1349,20 +1445,35 @@ export function AdminDashboard() {
                   exit="hidden"
                   className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden"
                 >
-                  <div className="pb-4 border-b border-purple-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-bold text-midnight capitalize">Trainers Management</h3>
-                      <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, suspend or promote trainers.</p>
+                  <div className="pb-4 border-b border-purple-500/10 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-base font-bold text-midnight capitalize">Trainers Management</h3>
+                        <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, suspend or promote trainers.</p>
+                      </div>
+                      <div className="relative w-full sm:w-64 shrink-0">
+                        <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search trainers..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
+                        />
+                      </div>
                     </div>
-                    <div className="relative w-full sm:w-64">
-                      <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search trainers..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
-                      />
+                    <div className="flex bg-purple-50/50 p-1 rounded-xl border border-purple-100 w-full sm:w-fit overflow-x-auto hide-scrollbar">
+                      {(['all', 'pending', 'approved', 'suspended'] as const).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setStatusFilter(f)}
+                          className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize whitespace-nowrap ${
+                            statusFilter === f ? 'bg-white text-purple-700 shadow-sm' : 'text-midnight/60 hover:text-midnight hover:bg-purple-100/50'
+                          }`}
+                        >
+                          {f}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -1375,7 +1486,8 @@ export function AdminDashboard() {
                           <tr className="border-b border-purple-500/10 text-left text-xs text-midnight/60 font-semibold">
                             <th className="px-3 py-3">Name</th>
                             <th className="px-3 py-3">Email</th>
-                            <th className="px-3 py-3">Department</th>
+                            <th className="px-3 py-3">Qualifications</th>
+                            <th className="px-3 py-3">Experience</th>
                             <th className="px-3 py-3">Proof</th>
                             <th className="px-3 py-3">Status</th>
                             <th className="px-3 py-3 text-right">Actions</th>
@@ -1399,7 +1511,8 @@ export function AdminDashboard() {
                                 </div>
                               </td>
                               <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[150px]">{u.email}</td>
-                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[90px]">{u.department ?? '—'}</td>
+                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[120px]">{(u as any).qualifications ?? '—'}</td>
+                              <td className="px-3 py-3 text-xs text-midnight/70">{(u as any).years_of_experience ? `${(u as any).years_of_experience} yrs` : '—'}</td>
                               <td className="px-3 py-3">
                                 {u.proof_path ? (
                                   <div className="flex flex-col gap-1.5">
@@ -1453,12 +1566,12 @@ export function AdminDashboard() {
                   exit="hidden"
                   className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden"
                 >
-                  <div className="pb-4 border-b border-purple-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="pb-4 border-b border-purple-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h3 className="text-base font-bold text-midnight capitalize">Admins Management</h3>
                       <p className="text-xs text-midnight/50 mt-0.5">Manage administrative access to the platform.</p>
                     </div>
-                    <div className="relative w-full sm:w-64">
+                    <div className="relative w-full sm:w-64 shrink-0">
                       <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"

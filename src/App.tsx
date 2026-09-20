@@ -35,6 +35,7 @@ import { LandingPage } from './pages/LandingPage'
 import { PublicCourseCatalog } from './pages/PublicCourseCatalog'
 import { PublicCourseDetails } from './pages/PublicCourseDetails'
 import { ChatBot } from './components/ChatBot'
+import { AdminCourseCreatePage } from './features/admin/AdminCourseCreatePage'
 
 function DashboardRedirect() {
   const { session, profile, loading } = useAuth()
@@ -103,6 +104,7 @@ export default function App() {
                 {/* Admin routes */}
                 <Route element={<RoleRoute allowedRoles={['admin', 'super_admin']} />}>
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/courses/new" element={<AdminCourseCreatePage />} />
                   <Route path="/admin/settings" element={<SettingsPage />} />
                 </Route>
 
