@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
@@ -415,25 +416,149 @@ export function TraineeDashboard() {
     }
   };
 
+  // ── Real data from Supabase ──────────────────────────────────
+
+  // Fetch all enrollments for this trainee with course & trainer info
+  const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
+    queryKey: ['trainee-dashboard-enrollments', profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select(`
+          *,
+          course:courses(
+            id, title, duration_minutes,
+            trainer:trainers!courses_trainer_id_fkey(full_name)
+          )
+        `)
+        .eq('user_id', profile!.id)
+        .order('enrolled_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!profile?.id,
+  })
+
+  // Fetch certificates for this trainee
+  const { data: certificates = [], isLoading: certLoading } = useQuery({
+    queryKey: ['trainee-dashboard-certs', profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('certificates')
+        .select('id, issued_at, status')
+        .eq('user_id', profile!.id)
+        .eq('status', 'valid')
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!profile?.id,
+  })
+
+  // Fetch recent notifications as activity feed
+  const { data: notifications = [], isLoading: notifLoading } = useQuery({
+    queryKey: ['trainee-dashboard-notifications', profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', profile!.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!profile?.id,
+  })
+
+  // ── Derived stats ────────────────────────────────────────────
+  const enrolledCount = enrollments.length
+  const completedEnrollments = enrollments.filter((e: any) => e.status === 'completed')
+  const completionRate = enrolledCount > 0
+    ? Math.round((completedEnrollments.length / enrolledCount) * 100)
+    : 0
+  const totalMinutes = enrollments.reduce((sum: number, e: any) => {
+    const mins = e.course?.duration_minutes ?? 0
+    const pct = (e.progress_percent ?? 0) / 100
+    return sum + Math.round(mins * pct)
+  }, 0)
+  const hoursLearned = Math.round(totalMinutes / 60)
+
   const stats = [
-    { label: 'Enrolled Courses', value: '3', icon: BookOpen, gradient: 'from-purple-600 to-purple-800', badgeText: 'Active', subtext: '+1 this month' },
-    { label: 'Hours Learned', value: '48', icon: Clock, gradient: 'from-pink-500 to-rose-600', badgeText: 'Total', subtext: '12 hrs this week' },
-    { label: 'Certificates', value: '2', icon: Award, gradient: 'from-orange-400 to-orange-600', badgeText: 'Verified', subtext: 'Ready to share' },
-    { label: 'Completion Rate', value: '78%', icon: Target, gradient: 'from-purple-600 via-pink-500 to-orange-500', badgeText: 'Top 15%', subtext: 'Ahead of target' },
+    {
+      label: 'Enrolled Courses',
+      value: enrollmentsLoading ? '…' : String(enrolledCount),
+      icon: BookOpen,
+      gradient: 'from-purple-600 to-purple-800',
+      badgeText: 'Active',
+      subtext: enrolledCount === 0 ? 'No courses yet' : `${enrollments.filter((e: any) => e.status !== 'completed' && e.status !== 'withdrawn').length} active`,
+    },
+    {
+      label: 'Hours Learned',
+      value: enrollmentsLoading ? '…' : String(hoursLearned),
+      icon: Clock,
+      gradient: 'from-pink-500 to-rose-600',
+      badgeText: 'Total',
+      subtext: hoursLearned === 0 ? 'Start learning!' : `Based on progress`,
+    },
+    {
+      label: 'Certificates',
+      value: certLoading ? '…' : String(certificates.length),
+      icon: Award,
+      gradient: 'from-orange-400 to-orange-600',
+      badgeText: 'Verified',
+      subtext: certificates.length === 0 ? 'None yet' : 'Ready to share',
+    },
+    {
+      label: 'Completion Rate',
+      value: enrollmentsLoading ? '…' : `${completionRate}%`,
+      icon: Target,
+      gradient: 'from-purple-600 via-pink-500 to-orange-500',
+      badgeText: completionRate >= 75 ? 'Top 25%' : completionRate >= 50 ? 'On Track' : 'Keep Going',
+      subtext: enrolledCount === 0 ? 'No data yet' : `${completedEnrollments.length} of ${enrolledCount} done`,
+    },
   ]
 
-  const recentCourses = [
-    { title: 'Data Science Fundamentals', progress: 72, status: 'In Progress', instructor: 'Dr. Sharma', duration: '6 hrs remaining' },
-    { title: 'Python for Analytics', progress: 45, status: 'In Progress', instructor: 'Prof. Kumar', duration: '10 hrs remaining' },
-    { title: 'Cloud Computing Basics', progress: 100, status: 'Completed', instructor: 'Ms. Patel', duration: 'Completed' },
-  ]
+  // ── In-progress courses (last 3 active enrollments) ──────────
+  const recentCourses = enrollments
+    .filter((e: any) => e.status !== 'withdrawn')
+    .slice(0, 3)
+    .map((e: any) => ({
+      id: e.course?.id,
+      title: e.course?.title ?? 'Untitled Course',
+      progress: e.progress_percent ?? 0,
+      status: e.status === 'completed' ? 'Completed' : 'In Progress',
+      instructor: e.course?.trainer?.full_name ?? 'Instructor',
+      duration: e.status === 'completed'
+        ? 'Completed'
+        : e.course?.duration_minutes
+          ? `${Math.round(e.course.duration_minutes * (1 - (e.progress_percent ?? 0) / 100))} min left`
+          : 'Self-paced',
+    }))
 
-  const activities = [
-    { icon: CheckCircle, title: 'Completed Module 5', desc: 'Data Science Fundamentals — Statistics', time: '2h ago', iconBg: 'bg-emerald-100 text-emerald-600' },
-    { icon: Award, title: 'Certificate Earned', desc: 'Cloud Computing Basics — Final Exam Passed', time: '1d ago', iconBg: 'bg-orange-100 text-orange-600' },
-    { icon: BookOpen, title: 'Started New Course', desc: 'Python for Analytics — Introduction', time: '2d ago', iconBg: 'bg-pink-100 text-pink-600' },
-    { icon: Star, title: 'Quiz Score: 92%', desc: 'Data Science Fundamentals — Module 4 Quiz', time: '3d ago', iconBg: 'bg-purple-100 text-purple-700' },
-  ]
+  // ── Recent activity from notifications ───────────────────────
+  const activities = notifications.length > 0
+    ? notifications.map((n: any) => ({
+        icon: n.type === 'certificate_issued' ? Award
+          : n.type === 'enrollment' ? BookOpen
+          : n.type === 'assessment_result' ? CheckCircle
+          : Star,
+        title: n.title,
+        desc: n.message,
+        time: formatDistanceToNow(new Date(n.created_at), { addSuffix: true }),
+        iconBg: n.type === 'certificate_issued' ? 'bg-orange-100 text-orange-600'
+          : n.type === 'enrollment' ? 'bg-pink-100 text-pink-600'
+          : n.type === 'assessment_result' ? 'bg-emerald-100 text-emerald-600'
+          : 'bg-purple-100 text-purple-700',
+      }))
+    : enrollments.slice(0, 4).map((e: any) => ({
+        icon: e.status === 'completed' ? CheckCircle : BookOpen,
+        title: e.status === 'completed' ? 'Completed Course' : 'Enrolled in Course',
+        desc: e.course?.title ?? 'Course',
+        time: formatDistanceToNow(new Date(e.enrolled_at), { addSuffix: true }),
+        iconBg: e.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-pink-100 text-pink-600',
+      }))
+
+  const dashboardLoading = enrollmentsLoading || certLoading
 
   return (
     <DashboardShell
@@ -465,7 +590,12 @@ export function TraineeDashboard() {
                 Welcome back, {profile?.full_name?.split(' ')[0] ?? 'Trainee'}! 👋
               </h2>
               <p className="text-white/80 text-sm leading-relaxed">
-                Continue your learning journey. You've completed 78% of your scheduled milestones this month!
+                Continue your learning journey.
+                {completionRate > 0
+                  ? ` You've completed ${completionRate}% of your enrolled courses!`
+                  : enrolledCount > 0
+                    ? ` You have ${enrolledCount} active course${enrolledCount > 1 ? 's' : ''} in progress.`
+                    : ' Browse the catalog to start your learning journey!'}
               </p>
             </div>
             <Link to="/trainee/courses" className="shrink-0">
@@ -497,36 +627,49 @@ export function TraineeDashboard() {
               </div>
 
               <div className="py-4 space-y-3.5">
-                {recentCourses.map(course => (
-                  <div key={course.title} className="p-4 rounded-2xl bg-purple-50/40 hover:bg-purple-50/80 border border-purple-500/10 hover:border-pink-500/20 transition-all duration-200 group">
-                    <div className="flex items-center justify-between mb-2.5">
-                      <div className="min-w-0 pr-3">
-                        <p className="text-sm font-bold text-midnight truncate group-hover:text-purple-700 transition-colors">{course.title}</p>
-                        <p className="text-xs text-midnight/50">{course.instructor} • {course.duration}</p>
-                      </div>
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-bold shrink-0 ${
-                        course.status === 'Completed' 
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                          : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200'
-                      }`}>
-                        {course.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <ProgressBar 
-                        value={course.progress} 
-                        color={course.progress === 100 ? 'from-emerald-400 to-emerald-600' : 'from-purple-600 via-pink-500 to-orange-500'} 
-                      />
-                      <span className="text-xs font-bold text-midnight/70 w-10 text-right">{course.progress}%</span>
-                    </div>
+                {enrollmentsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
                   </div>
-                ))}
+                ) : recentCourses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-8 h-8 text-purple-200 mx-auto mb-2" />
+                    <p className="text-sm text-midnight/40">No courses yet. Browse the catalog to get started!</p>
+                  </div>
+                ) : (
+                  recentCourses.map((course: any) => (
+                    <div key={course.id ?? course.title} className="p-4 rounded-2xl bg-purple-50/40 hover:bg-purple-50/80 border border-purple-500/10 hover:border-pink-500/20 transition-all duration-200 group">
+                      <div className="flex items-center justify-between mb-2.5">
+                        <div className="min-w-0 pr-3">
+                          <p className="text-sm font-bold text-midnight truncate group-hover:text-purple-700 transition-colors">{course.title}</p>
+                          <p className="text-xs text-midnight/50">{course.instructor} • {course.duration}</p>
+                        </div>
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold shrink-0 ${
+                          course.status === 'Completed'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200'
+                        }`}>
+                          {course.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <ProgressBar
+                          value={course.progress}
+                          color={course.progress === 100 ? 'from-emerald-400 to-emerald-600' : 'from-purple-600 via-pink-500 to-orange-500'}
+                        />
+                        <span className="text-xs font-bold text-midnight/70 w-10 text-right">{course.progress}%</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
             <div className="pt-3 border-t border-purple-500/10 flex items-center justify-between text-xs text-midnight/60">
-              <span>Goal: 100% completion by end of quarter</span>
-              <span className="font-semibold text-purple-600">On Track 🚀</span>
+              <span>{enrolledCount > 0 ? `${enrolledCount} course${enrolledCount > 1 ? 's' : ''} enrolled` : 'No enrollments yet'}</span>
+              <span className="font-semibold text-purple-600">
+                {completionRate >= 75 ? 'Excellent 🚀' : completionRate >= 50 ? 'On Track 📈' : completionRate > 0 ? 'Keep Going 💪' : 'Get Started!'}
+              </span>
             </div>
           </motion.div>
 
@@ -542,9 +685,20 @@ export function TraineeDashboard() {
               </button>
             </div>
             <div className="py-2 space-y-1 flex-1">
-              {activities.map((act, i) => (
-                <ActivityItem key={i} {...act} />
-              ))}
+              {notifLoading || enrollmentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 text-purple-600 animate-spin" />
+                </div>
+              ) : activities.length === 0 ? (
+                <div className="text-center py-8">
+                  <Star className="w-7 h-7 text-purple-200 mx-auto mb-2" />
+                  <p className="text-xs text-midnight/40">No activity yet. Enroll in a course to get started!</p>
+                </div>
+              ) : (
+                activities.map((act: any, i: number) => (
+                  <ActivityItem key={i} {...act} />
+                ))
+              )}
             </div>
           </motion.div>
         </div>
