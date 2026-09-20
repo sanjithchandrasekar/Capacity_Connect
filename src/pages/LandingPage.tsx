@@ -364,7 +364,7 @@ export function LandingPage() {
           className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-1000 ease-in-out"
           style={{ opacity: videoOpacity }}
         >
-          <source src="/home page/291398.mp4" type="video/mp4" />
+          <source src="/hero-bg.mp4" type="video/mp4" />
         </video>
 
         {/* Dark Gradient Scrim Overlay for Contrast & Space Atmosphere */}
