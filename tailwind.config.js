@@ -7,7 +7,19 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        display: ['"Space Grotesk"', 'Inter', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+      },
       colors: {
+        space: {
+          950: '#05060F',
+          900: '#0B0F2A',
+          800: '#111740',
+          700: '#1A235C',
+          card: '#0D1333',
+        },
         // --- Sunset Vibrant Palette (#F3841D, #FF8E7A, #EA519D, #6B4BA3, #FFFFFF) ---
         orange: {
           DEFAULT: '#F3841D',

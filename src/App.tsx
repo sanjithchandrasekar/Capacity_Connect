@@ -1,5 +1,6 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from '@/components/ui/sonner'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/query-client'
@@ -37,9 +38,59 @@ import { PublicCourseDetails } from './pages/PublicCourseDetails'
 import { ChatBot } from './components/ChatBot'
 import { AdminCourseCreatePage } from './features/admin/AdminCourseCreatePage'
 
+function RouteThemeManager() {
+  const location = useLocation()
+
+  React.useEffect(() => {
+    // Smooth scroll to top on navigation
+    window.scrollTo(0, 0)
+
+    const isLandingPage = location.pathname === '/'
+    if (isLandingPage) {
+      document.documentElement.classList.add('theme-dark')
+      document.documentElement.classList.remove('theme-light')
+      document.body.classList.add('theme-dark')
+      document.body.classList.remove('theme-light')
+      document.body.style.backgroundColor = '#05060F'
+    } else {
+      document.documentElement.classList.add('theme-light')
+      document.documentElement.classList.remove('theme-dark')
+      document.body.classList.add('theme-light')
+      document.body.classList.remove('theme-dark')
+      document.body.style.backgroundColor = '#FAF9F6'
+    }
+  }, [location.pathname])
+
+  return null
+}
+
+function AtmosphericThemeVeil({ isDark }: { isDark: boolean }) {
+  return (
+    <motion.div
+      initial={false}
+      animate={{
+        opacity: isDark ? 0 : 1,
+      }}
+      transition={{
+        duration: 0.85,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+      className="fixed inset-0 pointer-events-none -z-10 overflow-hidden"
+    >
+      {/* Radiant dawn ambient glow layer */}
+      <div className="absolute inset-0 bg-[#FAF9F6] transition-opacity duration-700" />
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-gradient-to-r from-purple-400/10 via-pink-400/10 to-orange-400/10 blur-[120px]" />
+    </motion.div>
+  )
+}
+
 function DashboardRedirect() {
   const { session, profile, loading } = useAuth()
-  if (loading) return <div className="min-h-screen bg-cream flex items-center justify-center"><div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin" /></div>
+  if (loading) return (
+    <div className="min-h-screen bg-cream flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
   if (!session) return <Navigate to="/login" replace />
   if (profile?.role === 'super_admin') return <Navigate to="/super-admin" replace />
   if (profile?.role === 'admin') return <Navigate to="/admin" replace />
@@ -47,12 +98,35 @@ function DashboardRedirect() {
   return <Navigate to="/trainee" replace />
 }
 
-export default function App() {
+function AnimatedAppRoutes() {
+  const location = useLocation()
+  const isLandingPage = location.pathname === '/'
+
+  // Transition smoothly between different page tiers
+  const routeKey = isLandingPage
+    ? 'landing'
+    : location.pathname.startsWith('/trainer')
+    ? 'trainer'
+    : location.pathname.startsWith('/trainee')
+    ? 'trainee'
+    : location.pathname.startsWith('/admin') || location.pathname.startsWith('/super-admin')
+    ? 'admin'
+    : location.pathname
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
+    <>
+      <RouteThemeManager />
+      <AtmosphericThemeVeil isDark={isLandingPage} />
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={routeKey}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.35, ease: 'easeInOut' }}
+          className="min-h-screen w-full"
+        >
+          <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/dashboard" element={<DashboardRedirect />} />
             <Route path="/login" element={<Login />} />
@@ -119,6 +193,18 @@ export default function App() {
 
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+        </motion.div>
+      </AnimatePresence>
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <AnimatedAppRoutes />
           <ChatBot />
           <Toaster position="top-right" richColors />
         </BrowserRouter>
