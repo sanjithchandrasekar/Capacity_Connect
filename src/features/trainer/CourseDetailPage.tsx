@@ -60,7 +60,7 @@ export function CourseDetailPage() {
         supabase.from('enrollments').select('*').eq('course_id', courseId).order('enrolled_at', { ascending: false }),
       ])
       
-      let mergedEnrollments = []
+      let mergedEnrollments: any[] = []
       if (enrollmentsRes.error) {
         console.error('Error fetching enrollments:', enrollmentsRes.error)
       } else if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {

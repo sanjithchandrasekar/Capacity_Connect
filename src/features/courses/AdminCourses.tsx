@@ -125,7 +125,7 @@ export function AdminCourses() {
         supabase.from('enrollments').select('*').eq('course_id', course.id).eq('status', 'pending_approval'),
       ])
       
-      let mergedPending = []
+      let mergedPending: any[] = []
       if (pRes.data && pRes.data.length > 0) {
         const userIds = pRes.data.map(e => e.user_id)
         const { data: traineesData } = await supabase.from('trainees').select('id, full_name, email').in('id', userIds)
