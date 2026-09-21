@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { Database } from '@/integrations/supabase/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
-import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
+import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers, Plus, CheckCircle2, XCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -74,6 +75,8 @@ export function AdminCourses() {
   
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [editMaxTrainees, setEditMaxTrainees] = useState(false)
+  const [newMaxTrainees, setNewMaxTrainees] = useState<string>('')
 
   const fetchCourses = useCallback(async () => {
     setLoading(true)
@@ -115,6 +118,8 @@ export function AdminCourses() {
   const openCourseDetail = async (course: Course) => {
     setSelectedCourse(course)
     setDetailOpen(true)
+    setEditMaxTrainees(false)
+    setNewMaxTrainees(course.max_trainees ? String(course.max_trainees) : '')
     setDetailLoading(true)
     try {
       const [mRes, sRes, eRes, sessRes, pRes] = await Promise.all([
@@ -205,6 +210,35 @@ export function AdminCourses() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to update course'
       toast.error(message)
+    } finally {
+      setUpdating(null)
+    }
+  }
+
+  const handleUpdateMaxTrainees = async () => {
+    if (!selectedCourse) return
+    const parsed = parseInt(newMaxTrainees)
+    const val = isNaN(parsed) ? null : parsed
+    if (val !== null && (val < 50 || val > 250)) {
+      toast.error('Max trainees must be between 50 and 250')
+      return
+    }
+    
+    setUpdating(selectedCourse.id)
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .update({ max_trainees: val })
+        .eq('id', selectedCourse.id)
+      
+      if (error) throw error
+      
+      toast.success('Course capacity updated')
+      setSelectedCourse({ ...selectedCourse, max_trainees: val })
+      setEditMaxTrainees(false)
+      fetchCourses()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update capacity')
     } finally {
       setUpdating(null)
     }
@@ -389,6 +423,52 @@ export function AdminCourses() {
                         <span>{selectedCourse.duration_minutes ? `${selectedCourse.duration_minutes} min` : 'Self-paced'}</span>
                         <span>Pass: {selectedCourse.passing_score}%</span>
                         <span>{enrollmentCount} enrolled</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trainer Suggestion */}
+                  {selectedCourse.trainer_suggestion && (
+                    <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-purple-800 uppercase tracking-wider">
+                        <AlertCircle className="w-4 h-4" /> Notice / Suggestion from Trainer
+                      </div>
+                      <p className="text-sm text-purple-900 leading-relaxed whitespace-pre-wrap">
+                        {selectedCourse.trainer_suggestion}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Capacity & Limits */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                      <Users className="w-3.5 h-3.5" /> Capacity & Limits
+                    </div>
+                    <div className="bg-ink/5 rounded-lg p-4 flex items-center justify-between">
+                      <div>
+                        <span className="text-ink/60 block text-xs">Max Trainees</span>
+                        {editMaxTrainees ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Input 
+                              type="number" 
+                              value={newMaxTrainees} 
+                              onChange={e => setNewMaxTrainees(e.target.value)}
+                              className="w-24 h-8 text-sm"
+                            />
+                            <Button size="sm" className="h-8 bg-purple-600 hover:bg-purple-700" onClick={handleUpdateMaxTrainees} disabled={!!updating}>Save</Button>
+                            <Button size="sm" variant="ghost" className="h-8" onClick={() => {
+                              setEditMaxTrainees(false)
+                              setNewMaxTrainees(selectedCourse.max_trainees ? String(selectedCourse.max_trainees) : '')
+                            }}>Cancel</Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-ink font-medium">{selectedCourse.max_trainees ?? 'Unlimited'}</span>
+                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setEditMaxTrainees(true)}>
+                              Edit
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

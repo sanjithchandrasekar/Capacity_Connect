@@ -169,7 +169,7 @@ export interface Database {
           id: string
           title: string
           description: string | null
-          course_type: 'standard' | 'scenario'
+          course_type: string
           trainer_id: string | null
           department: string | null
           duration_minutes: number | null
@@ -196,12 +196,13 @@ export interface Database {
           planned_assessments_count: number | null
           planned_mock_tests_count: number | null
           max_trainees: number | null
+          trainer_suggestion: string | null
         }
         Insert: {
           id?: string
           title: string
           description?: string | null
-          course_type?: 'standard' | 'scenario'
+          course_type?: string
           trainer_id?: string | null
           department?: string | null
           duration_minutes?: number | null
@@ -228,12 +229,13 @@ export interface Database {
           planned_assessments_count?: number | null
           planned_mock_tests_count?: number | null
           max_trainees?: number | null
+          trainer_suggestion?: string | null
         }
         Update: {
           id?: string
           title?: string
           description?: string | null
-          course_type?: 'standard' | 'scenario'
+          course_type?: string
           trainer_id?: string | null
           department?: string | null
           duration_minutes?: number | null
@@ -260,6 +262,7 @@ export interface Database {
           planned_assessments_count?: number | null
           planned_mock_tests_count?: number | null
           max_trainees?: number | null
+          trainer_suggestion?: string | null
         }
         Relationships: []
       }

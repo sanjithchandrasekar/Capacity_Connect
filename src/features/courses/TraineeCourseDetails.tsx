@@ -203,7 +203,7 @@ export function TraineeCourseDetails() {
       const activeCount = currentEnrollments.filter(e => activeStatuses.includes(e.status)).length
       const waitlistCount = currentEnrollments.filter(e => (e.status as string) === 'waitlisted').length
 
-      const seatLimit = (course as any)?.seat_limit ?? course?.max_trainees ?? 50
+      const seatLimit = course?.max_trainees ?? 50
       const waitlistLimit = course?.waitlist_limit ?? 10
 
       let newStatus = 'pending_approval'
@@ -382,7 +382,7 @@ export function TraineeCourseDetails() {
 
   const isLoading = isCourseLoading || isEnrollmentLoading
   
-  const seatLimit = course?.seat_limit ?? 50
+  const seatLimit = course?.max_trainees ?? 50
   const waitlistLimit = course?.waitlist_limit ?? 10
   
   const activeCount = enrollmentCounts?.active ?? 0

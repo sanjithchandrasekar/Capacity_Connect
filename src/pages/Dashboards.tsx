@@ -1170,6 +1170,9 @@ export function AdminDashboard() {
   ] as const
 
   const pendingCount = users.filter(u => u.approval_status === 'pending').length
+  const pendingTrainees = users.filter(u => u.approval_status === 'pending' && u.role === 'trainee').length
+  const pendingTrainers = users.filter(u => u.approval_status === 'pending' && u.role === 'trainer').length
+  const pendingAdmins = isSuperAdmin ? users.filter(u => u.approval_status === 'pending' && u.role === 'admin').length : 0
 
   const stats = [
     { label: 'Total Users', value: users.length, icon: Users, gradient: 'from-purple-600 to-purple-800', badgeText: 'Registered' },
@@ -1194,7 +1197,9 @@ export function AdminDashboard() {
         id: tab.key,
         label: tab.label,
         icon: tab.icon,
-        badge: tab.key === 'trainees' ? pendingCount : undefined,
+        badge: tab.key === 'trainees' ? pendingTrainees || undefined :
+               tab.key === 'trainers' ? pendingTrainers || undefined :
+               tab.key === 'admins' ? pendingAdmins || undefined : undefined,
         isActive: activeTab === tab.key,
         onClick: () => setActiveTab(tab.key as any)
       }))}

@@ -25,13 +25,14 @@ import {
   Video, Link2, ExternalLink, Globe, Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
 
 type Skill = Database['public']['Tables']['skills']['Row']
 
 const detailsSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  course_type: z.enum(['standard', 'scenario']),
+  course_type: z.string().min(2, 'Course type is required'),
   department: z.string().optional(),
 })
 
@@ -47,17 +48,18 @@ const settingsSchema = z.object({
   final_test_start_time: z.string().optional(),
   final_test_end_time: z.string().optional(),
   delivery_mode: z.enum(['recorded', 'live', 'hybrid']),
-  max_trainees: z.coerce.number().positive('Capacity must be positive').optional(),
+  max_trainees: z.coerce.number().min(50, 'Minimum capacity is 50').max(250, 'Maximum capacity is 250').optional(),
+  trainer_suggestion: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.start_date) {
     const start = new Date(data.start_date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const diffDays = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffDays > 62) {
+    if (diffDays < 30) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Course cannot start more than 2 months from today',
+        message: 'Course must start at least 1 month from today',
         path: ['start_date']
       })
     }
@@ -128,6 +130,9 @@ export function CourseCreatePage() {
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
   const [customSkillName, setCustomSkillName] = useState('')
   const [addingSkill, setAddingSkill] = useState(false)
+  const [isCustomType, setIsCustomType] = useState(false)
+  const [isCropperOpen, setIsCropperOpen] = useState(false)
+  const [rawImageFile, setRawImageFile] = useState<File | null>(null)
   const thumbRef = useRef<HTMLInputElement>(null)
 
   // Materials state
@@ -208,8 +213,16 @@ export function CourseCreatePage() {
       toast.error('Thumbnail must be under 5MB')
       return
     }
-    setThumbnail(file)
-    setThumbnailPreview(URL.createObjectURL(file))
+    setRawImageFile(file)
+    setIsCropperOpen(true)
+    if (thumbRef.current) thumbRef.current.value = ''
+  }
+
+  const handleCropComplete = (croppedFile: File) => {
+    setThumbnail(croppedFile)
+    setThumbnailPreview(URL.createObjectURL(croppedFile))
+    setIsCropperOpen(false)
+    setRawImageFile(null)
   }
 
   const validateStep = async () => {
@@ -354,6 +367,7 @@ export function CourseCreatePage() {
           final_test_end_time: s.final_test_end_time || null,
           delivery_mode: s.delivery_mode,
           max_trainees: s.max_trainees || null,
+          trainer_suggestion: s.trainer_suggestion || null,
           session_flow_text: f.session_flow_text || null,
         })
         .select()
@@ -563,13 +577,34 @@ export function CourseCreatePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-ink/80 text-xs">Course Type</Label>
-                    <Select value={detailsForm.watch('course_type')} onValueChange={v => detailsForm.setValue('course_type', v as any)}>
+                    <Select 
+                      value={isCustomType ? 'custom' : detailsForm.watch('course_type')} 
+                      onValueChange={v => {
+                        if (v === 'custom') {
+                          setIsCustomType(true)
+                          detailsForm.setValue('course_type', '')
+                        } else {
+                          setIsCustomType(false)
+                          detailsForm.setValue('course_type', v)
+                        }
+                      }}
+                    >
                       <SelectTrigger className="bg-ink/5 border-ink/20 text-ink h-10"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="standard">Standard Training</SelectItem>
                         <SelectItem value="scenario">Scenario-Based Training</SelectItem>
+                        <SelectItem value="technical">Technical Training</SelectItem>
+                        <SelectItem value="custom">+ Add Custom Course Type...</SelectItem>
                       </SelectContent>
                     </Select>
+                    {isCustomType && (
+                      <Input 
+                        {...detailsForm.register('course_type')} 
+                        placeholder="Enter custom course type" 
+                        className="bg-ink/5 border-ink/20 text-ink h-10 mt-2" 
+                      />
+                    )}
+                    {detailsForm.formState.errors.course_type && <p className="text-xs text-red-600">{detailsForm.formState.errors.course_type.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-ink/80 text-xs">Department</Label>
@@ -628,7 +663,13 @@ export function CourseCreatePage() {
                   <div className="space-y-1.5 col-span-2">
                     <Label className="text-ink/80 text-xs">Trainee Capacity Limit</Label>
                     <Input type="number" {...settingsForm.register('max_trainees')} placeholder="e.g. 50" className="bg-ink/5 border-ink/20 text-ink h-10" />
-                    <p className="text-[10px] text-ink/40">Leave empty for unlimited trainees</p>
+                    <p className="text-[10px] text-ink/40">Must be between 50 and 250</p>
+                  </div>
+                  
+                  {/* Trainer Suggestion / Notice */}
+                  <div className="space-y-1.5 col-span-2">
+                    <Label className="text-ink/80 text-xs flex items-center gap-2">Notice to Admin <Badge variant="secondary" className="text-[9px] h-4 bg-purple-100 text-purple-700">Optional</Badge></Label>
+                    <Textarea {...settingsForm.register('trainer_suggestion')} placeholder="Add any notes or suggestions for the admin approving this course..." className="bg-ink/5 border-ink/20 text-ink min-h-[60px]" />
                   </div>
                   
                   {/* Test Planning */}
@@ -696,7 +737,7 @@ export function CourseCreatePage() {
                     <button onClick={() => thumbRef.current?.click()} className="w-full h-32 border-2 border-dashed border-ink/20 rounded-lg flex flex-col items-center justify-center gap-2 text-ink/40 hover:text-ink hover:border-ink/30 transition-all">
                       <Upload className="w-6 h-6" />
                       <span className="text-xs">Click to upload thumbnail</span>
-                      <span className="text-[10px] text-ink/30">PNG, JPG up to 5MB</span>
+                      <span className="text-[10px] text-ink/30">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
                     </button>
                   )}
                 </div>
@@ -1044,6 +1085,16 @@ export function CourseCreatePage() {
           </div>
         </motion.div>
       </motion.div>
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageFile={rawImageFile}
+        onClose={() => {
+          setIsCropperOpen(false)
+          setRawImageFile(null)
+        }}
+        onCropComplete={handleCropComplete}
+      />
     </TrainerLayout>
   )
 }

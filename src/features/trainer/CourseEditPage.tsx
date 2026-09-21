@@ -47,16 +47,10 @@ const courseSchema = z.object({
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const diffDays = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffDays < 0) {
+    if (diffDays < 30) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Course cannot start in the past',
-        path: ['start_date']
-      })
-    } else if (diffDays > 62) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Course cannot start more than 2 months from today',
+        message: 'Course must start at least 1 month from today',
         path: ['start_date']
       })
     }
@@ -391,7 +385,7 @@ export function CourseEditPage() {
                     <button type="button" onClick={() => thumbRef.current?.click()} className="w-full max-w-sm h-32 border-2 border-dashed border-ink/20 rounded-lg flex flex-col items-center justify-center gap-2 text-ink/40 hover:text-ink hover:border-ink/30 transition-all bg-ink/5">
                       <Upload className="w-6 h-6" />
                       <span className="text-xs">Click to upload thumbnail</span>
-                      <span className="text-[10px] text-ink/30">PNG, JPG up to 5MB</span>
+                      <span className="text-[10px] text-ink/30">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
                     </button>
                   )}
                 </div>

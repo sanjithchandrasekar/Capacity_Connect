@@ -18,6 +18,7 @@ import {
   Target, Eye, AlertCircle, Image, UserCheck, Megaphone
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
 
 type Trainer = { id: string; full_name: string; email: string; qualifications?: string | null; years_of_experience?: number | null }
 type Skill = { id: string; name: string }
@@ -29,7 +30,7 @@ const trainerSchema = z.object({
 const detailsSchema = z.object({
   title: z.string().min(5, 'At least 5 characters'),
   description: z.string().min(10, 'At least 10 characters'),
-  course_type: z.enum(['standard', 'scenario']),
+  course_type: z.string().min(2, 'Course type is required'),
   department: z.string().optional(),
 })
 const settingsSchema = z.object({
@@ -38,7 +39,21 @@ const settingsSchema = z.object({
   start_date: z.string().optional(),
   end_date: z.string().optional(),
   delivery_mode: z.enum(['recorded', 'live', 'hybrid']),
-  max_trainees: z.coerce.number().positive().optional(),
+  max_trainees: z.coerce.number().min(50, 'Minimum capacity is 50').max(250, 'Maximum capacity is 250').optional(),
+}).superRefine((data, ctx) => {
+  if (data.start_date) {
+    const start = new Date(data.start_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays < 30) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Course must start at least 1 month from today',
+        path: ['start_date']
+      })
+    }
+  }
 })
 const objectivesSchema = z.object({
   understand: z.string().min(5),
@@ -72,6 +87,9 @@ export function AdminCourseCreatePage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [thumbnail, setThumbnail] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+  const [isCustomType, setIsCustomType] = useState(false)
+  const [isCropperOpen, setIsCropperOpen] = useState(false)
+  const [rawImageFile, setRawImageFile] = useState<File | null>(null)
   const thumbRef = useRef<HTMLInputElement>(null)
 
   const trainerForm = useForm<TrainerData>({ resolver: zodResolver(trainerSchema), defaultValues: { trainer_id: '', assignment_message: '' } })
@@ -249,10 +267,34 @@ export function AdminCourseCreatePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-semibold text-slate-700">Course Type *</Label>
-                      <Select value={detailsForm.watch('course_type')} onValueChange={v => detailsForm.setValue('course_type', v as any)}>
+                      <Select 
+                        value={isCustomType ? 'custom' : detailsForm.watch('course_type')} 
+                        onValueChange={v => {
+                          if (v === 'custom') {
+                            setIsCustomType(true)
+                            detailsForm.setValue('course_type', '')
+                          } else {
+                            setIsCustomType(false)
+                            detailsForm.setValue('course_type', v)
+                          }
+                        }}
+                      >
                         <SelectTrigger className="border-slate-200 rounded-xl h-12"><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="standard">Standard</SelectItem><SelectItem value="scenario">Scenario-Based</SelectItem></SelectContent>
+                        <SelectContent>
+                          <SelectItem value="standard">Standard Training</SelectItem>
+                          <SelectItem value="scenario">Scenario-Based Training</SelectItem>
+                          <SelectItem value="technical">Technical Training</SelectItem>
+                          <SelectItem value="custom">+ Add Custom Course Type...</SelectItem>
+                        </SelectContent>
                       </Select>
+                      {isCustomType && (
+                        <Input 
+                          {...detailsForm.register('course_type')} 
+                          placeholder="Enter custom course type" 
+                          className="border-slate-200 focus:border-purple-500 rounded-xl h-12 mt-2" 
+                        />
+                      )}
+                      {detailsForm.formState.errors.course_type && <p className="text-xs text-red-500">{detailsForm.formState.errors.course_type.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-semibold text-slate-700">Department</Label>
@@ -263,9 +305,16 @@ export function AdminCourseCreatePage() {
                     <Label className="text-sm font-semibold text-slate-700">Thumbnail <span className="text-slate-400 font-normal">(optional)</span></Label>
                     <div onClick={() => thumbRef.current?.click()} className="flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-purple-400 cursor-pointer transition-colors">
                       {thumbnailPreview ? <img src={thumbnailPreview} alt="thumb" className="w-20 h-14 object-cover rounded-xl" /> : <div className="w-20 h-14 rounded-xl bg-slate-100 flex items-center justify-center"><Image className="w-6 h-6 text-slate-300" /></div>}
-                      <div><p className="text-sm font-medium text-slate-700">{thumbnail ? thumbnail.name : 'Click to upload thumbnail'}</p><p className="text-xs text-slate-400">PNG, JPG — max 5MB</p></div>
+                      <div><p className="text-sm font-medium text-slate-700">{thumbnail ? thumbnail.name : 'Click to upload thumbnail'}</p><p className="text-xs text-slate-400">PNG, JPG — max 5MB (16:5 ratio, e.g. 1600x500px)</p></div>
                     </div>
-                    <input ref={thumbRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f && f.size < 5*1024*1024) { setThumbnail(f); setThumbnailPreview(URL.createObjectURL(f)) } else if (f) toast.error('Max 5MB') }} className="hidden" />
+                    <input ref={thumbRef} type="file" accept="image/*" onChange={e => { 
+                      const f = e.target.files?.[0]; 
+                      if (f && f.size < 5*1024*1024) { 
+                        setRawImageFile(f); 
+                        setIsCropperOpen(true); 
+                        if(thumbRef.current) thumbRef.current.value=''; 
+                      } else if (f) toast.error('Max 5MB') 
+                    }} className="hidden" />
                   </div>
                 </div>
               )}
@@ -374,6 +423,21 @@ export function AdminCourseCreatePage() {
           </motion.div>
         )}
       </div>
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageFile={rawImageFile}
+        onClose={() => {
+          setIsCropperOpen(false)
+          setRawImageFile(null)
+        }}
+        onCropComplete={(croppedFile) => {
+          setThumbnail(croppedFile)
+          setThumbnailPreview(URL.createObjectURL(croppedFile))
+          setIsCropperOpen(false)
+          setRawImageFile(null)
+        }}
+      />
     </div>
   )
 }
