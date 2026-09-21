@@ -31,7 +31,7 @@ type Course = Database['public']['Tables']['courses']['Row']
 const courseSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().optional(),
-  course_type: z.enum(['standard', 'scenario']),
+  course_type: z.string().min(2, 'Course type is required'),
   department: z.string().optional(),
   duration_minutes: z.coerce.number().positive().optional(),
   passing_score: z.coerce.number().min(1).max(100).optional(),
@@ -80,7 +80,16 @@ export function CourseFormDialog({ open, onClose, onSaved, course }: CourseFormD
         // Create new
         const { error } = await supabase
           .from('courses')
-          .insert({ ...data, trainer_id: user.id, status })
+          .insert({
+            title: data.title,
+            description: data.description,
+            course_type: data.course_type,
+            department: data.department,
+            duration_minutes: data.duration_minutes,
+            passing_score: data.passing_score,
+            trainer_id: user.id,
+            status
+          })
         if (error) throw error
         toast.success(status === 'draft' ? 'Course saved as draft' : 'Course submitted for review')
       }
@@ -120,7 +129,7 @@ export function CourseFormDialog({ open, onClose, onSaved, course }: CourseFormD
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label>Course Type *</Label>
-              <Select value={courseType} onValueChange={(v) => setValue('course_type', v as 'standard' | 'scenario')}>
+              <Select value={courseType} onValueChange={(v) => setValue('course_type', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
