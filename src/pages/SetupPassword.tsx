@@ -28,6 +28,7 @@ export function SetupPassword() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [hasSession, setHasSession] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
     // Check if we actually have a session to update the password for.
@@ -35,6 +36,7 @@ export function SetupPassword() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setHasSession(true)
+        setUserEmail(session.user.email ?? null)
       } else {
         toast.error('Invalid or expired reset link. Please try again.')
         navigate('/login')
@@ -107,6 +109,12 @@ export function SetupPassword() {
           </div>
           <h1 className="text-3xl font-extrabold text-midnight tracking-tight">Set New Password</h1>
           <p className="text-midnight/60 mt-2 text-sm">Please enter a new password for your account.</p>
+          {userEmail && (
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-50 border border-purple-100 text-sm font-semibold text-purple-700 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ring-2 ring-emerald-500/20"></span>
+              {userEmail}
+            </div>
+          )}
         </div>
 
         <div className="bg-white/90 backdrop-blur-xl border border-purple-500/15 rounded-2xl p-8 shadow-2xl shadow-purple-500/10">
