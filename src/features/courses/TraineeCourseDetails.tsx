@@ -155,13 +155,12 @@ export function TraineeCourseDetails() {
   const { data: enrollmentCounts } = useQuery({
     queryKey: ['enrollments-count', courseId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('enrollments').select('status, user_id').eq('course_id', courseId!).order('enrolled_at', { ascending: true })
+      const { data, error } = await (supabase.rpc as any)('get_course_enrollment_counts', {
+        p_course_id: courseId!,
+        p_user_id: profile?.id || null
+      })
       if (error) throw error
-      const active = data.filter(e => ['enrolled', 'in_progress', 'completed', 'pending_approval'].includes(e.status)).length
-      const waitlisted = data.filter(e => (e.status as string) === 'waitlisted')
-      const myWaitlistPosition = waitlisted.findIndex(e => e.user_id === profile?.id) + 1
-      return { active, waitlisted: waitlisted.length, total: data.length, myWaitlistPosition }
+      return (data as any) as { active: number, waitlisted: number, total: number, myWaitlistPosition: number }
     },
     enabled: !!courseId,
   })
@@ -204,7 +203,7 @@ export function TraineeCourseDetails() {
       const activeCount = currentEnrollments.filter(e => activeStatuses.includes(e.status)).length
       const waitlistCount = currentEnrollments.filter(e => (e.status as string) === 'waitlisted').length
 
-      const seatLimit = course?.seat_limit ?? 50
+      const seatLimit = (course as any)?.seat_limit ?? course?.max_trainees ?? 50
       const waitlistLimit = course?.waitlist_limit ?? 10
 
       let newStatus = 'pending_approval'
@@ -535,6 +534,9 @@ export function TraineeCourseDetails() {
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-cyan-400 shrink-0" />
                       <span>{enrollmentCounts.active} enrolled / {seatLimit}</span>
+                      {enrollmentCounts.waitlisted > 0 && (
+                        <span className="text-yellow-300 ml-1">({enrollmentCounts.waitlisted} waitlisted)</span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -961,7 +963,7 @@ export function TraineeCourseDetails() {
                       { icon: <Layers className="w-3.5 h-3.5 text-purple-500" />, label: 'Sessions', value: String(course.sessions?.length || 0) },
                       { icon: <FileText className="w-3.5 h-3.5 text-blue-500" />, label: 'Materials', value: String(totalMaterials) },
                       { icon: <Target className="w-3.5 h-3.5 text-emerald-500" />, label: 'Passing Score', value: `${course.passing_score ?? '—'}%` },
-                      { icon: <Users className="w-3.5 h-3.5 text-cyan-500" />, label: 'Enrolled', value: `${activeCount}${course.max_trainees ? ` / ${course.max_trainees}` : ''}` },
+                      { icon: <Users className="w-3.5 h-3.5 text-cyan-500" />, label: 'Enrolled', value: `${activeCount} / ${seatLimit}` },
                       { icon: <Video className="w-3.5 h-3.5 text-pink-500" />, label: 'Delivery', value: course.delivery_mode ? course.delivery_mode.charAt(0).toUpperCase() + course.delivery_mode.slice(1) : 'Recorded' },
                     ].map(item => (
                       <div key={item.label} className="flex items-center gap-2.5">

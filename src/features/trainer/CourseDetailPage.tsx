@@ -241,9 +241,16 @@ export function CourseDetailPage() {
                 <div className="mb-4">
                   <Card className="bg-white border-ink/10">
                     <CardContent className="p-6">
-                      <h3 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-brand" /> Enrollment History & Stats
-                      </h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
+                          <Users className="w-4 h-4 text-brand" /> Enrollment History & Stats
+                        </h3>
+                        {course?.max_trainees && (
+                          <span className="text-xs font-semibold px-2.5 py-1 bg-ink/5 text-ink/70 rounded-full border border-ink/10">
+                            {activeEnrollments.length} / {course.max_trainees} Enrolled
+                          </span>
+                        )}
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-center">
                           <span className="block text-2xl font-bold text-emerald-600">{activeEnrollments.length}</span>
