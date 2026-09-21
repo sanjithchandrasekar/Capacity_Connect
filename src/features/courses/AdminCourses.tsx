@@ -122,13 +122,24 @@ export function AdminCourses() {
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', course.id),
         supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', course.id).neq('status', 'pending_approval'),
         supabase.from('course_sessions').select('*').eq('course_id', course.id).order('order_index'),
-        supabase.from('enrollments').select('*, trainee:profiles(id, full_name, email)').eq('course_id', course.id).eq('status', 'pending_approval'),
+        supabase.from('enrollments').select('*').eq('course_id', course.id).eq('status', 'pending_approval'),
       ])
+      
+      let mergedPending = []
+      if (pRes.data && pRes.data.length > 0) {
+        const userIds = pRes.data.map(e => e.user_id)
+        const { data: traineesData } = await supabase.from('trainees').select('id, full_name, email').in('id', userIds)
+        mergedPending = pRes.data.map(e => ({
+          ...e,
+          trainee: traineesData?.find(t => t.id === e.user_id) || { full_name: 'Unknown Trainee', email: '' }
+        }))
+      }
+
       setMaterials(mRes.data ?? [])
       setSkills(sRes.data as any ?? [])
       setEnrollmentCount(eRes.count ?? 0)
       setSessions(sessRes.data ?? [])
-      setPendingEnrollments(pRes.data ?? [])
+      setPendingEnrollments(mergedPending)
     } catch {
       toast.error('Failed to load course details')
     } finally {

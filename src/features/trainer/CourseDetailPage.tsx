@@ -38,29 +38,49 @@ export function CourseDetailPage() {
   const [loading, setLoading] = useState(true)
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [pendingEnrollments, setPendingEnrollments] = useState<any[]>([])
+  const [allEnrollments, setAllEnrollments] = useState<any[]>([])
   const [isProcessingId, setIsProcessingId] = useState<string | null>(null)
+
+  const pendingEnrollments = allEnrollments.filter(e => e.status === 'pending_approval')
+  const waitlistedEnrollments = allEnrollments.filter(e => e.status === 'waitlisted')
+  const activeEnrollments = allEnrollments.filter(e => ['enrolled', 'in_progress', 'completed'].includes(e.status))
+  const historyEnrollments = allEnrollments.filter(e => e.status !== 'pending_approval')
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
     setLoading(true)
     try {
-      const [cRes, csRes, mRes, aRes, eRes, sRes, pendingRes] = await Promise.all([
+      const [cRes, csRes, mRes, aRes, eRes, sRes, enrollmentsRes] = await Promise.all([
         supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single(),
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', courseId),
         supabase.from('materials').select('*').eq('course_id', courseId),
         supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).single(),
-        supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId).neq('status', 'pending_approval'),
+        supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId).in('status', ['enrolled', 'in_progress', 'completed']),
         supabase.from('course_sessions').select('*').eq('course_id', courseId).order('order_index'),
-        supabase.from('enrollments').select('*, trainee:profiles(id, full_name, email)').eq('course_id', courseId).eq('status', 'pending_approval'),
+        supabase.from('enrollments').select('*').eq('course_id', courseId).order('enrolled_at', { ascending: false }),
       ])
+      
+      let mergedEnrollments = []
+      if (enrollmentsRes.error) {
+        console.error('Error fetching enrollments:', enrollmentsRes.error)
+      } else if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {
+        const userIds = enrollmentsRes.data.map(e => e.user_id)
+        const { data: traineesData, error: traineesError } = await supabase.from('trainees').select('id, full_name, email').in('id', userIds)
+        if (traineesError) console.error('Error fetching trainees:', traineesError)
+        
+        mergedEnrollments = enrollmentsRes.data.map(e => ({
+          ...e,
+          trainee: traineesData?.find(t => t.id === e.user_id) || { full_name: 'Unknown Trainee', email: '' }
+        }))
+      }
+
       if (cRes.data) setCourse(cRes.data)
       if (csRes.data) setCourseSkills(csRes.data as any)
       if (mRes.data) setMaterials(mRes.data)
       if (aRes.data) setAssessment(aRes.data)
       setEnrollmentCount(eRes.count ?? 0)
       if (sRes.data) setSessions(sRes.data)
-      if (pendingRes.data) setPendingEnrollments(pendingRes.data)
+      setAllEnrollments(mergedEnrollments)
     } catch (err) {
       console.error(err)
     } finally {
@@ -89,7 +109,8 @@ export function CourseDetailPage() {
             email: trainee.email,
             name: trainee.full_name || 'Trainee',
             courseTitle: course?.title || 'Course',
-            action: action
+            action: action,
+            origin: window.location.origin
           }
         }).catch(console.error)
       }
@@ -210,6 +231,60 @@ export function CourseDetailPage() {
                           ))
                         ) : (
                           <p className="text-xs text-orange-800/60">No pending enrollment requests at this time.</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Enrollment History & Stats Section */}
+                <div className="mb-4">
+                  <Card className="bg-white border-ink/10">
+                    <CardContent className="p-6">
+                      <h3 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2">
+                        <Users className="w-4 h-4 text-brand" /> Enrollment History & Stats
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-center">
+                          <span className="block text-2xl font-bold text-emerald-600">{activeEnrollments.length}</span>
+                          <span className="text-[10px] uppercase font-bold text-emerald-800/70 tracking-wider">Accepted</span>
+                        </div>
+                        <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3 text-center">
+                          <span className="block text-2xl font-bold text-yellow-600">{waitlistedEnrollments.length}</span>
+                          <span className="text-[10px] uppercase font-bold text-yellow-800/70 tracking-wider">Waitlisted</span>
+                        </div>
+                        <div className="bg-rose-50 border border-rose-100 rounded-lg p-3 text-center">
+                          <span className="block text-2xl font-bold text-rose-600">{allEnrollments.filter(e => e.status === 'rejected').length}</span>
+                          <span className="text-[10px] uppercase font-bold text-rose-800/70 tracking-wider">Rejected</span>
+                        </div>
+                        <div className="bg-ink/5 border border-ink/10 rounded-lg p-3 text-center">
+                          <span className="block text-2xl font-bold text-ink/70">{allEnrollments.filter(e => e.status === 'withdrawn').length}</span>
+                          <span className="text-[10px] uppercase font-bold text-ink/60 tracking-wider">Withdrawn</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        {historyEnrollments.length > 0 ? (
+                          historyEnrollments.map((enrollment) => (
+                            <div key={enrollment.id} className="p-3 rounded-xl bg-ink/5 flex items-center justify-between">
+                              <div>
+                                <h4 className="text-xs font-semibold text-ink">{enrollment.trainee?.full_name || 'Unknown Trainee'}</h4>
+                                <p className="text-[10px] text-ink/60">{enrollment.trainee?.email}</p>
+                              </div>
+                              <div>
+                                <Badge variant="outline" className={`text-[10px] capitalize ${
+                                  ['enrolled', 'in_progress', 'completed'].includes(enrollment.status) ? 'border-emerald-200 text-emerald-700 bg-emerald-50' :
+                                  enrollment.status === 'waitlisted' ? 'border-yellow-200 text-yellow-700 bg-yellow-50' :
+                                  enrollment.status === 'rejected' ? 'border-rose-200 text-rose-700 bg-rose-50' :
+                                  'border-ink/20 text-ink/60 bg-ink/5'
+                                }`}>
+                                  {enrollment.status.replace('_', ' ')}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-ink/50 text-center py-4">No historical enrollments yet.</p>
                         )}
                       </div>
                     </CardContent>

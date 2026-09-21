@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, name, courseTitle, action } = await req.json()
+    const { email, name, courseTitle, action, origin } = await req.json()
 
     if (!email || !name || !courseTitle || !action) {
       throw new Error('Missing required fields')
@@ -76,7 +76,7 @@ serve(async (req) => {
             
             ${isApproved ? `
             <div style="text-align: center; margin-top: 40px;">
-              <a href="https://capacityconnect.moes.gov.in/dashboard" style="background-color: #7c3aed; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);">
+              <a href="${origin || 'https://capacityconnect.moes.gov.in'}/dashboard" style="background-color: #7c3aed; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);">
                 Go to My Learning
               </a>
             </div>

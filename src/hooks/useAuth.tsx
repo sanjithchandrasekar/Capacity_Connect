@@ -114,8 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setLoading(false)
 
-        // Automatically redirect to password setup when clicking an email link
-        if (event === 'PASSWORD_RECOVERY') {
+        // Automatically redirect to password setup when clicking an email link, but only if not already there
+        if (event === 'PASSWORD_RECOVERY' && !window.location.pathname.includes('/setup-password')) {
           window.location.href = '/setup-password'
         }
       }

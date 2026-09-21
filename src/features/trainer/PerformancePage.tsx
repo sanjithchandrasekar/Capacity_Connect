@@ -81,16 +81,17 @@ export function PerformancePage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const totalEnrolled = traineeRows.length
-  const completed = traineeRows.filter(r => r.enrollment.status === 'completed').length
+  const activeTraineeRows = traineeRows.filter(r => ['enrolled', 'in_progress', 'completed'].includes(r.enrollment.status))
+  const totalEnrolled = activeTraineeRows.length
+  const completed = activeTraineeRows.filter(r => r.enrollment.status === 'completed').length
   const completionRate = totalEnrolled > 0 ? Math.round((completed / totalEnrolled) * 100) : 0
-  const avgProgress = totalEnrolled > 0 ? Math.round(traineeRows.reduce((s, r) => s + r.enrollment.progress_percent, 0) / totalEnrolled) : 0
-  const scoresFiltered = traineeRows.filter(r => r.bestScore !== null)
+  const avgProgress = totalEnrolled > 0 ? Math.round(activeTraineeRows.reduce((s, r) => s + r.enrollment.progress_percent, 0) / totalEnrolled) : 0
+  const scoresFiltered = activeTraineeRows.filter(r => r.bestScore !== null)
   const avgScore = scoresFiltered.length > 0 ? Math.round(scoresFiltered.reduce((s, r) => s + (r.bestScore ?? 0), 0) / scoresFiltered.length) : 0
   const passedCount = scoresFiltered.filter(r => (r.bestScore ?? 0) >= (course?.passing_score ?? 60)).length
   const passRate = scoresFiltered.length > 0 ? Math.round((passedCount / scoresFiltered.length) * 100) : 0
-  const avgAttempts = totalEnrolled > 0 ? Math.round(traineeRows.reduce((s, r) => s + r.attemptCount, 0) / totalEnrolled * 10) / 10 : 0
-  const needsSupport = traineeRows.filter(r => r.enrollment.status !== 'completed' && r.bestScore !== null && (r.bestScore ?? 0) < (course?.passing_score ?? 60))
+  const avgAttempts = totalEnrolled > 0 ? Math.round(activeTraineeRows.reduce((s, r) => s + r.attemptCount, 0) / totalEnrolled * 10) / 10 : 0
+  const needsSupport = activeTraineeRows.filter(r => r.enrollment.status !== 'completed' && r.bestScore !== null && (r.bestScore ?? 0) < (course?.passing_score ?? 60))
 
   const stats = [
     { label: 'Enrolled', value: totalEnrolled, icon: Users, color: 'from-ink/10 to-ink/5 border-ink/20' },
@@ -151,7 +152,7 @@ export function PerformancePage() {
           <div className="px-6 py-4 border-b border-ink/10">
             <h3 className="text-sm font-semibold text-ink">Enrolled Trainees</h3>
           </div>
-          {traineeRows.length === 0 ? (
+          {activeTraineeRows.length === 0 ? (
             <div className="p-8 text-center text-ink/50 text-sm">No trainees enrolled yet.</div>
           ) : (
             <div className="overflow-x-auto">
@@ -164,7 +165,7 @@ export function PerformancePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink/10">
-                  {traineeRows.map(r => (
+                  {activeTraineeRows.map(r => (
                     <tr key={r.enrollment.user_id} className="hover:bg-ink/5 transition-colors">
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-3">

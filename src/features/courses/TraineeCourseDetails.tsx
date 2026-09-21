@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -15,6 +15,7 @@ import {
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 
@@ -151,22 +152,73 @@ export function TraineeCourseDetails() {
     enabled: !!courseId && !!profile?.id,
   })
 
-  const { data: enrollmentCount } = useQuery({
+  const { data: enrollmentCounts } = useQuery({
     queryKey: ['enrollments-count', courseId],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId!)
+      const { data, error } = await supabase
+        .from('enrollments').select('status, user_id').eq('course_id', courseId!).order('enrolled_at', { ascending: true })
       if (error) throw error
-      return count || 0
+      const active = data.filter(e => ['enrolled', 'in_progress', 'completed', 'pending_approval'].includes(e.status)).length
+      const waitlisted = data.filter(e => (e.status as string) === 'waitlisted')
+      const myWaitlistPosition = waitlisted.findIndex(e => e.user_id === profile?.id) + 1
+      return { active, waitlisted: waitlisted.length, total: data.length, myWaitlistPosition }
     },
     enabled: !!courseId,
   })
 
+  useEffect(() => {
+    if (!profile?.id || !courseId) return
+
+    const channel = supabase
+      .channel('enrollment_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'enrollments',
+          filter: `course_id=eq.${courseId}&user_id=eq.${profile.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile.id] })
+          queryClient.invalidateQueries({ queryKey: ['enrollments-count', courseId] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [profile?.id, courseId, queryClient])
+
   const enrollMutation = useMutation({
     mutationFn: async () => {
+      const { data: currentEnrollments, error: fetchError } = await supabase
+        .from('enrollments')
+        .select('status')
+        .eq('course_id', courseId!)
+
+      if (fetchError) throw fetchError
+
+      const activeStatuses = ['enrolled', 'in_progress', 'completed', 'pending_approval']
+      const activeCount = currentEnrollments.filter(e => activeStatuses.includes(e.status)).length
+      const waitlistCount = currentEnrollments.filter(e => (e.status as string) === 'waitlisted').length
+
+      const seatLimit = course?.seat_limit ?? 50
+      const waitlistLimit = course?.waitlist_limit ?? 10
+
+      let newStatus = 'pending_approval'
+
+      if (activeCount >= seatLimit) {
+        if (waitlistCount >= waitlistLimit) {
+          throw new Error('Course and waitlist are currently full.')
+        }
+        newStatus = 'waitlisted'
+      }
+
       const { data: enrollData, error: enrollError } = await supabase
         .from('enrollments')
-        .insert({ course_id: courseId!, user_id: profile!.id, status: 'pending_approval', progress_percent: 0 })
+        .insert({ course_id: courseId!, user_id: profile!.id, status: newStatus as any, progress_percent: 0 })
         .select().single()
       if (enrollError) throw enrollError
 
@@ -174,17 +226,21 @@ export function TraineeCourseDetails() {
         await supabase.from('notifications').insert({
           user_id: course.trainer_id,
           type: 'enrollment_request',
-          title: 'New Enrollment Request',
-          message: `${profile?.full_name || 'A trainee'} wants to enroll in ${course.title}.`,
+          title: newStatus === 'waitlisted' ? 'New Waitlist Request' : 'New Enrollment Request',
+          message: `${profile?.full_name || 'A trainee'} wants to enroll in ${course.title}${newStatus === 'waitlisted' ? ' (Waitlisted)' : ''}.`,
         })
       }
 
-      return enrollData
+      return { enrollData, status: newStatus }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile?.id] })
       queryClient.invalidateQueries({ queryKey: ['enrollments-count', courseId] })
-      toast.success('Enrollment request sent. Pending approval from trainer.')
+      if (data.status === 'waitlisted') {
+         toast.success('Course is full. You have been added to the waitlist.')
+      } else {
+         toast.success('Enrollment request sent. Pending approval from trainer.')
+      }
       handleCloseOtpDialog()
     },
     onError: (error: any) => toast.error(error.message || 'Failed to request enrollment'),
@@ -210,13 +266,18 @@ export function TraineeCourseDetails() {
     onError: (error: any) => toast.error(error.message || 'Failed to drop course'),
   })
 
-  const handleSendOtp = async (type: 'enroll' | 'drop') => {
-    if (!profile?.email) {
+  const handleInitiateOtp = (type: 'enroll' | 'drop') => {
+    setOtpDialogType(type)
+    setOtpSent(false)
+    setOtpInput('')
+  }
+
+  const handleSendOtp = async () => {
+    if (!profile?.email || !otpDialogType) {
       toast.error('No email address found for your profile.')
       return
     }
     
-    setOtpDialogType(type)
     setIsSendingOtp(true)
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
@@ -229,7 +290,6 @@ export function TraineeCourseDetails() {
     } catch (error: any) {
       console.error(error)
       toast.error('Failed to send OTP')
-      setOtpDialogType(null)
     } finally {
       setIsSendingOtp(false)
     }
@@ -322,8 +382,20 @@ export function TraineeCourseDetails() {
 
 
   const isLoading = isCourseLoading || isEnrollmentLoading
-  const isFull = course?.max_trainees && (enrollmentCount ?? 0) >= course.max_trainees
-  const spotsLeft = course?.max_trainees ? course.max_trainees - (enrollmentCount ?? 0) : null
+  
+  const seatLimit = course?.seat_limit ?? 50
+  const waitlistLimit = course?.waitlist_limit ?? 10
+  
+  const activeCount = enrollmentCounts?.active ?? 0
+  const waitlistCount = enrollmentCounts?.waitlisted ?? 0
+  const myWaitlistPosition = enrollmentCounts?.myWaitlistPosition ?? 0
+  
+  const isCourseFull = activeCount >= seatLimit
+  const isWaitlistFull = waitlistCount >= waitlistLimit
+  const isFull = isCourseFull && isWaitlistFull
+  
+  const spotsLeft = isCourseFull ? (isWaitlistFull ? 0 : waitlistLimit - waitlistCount) : (seatLimit - activeCount)
+  const spotsLabel = isCourseFull ? (spotsLeft === 1 ? 'Waitlist Spot' : 'Waitlist Spots') : (spotsLeft === 1 ? 'Spot' : 'Spots')
   const totalMaterials = course?.materials?.length ?? 0
 
   // 10-day Drop Course Constraint Logic
@@ -357,6 +429,7 @@ export function TraineeCourseDetails() {
     hybrid: 'bg-pink-50 text-pink-700 border-pink-200',
   }
   return (
+    <ErrorBoundary>
     <DashboardShell
       title="Course Details"
       icon={Compass}
@@ -414,6 +487,11 @@ export function TraineeCourseDetails() {
                       <Clock className="w-3 h-3" /> Pending Approval
                     </span>
                   )}
+                  {(enrollment as any)?.status === 'waitlisted' ? (
+                    <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Waitlisted
+                    </span>
+                  ) : null}
                   {enrollment?.status === 'rejected' && (
                     <span className="bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
                       <XCircle className="w-3 h-3" /> Rejected
@@ -453,10 +531,10 @@ export function TraineeCourseDetails() {
                     <Target className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>Pass: {course.passing_score}%</span>
                   </div>
-                  {enrollmentCount !== undefined && (
+                  {enrollmentCounts !== undefined && (
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span>{enrollmentCount} enrolled{course.max_trainees ? ` / ${course.max_trainees}` : ''}</span>
+                      <span>{enrollmentCounts.active} enrolled / {seatLimit}</span>
                     </div>
                   )}
                 </div>
@@ -481,7 +559,7 @@ export function TraineeCourseDetails() {
                       />
                     </div>
                     <p className="text-xs text-white/50 mt-1.5 capitalize">
-                      Status: <span className="text-white/80 font-semibold">{enrollment.status.replace('_', ' ')}</span>
+                      Status: <span className="text-white/80 font-semibold">{enrollment?.status?.replace('_', ' ') || 'Unknown'}</span>
                     </p>
                   </div>
                 )}
@@ -499,7 +577,7 @@ export function TraineeCourseDetails() {
                       
                       <div className="space-y-1">
                         <Button
-                          onClick={() => handleSendOtp('drop')}
+                          onClick={() => handleInitiateOtp('drop')}
                           disabled={!canDrop || dropMutation.isPending}
                           variant="outline"
                           className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
@@ -520,28 +598,43 @@ export function TraineeCourseDetails() {
                     <Button disabled className="bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold rounded-2xl px-6 py-3 cursor-not-allowed flex items-center gap-2">
                       <XCircle className="w-4 h-4" /> Enrollment Rejected
                     </Button>
+                  ) : enrollment && (enrollment.status as string) === 'waitlisted' ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button disabled className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 font-bold rounded-2xl px-6 py-3 cursor-not-allowed flex items-center gap-2">
+                        <Clock className="w-4 h-4" /> Waitlisted {myWaitlistPosition > 0 && `(WL-${myWaitlistPosition})`}
+                      </Button>
+                      <Button
+                        onClick={() => handleInitiateOtp('drop')}
+                        disabled={dropMutation.isPending}
+                        variant="outline"
+                        className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                      >
+                        {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                        Quit Waitlist
+                      </Button>
+                    </div>
                   ) : isFull ? (
                     <div className="space-y-1">
                       <Button disabled className="bg-white/10 text-white/50 border border-white/20 font-bold rounded-2xl px-6 py-3 cursor-not-allowed">
-                        Course Full
+                        Course & Waitlist Full
                       </Button>
-                      <p className="text-xs text-rose-300 font-medium">Capacity limit of {course.max_trainees} reached.</p>
+                      <p className="text-xs text-rose-300 font-medium">Capacity limit of {seatLimit + waitlistLimit} reached.</p>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
                       <Button
-                        onClick={() => handleSendOtp('enroll')}
+                        onClick={() => handleInitiateOtp('enroll')}
                         disabled={isSendingOtp || otpDialogType === 'enroll'}
                         className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-extrabold text-base rounded-2xl px-8 py-5 shadow-xl shadow-pink-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                       >
                         {isSendingOtp && otpDialogType === 'enroll'
                           ? <Loader2 className="w-5 h-5 animate-spin" />
                           : <GraduationCap className="w-5 h-5" />}
-                        Enroll in Course
+                        {isFull ? 'Join Waitlist' : 'Enroll in Course'}
                       </Button>
                       {spotsLeft !== null && (
                         <p className="text-xs text-pink-300 font-semibold">
-                          🔥 Only {spotsLeft} spot{spotsLeft !== 1 ? 's' : ''} remaining!
+                          🔥 Only {spotsLeft} {spotsLabel} remaining!
                         </p>
                       )}
                     </div>
@@ -868,7 +961,7 @@ export function TraineeCourseDetails() {
                       { icon: <Layers className="w-3.5 h-3.5 text-purple-500" />, label: 'Sessions', value: String(course.sessions?.length || 0) },
                       { icon: <FileText className="w-3.5 h-3.5 text-blue-500" />, label: 'Materials', value: String(totalMaterials) },
                       { icon: <Target className="w-3.5 h-3.5 text-emerald-500" />, label: 'Passing Score', value: `${course.passing_score ?? '—'}%` },
-                      { icon: <Users className="w-3.5 h-3.5 text-cyan-500" />, label: 'Enrolled', value: `${enrollmentCount ?? 0}${course.max_trainees ? ` / ${course.max_trainees}` : ''}` },
+                      { icon: <Users className="w-3.5 h-3.5 text-cyan-500" />, label: 'Enrolled', value: `${activeCount}${course.max_trainees ? ` / ${course.max_trainees}` : ''}` },
                       { icon: <Video className="w-3.5 h-3.5 text-pink-500" />, label: 'Delivery', value: course.delivery_mode ? course.delivery_mode.charAt(0).toUpperCase() + course.delivery_mode.slice(1) : 'Recorded' },
                     ].map(item => (
                       <div key={item.label} className="flex items-center gap-2.5">
@@ -1028,48 +1121,74 @@ export function TraineeCourseDetails() {
               {otpDialogType === 'enroll' ? 'Confirm Enrollment' : 'Confirm Drop Course'}
             </DialogTitle>
             <DialogDescription className="text-center text-midnight/60 text-sm">
-              We've sent a 6-digit code to <strong>{profile?.email}</strong>. 
-              {otpDialogType === 'enroll' 
-                ? ' Enter it below to confirm your enrollment.' 
-                : ' Enter it below to confirm you want to drop this course.'}
+              {otpSent 
+                ? <>We've sent a 6-digit code to <strong>{profile?.email}</strong>. Enter it below to confirm.</>
+                : <>Are you sure you want to {otpDialogType === 'enroll' ? 'enroll in' : 'drop'} this course? We will send a verification code to <strong>{profile?.email}</strong>.</>}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Input
-                placeholder="Enter 6-digit OTP"
-                value={otpInput}
-                onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                className="text-center text-lg tracking-[0.25em] font-bold h-12 rounded-xl border-purple-200 focus-visible:ring-purple-500"
-                maxLength={6}
-              />
-            </div>
-          </div>
+          {!otpSent ? (
+            <DialogFooter className="flex-col sm:flex-col gap-2 mt-4">
+              <Button
+                onClick={handleSendOtp}
+                disabled={isSendingOtp}
+                className={`w-full font-bold h-11 rounded-xl text-white ${
+                  otpDialogType === 'enroll' 
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-purple-500/20' 
+                    : 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-rose-500/20'
+                } shadow-lg transition-all`}
+              >
+                {isSendingOtp ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Verification Code'}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleCloseOtpDialog}
+                disabled={isSendingOtp}
+                className="w-full text-midnight/60 hover:text-midnight h-11 rounded-xl"
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          ) : (
+            <>
+              <div className="py-4 space-y-4">
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Enter 6-digit OTP"
+                    value={otpInput}
+                    onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    className="text-center text-lg tracking-[0.25em] font-bold h-12 rounded-xl border-purple-200 focus-visible:ring-purple-500"
+                    maxLength={6}
+                  />
+                </div>
+              </div>
 
-          <DialogFooter className="flex-col sm:flex-col gap-2">
-            <Button
-              onClick={handleVerifyOtp}
-              disabled={isVerifyingOtp || otpInput.length !== 6}
-              className={`w-full font-bold h-11 rounded-xl text-white ${
-                otpDialogType === 'enroll' 
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-purple-500/20' 
-                  : 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-rose-500/20'
-              } shadow-lg transition-all`}
-            >
-              {isVerifyingOtp ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify Code'}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleCloseOtpDialog}
-              disabled={isVerifyingOtp}
-              className="w-full text-midnight/60 hover:text-midnight h-11 rounded-xl"
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="flex-col sm:flex-col gap-2">
+                <Button
+                  onClick={handleVerifyOtp}
+                  disabled={isVerifyingOtp || otpInput.length !== 6}
+                  className={`w-full font-bold h-11 rounded-xl text-white ${
+                    otpDialogType === 'enroll' 
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-emerald-500/20' 
+                      : 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-rose-500/20'
+                  } shadow-lg transition-all`}
+                >
+                  {isVerifyingOtp ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify Code'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleCloseOtpDialog}
+                  disabled={isVerifyingOtp}
+                  className="w-full text-midnight/60 hover:text-midnight h-11 rounded-xl"
+                >
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardShell>
+    </ErrorBoundary>
   )
 }
