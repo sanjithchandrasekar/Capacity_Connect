@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
-import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers, Plus } from 'lucide-react'
+import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers, Plus, CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -68,7 +68,9 @@ export function AdminCourses() {
   const [sessions, setSessions] = useState<any[]>([])
   const [skills, setSkills] = useState<CourseSkill[]>([])
   const [enrollmentCount, setEnrollmentCount] = useState(0)
+  const [pendingEnrollments, setPendingEnrollments] = useState<any[]>([])
   const [updating, setUpdating] = useState<string | null>(null)
+  const [isProcessingId, setIsProcessingId] = useState<string | null>(null)
   
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -76,19 +78,33 @@ export function AdminCourses() {
   const fetchCourses = useCallback(async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
+      const { data: coursesData, error: coursesError } = await supabase
         .from('courses')
         .select(`
           *,
-          trainer:trainers!courses_trainer_id_fkey(full_name),
-          course_assignments(id)
+          trainer:trainers!courses_trainer_id_fkey(full_name)
         `)
         .order('created_at', { ascending: false })
-      if (error) throw error
-      setCourses(data ?? [])
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load courses'
-      toast.error(message)
+      if (coursesError) throw coursesError
+
+      // Fetch assignments separately in case the foreign key relationship isn't in the schema cache
+      const { data: assignmentsData, error: assignmentsError } = await (supabase as any)
+        .from('course_assignments')
+        .select('id, course_id')
+      
+      const assignments = assignmentsError ? [] : (assignmentsData ?? [])
+
+      const coursesWithAssignments = (coursesData ?? []).map(course => ({
+        ...course,
+        course_assignments: assignments.filter((a: any) => a.course_id === course.id)
+      }))
+
+      setCourses(coursesWithAssignments as any)
+    } catch (err: any) {
+      const message = err?.message || 'Failed to load courses'
+      const details = err?.details || ''
+      const hint = err?.hint || ''
+      toast.error(`${message} ${details} ${hint}`)
     } finally {
       setLoading(false)
     }
@@ -101,20 +117,66 @@ export function AdminCourses() {
     setDetailOpen(true)
     setDetailLoading(true)
     try {
-      const [mRes, sRes, eRes, sessRes] = await Promise.all([
+      const [mRes, sRes, eRes, sessRes, pRes] = await Promise.all([
         supabase.from('materials').select('*').eq('course_id', course.id).order('created_at', { ascending: false }),
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', course.id),
-        supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', course.id),
+        supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', course.id).neq('status', 'pending_approval'),
         supabase.from('course_sessions').select('*').eq('course_id', course.id).order('order_index'),
+        supabase.from('enrollments').select('*, trainee:profiles(id, full_name, email)').eq('course_id', course.id).eq('status', 'pending_approval'),
       ])
       setMaterials(mRes.data ?? [])
       setSkills(sRes.data as any ?? [])
       setEnrollmentCount(eRes.count ?? 0)
       setSessions(sessRes.data ?? [])
+      setPendingEnrollments(pRes.data ?? [])
     } catch {
       toast.error('Failed to load course details')
     } finally {
       setDetailLoading(false)
+    }
+  }
+
+  const handleApproval = async (enrollmentId: string, action: 'approve' | 'reject', trainee: any, course: Course) => {
+    setIsProcessingId(enrollmentId)
+    try {
+      const newStatus = action === 'approve' ? 'enrolled' : 'rejected'
+      
+      const { error: updateError } = await supabase
+        .from('enrollments')
+        .update({ status: newStatus })
+        .eq('id', enrollmentId)
+
+      if (updateError) throw updateError
+
+      // Call edge function to send email
+      if (trainee?.email) {
+        supabase.functions.invoke('send-enrollment-email', {
+          body: {
+            email: trainee.email,
+            name: trainee.full_name || 'Trainee',
+            courseTitle: course.title || 'Course',
+            action: action
+          }
+        }).catch(console.error)
+      }
+
+      // Add notification
+      const { error: notificationError } = await supabase.from('notifications').insert({
+        user_id: trainee.id,
+        type: 'enrollment_status',
+        title: `Enrollment ${action === 'approve' ? 'Approved' : 'Rejected'} (Admin)`,
+        message: `Your request to enroll in ${course.title} was ${action === 'approve' ? 'approved' : 'rejected'} by an Administrator.`,
+      })
+      if (notificationError) console.error(notificationError)
+
+      toast.success(`Enrollment ${action === 'approve' ? 'approved' : 'rejected'} successfully`)
+      // Refresh the dialog data
+      openCourseDetail(course)
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to process enrollment')
+      console.error(e)
+    } finally {
+      setIsProcessingId(null)
     }
   }
 
@@ -317,6 +379,49 @@ export function AdminCourses() {
                         <span>Pass: {selectedCourse.passing_score}%</span>
                         <span>{enrollmentCount} enrolled</span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Pending Enrollments */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-medium text-orange-600 uppercase tracking-wider">
+                      <Clock className="w-3.5 h-3.5" /> Pending Enrollments ({pendingEnrollments.length})
+                    </div>
+                    <div className="bg-orange-50/50 rounded-lg p-3 border border-orange-100 space-y-2">
+                      {pendingEnrollments.length > 0 ? (
+                        pendingEnrollments.map((enrollment) => (
+                          <div key={enrollment.id} className="p-3 rounded-lg bg-white border border-orange-100 flex items-center justify-between">
+                            <div>
+                              <h4 className="text-xs font-semibold text-midnight">{enrollment.trainee?.full_name || 'Unknown Trainee'}</h4>
+                              <p className="text-[10px] text-midnight/60">{enrollment.trainee?.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-7 text-[10px] px-2"
+                                disabled={isProcessingId === enrollment.id}
+                                onClick={() => handleApproval(enrollment.id, 'approve', enrollment.trainee, selectedCourse!)}
+                              >
+                                {isProcessingId === enrollment.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-rose-200 text-rose-700 hover:bg-rose-50 h-7 text-[10px] px-2"
+                                disabled={isProcessingId === enrollment.id}
+                                onClick={() => handleApproval(enrollment.id, 'reject', enrollment.trainee, selectedCourse!)}
+                              >
+                                {isProcessingId === enrollment.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3 mr-1" />}
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-orange-800/60 p-2 text-center">No pending enrollment requests at this time.</p>
+                      )}
                     </div>
                   </div>
 

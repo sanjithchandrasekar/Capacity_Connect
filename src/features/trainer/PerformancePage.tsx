@@ -41,16 +41,17 @@ export function PerformancePage() {
       const { data: e } = await supabase.from('enrollments').select('*, trainees(*)').eq('course_id', courseId)
       const enrollments = (e ?? []) as any as (Enrollment & { trainees: Trainee | null })[]
 
-      const { data: assessment } = await supabase
+      const { data: assessmentsList } = await supabase
         .from('assessments')
         .select('id')
         .eq('course_id', courseId)
         .eq('created_by', user.id)
-        .single()
+
+      const assessmentIds = assessmentsList?.map(a => a.id) || []
 
       let allAttempts: AssessmentAttempt[] = []
-      if (assessment) {
-        const { data: a } = await supabase.from('assessment_attempts').select('*').eq('assessment_id', assessment.id)
+      if (assessmentIds.length > 0) {
+        const { data: a } = await supabase.from('assessment_attempts').select('*').in('assessment_id', assessmentIds)
         if (a) allAttempts = a
       }
 
@@ -67,8 +68,8 @@ export function PerformancePage() {
       })
       setTraineeRows(rows)
 
-      if (assessment) {
-        const { data: q } = await supabase.from('questions').select('*').eq('assessment_id', assessment.id)
+      if (assessmentIds.length > 0) {
+        const { data: q } = await supabase.from('questions').select('*').in('assessment_id', assessmentIds)
         if (q) setQuestions(q)
       }
     } catch (err) {

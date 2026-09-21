@@ -21,7 +21,7 @@ export function PublicCourseDetails() {
         .from('courses')
         .select(`
           *,
-          trainer:trainers!courses_trainer_id_fkey(full_name, department)
+          trainer:trainers!courses_trainer_id_fkey(full_name)
         `)
         .eq('id', courseId!)
         .eq('status', 'published')

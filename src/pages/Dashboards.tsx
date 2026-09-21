@@ -8,6 +8,8 @@ import { Database } from '@/integrations/supabase/types'
 import { AdminCourses } from '@/features/courses/AdminCourses'
 import { TrainerAssignmentBanner } from '@/features/admin/TrainerAssignmentBanner'
 import { Button } from '@/components/ui/button'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import {
   Globe, LogOut, Users, BookOpen, BarChart3, Shield,
   GraduationCap, ChevronRight, CheckCircle, Search,
@@ -968,7 +970,10 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended' | 'rejected'>('all')
+
+  const [previewMaterial, setPreviewMaterial] = useState<{file_name: string, storage_path: string} | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const fetchData = async () => {
     setLoading(true)
@@ -1071,14 +1076,17 @@ export function AdminDashboard() {
 
   const handleViewProof = async (proofPath: string) => {
     try {
+      setPreviewMaterial({ file_name: 'ID Proof Document', storage_path: proofPath })
+      setPreviewUrl(null)
       const { data, error } = await supabase.storage.from('proofs').createSignedUrl(proofPath, 60)
       if (error) throw error
       if (data?.signedUrl) {
-        window.open(data.signedUrl, '_blank')
+        setPreviewUrl(data.signedUrl)
       }
     } catch (e) {
       console.error('Error viewing proof:', e)
       toast.error('Failed to open proof document')
+      setPreviewMaterial(null)
     }
   }
 
@@ -1178,9 +1186,10 @@ export function AdminDashboard() {
   ]
 
   return (
-    <DashboardShell
-      title={isSuperAdmin ? "Super Admin Dashboard" : "Admin Dashboard"}
-      icon={Shield}
+    <>
+      <DashboardShell
+        title={isSuperAdmin ? "Super Admin Dashboard" : "Admin Dashboard"}
+        icon={Shield}
       navLinks={tabs.map(tab => ({
         id: tab.key,
         label: tab.label,
@@ -1344,7 +1353,7 @@ export function AdminDashboard() {
                       </div>
                     </div>
                     <div className="flex bg-purple-50/50 p-1 rounded-xl border border-purple-100 w-full sm:w-fit overflow-x-auto hide-scrollbar">
-                      {(['all', 'pending', 'approved', 'suspended'] as const).map(f => (
+                      {(['all', 'pending', 'approved', 'suspended', 'rejected'] as const).map(f => (
                         <button
                           key={f}
                           onClick={() => setStatusFilter(f)}
@@ -1463,7 +1472,7 @@ export function AdminDashboard() {
                       </div>
                     </div>
                     <div className="flex bg-purple-50/50 p-1 rounded-xl border border-purple-100 w-full sm:w-fit overflow-x-auto hide-scrollbar">
-                      {(['all', 'pending', 'approved', 'suspended'] as const).map(f => (
+                      {(['all', 'pending', 'approved', 'suspended', 'rejected'] as const).map(f => (
                         <button
                           key={f}
                           onClick={() => setStatusFilter(f)}
@@ -1728,6 +1737,12 @@ export function AdminDashboard() {
         </motion.div>
       </motion.div>
     </DashboardShell>
+      <MaterialPreviewDialog
+        material={previewMaterial}
+        previewUrl={previewUrl}
+        onClose={() => setPreviewMaterial(null)}
+      />
+    </>
   )
 }
 

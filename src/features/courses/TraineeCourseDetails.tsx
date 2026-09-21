@@ -10,10 +10,12 @@ import {
   BookMarked, Layers, ChevronDown, ChevronUp, Play, FileText, Link2,
   Lock, Target, Calendar, Video, Download, ExternalLink, Users,
   GraduationCap, Award, BarChart3, AlertCircle, PlayCircle,
-  ListOrdered, BookCheck, Mail, Send
+  ListOrdered, BookCheck, Mail, Send, XCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 
 const fadeUp = {
@@ -88,6 +90,13 @@ export function TraineeCourseDetails() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [docLoading, setDocLoading] = useState(false)
 
+  // OTP Verification States
+  const [otpDialogType, setOtpDialogType] = useState<'enroll' | 'drop' | null>(null)
+  const [otpInput, setOtpInput] = useState('')
+  const [isSendingOtp, setIsSendingOtp] = useState(false)
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
+
   const toggleSession = (id: string) => {
     setOpenSessions(prev => {
       const next = new Set(prev)
@@ -101,7 +110,7 @@ export function TraineeCourseDetails() {
     queryFn: async () => {
       const { data: courseData, error } = await supabase
         .from('courses')
-        .select(`*, trainer:trainers!courses_trainer_id_fkey(full_name, bio, years_of_experience, qualifications, email, expertise_areas, study_details)`)
+        .select(`*, trainer:trainers!courses_trainer_id_fkey(full_name, bio, years_of_experience, qualifications, email, study_details)`)
         .eq('id', courseId!)
         .single() as any
       if (error) throw error
@@ -118,7 +127,14 @@ export function TraineeCourseDetails() {
         .eq('course_id', courseId!)
         .order('created_at')
 
-      return { ...courseData, sessions: sessionsData || [], materials: materialsData || [] }
+      const { data: assessmentsData } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('course_id', courseId!)
+        .eq('status', 'published')
+        .order('created_at')
+
+      return { ...courseData, sessions: sessionsData || [], materials: materialsData || [], assessments: assessmentsData || [] }
     },
     enabled: !!courseId,
   })
@@ -148,20 +164,113 @@ export function TraineeCourseDetails() {
 
   const enrollMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase
+      const { data: enrollData, error: enrollError } = await supabase
         .from('enrollments')
-        .insert({ course_id: courseId!, user_id: profile!.id, status: 'enrolled', progress_percent: 0 })
+        .insert({ course_id: courseId!, user_id: profile!.id, status: 'pending_approval', progress_percent: 0 })
         .select().single()
-      if (error) throw error
-      return data
+      if (enrollError) throw enrollError
+
+      if (course?.trainer_id) {
+        await supabase.from('notifications').insert({
+          user_id: course.trainer_id,
+          type: 'enrollment_request',
+          title: 'New Enrollment Request',
+          message: `${profile?.full_name || 'A trainee'} wants to enroll in ${course.title}.`,
+        })
+      }
+
+      return enrollData
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile?.id] })
       queryClient.invalidateQueries({ queryKey: ['enrollments-count', courseId] })
-      toast.success('Successfully enrolled in course!')
+      toast.success('Enrollment request sent. Pending approval from trainer.')
+      handleCloseOtpDialog()
     },
-    onError: (error: any) => toast.error(error.message || 'Failed to enroll'),
+    onError: (error: any) => toast.error(error.message || 'Failed to request enrollment'),
   })
+
+  const dropMutation = useMutation({
+    mutationFn: async () => {
+      const { data: enrollData, error: enrollError } = await supabase
+        .from('enrollments')
+        .update({ status: 'withdrawn' as any })
+        .eq('course_id', courseId!)
+        .eq('user_id', profile!.id)
+        .select().single()
+      if (enrollError) throw enrollError
+      return enrollData
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile?.id] })
+      queryClient.invalidateQueries({ queryKey: ['enrollments-count', courseId] })
+      toast.success('You have successfully dropped the course.')
+      handleCloseOtpDialog()
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to drop course'),
+  })
+
+  const handleSendOtp = async (type: 'enroll' | 'drop') => {
+    if (!profile?.email) {
+      toast.error('No email address found for your profile.')
+      return
+    }
+    
+    setOtpDialogType(type)
+    setIsSendingOtp(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp', {
+        body: { identifier: profile.email, type: 'email' }
+      })
+      if (error) throw error
+      
+      setOtpSent(true)
+      toast.success('OTP sent to your email address')
+    } catch (error: any) {
+      console.error(error)
+      toast.error('Failed to send OTP')
+      setOtpDialogType(null)
+    } finally {
+      setIsSendingOtp(false)
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    if (!profile?.email || !otpInput || otpInput.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP')
+      return
+    }
+    
+    setIsVerifyingOtp(true)
+    try {
+      const { data: isValid, error } = await supabase.rpc('verify_otp', {
+        p_identifier: profile.email,
+        p_otp: otpInput,
+        p_user_id: profile.id,
+        p_type: 'email'
+      })
+      
+      if (error) throw error
+      if (!isValid) throw new Error('Invalid or expired OTP')
+
+      if (otpDialogType === 'enroll') {
+        enrollMutation.mutate()
+      } else if (otpDialogType === 'drop') {
+        dropMutation.mutate()
+      }
+    } catch (error: any) {
+      console.error(error)
+      toast.error(error.message || 'Failed to verify OTP')
+      setIsVerifyingOtp(false)
+    }
+  }
+
+  const handleCloseOtpDialog = () => {
+    setOtpDialogType(null)
+    setOtpInput('')
+    setOtpSent(false)
+    setIsVerifyingOtp(false)
+  }
 
   const handleDownload = async (material: any) => {
     setDownloadingId(material.id)
@@ -216,6 +325,18 @@ export function TraineeCourseDetails() {
   const isFull = course?.max_trainees && (enrollmentCount ?? 0) >= course.max_trainees
   const spotsLeft = course?.max_trainees ? course.max_trainees - (enrollmentCount ?? 0) : null
   const totalMaterials = course?.materials?.length ?? 0
+
+  // 10-day Drop Course Constraint Logic
+  const checkCanDrop = () => {
+    if (!enrollment || enrollment.status !== 'enrolled') return false;
+    if (!course?.start_date) return true; 
+    const startDate = new Date(course.start_date);
+    const now = new Date();
+    const diffTime = startDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 10;
+  }
+  const canDrop = checkCanDrop();
 
   const objectives: string[] = course?.learning_objectives
     ? (Array.isArray(course.learning_objectives)
@@ -283,9 +404,19 @@ export function TraineeCourseDetails() {
                   }`}>
                     {course.status.replace('_', ' ')}
                   </span>
-                  {enrollment && (
+                  {enrollment && enrollment.status !== 'pending_approval' && enrollment.status !== 'rejected' && (
                     <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" /> Enrolled
+                    </span>
+                  )}
+                  {enrollment?.status === 'pending_approval' && (
+                    <span className="bg-orange-500/20 text-orange-300 border border-orange-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Pending Approval
+                    </span>
+                  )}
+                  {enrollment?.status === 'rejected' && (
+                    <span className="bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                      <XCircle className="w-3 h-3" /> Rejected
                     </span>
                   )}
                 </div>
@@ -357,12 +488,37 @@ export function TraineeCourseDetails() {
 
                 {/* CTA */}
                 <div className="flex flex-wrap items-center gap-3">
-                  {enrollment ? (
-                    <Button
-                      onClick={() => navigate('/trainee/my-learning')}
-                      className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-bold rounded-2xl px-6 py-3 shadow-lg shadow-pink-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                    >
-                      <PlayCircle className="w-4 h-4" /> Go to My Learning
+                  {enrollment && enrollment.status === 'enrolled' ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        onClick={() => navigate('/trainee/my-learning')}
+                        className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-bold rounded-2xl px-6 py-3 shadow-lg shadow-pink-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                      >
+                        <PlayCircle className="w-4 h-4" /> Go to My Learning
+                      </Button>
+                      
+                      <div className="space-y-1">
+                        <Button
+                          onClick={() => handleSendOtp('drop')}
+                          disabled={!canDrop || dropMutation.isPending}
+                          variant="outline"
+                          className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                        >
+                          {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                          Drop Course
+                        </Button>
+                        {!canDrop && course?.start_date && (
+                          <p className="text-[10px] text-pink-200/70 font-medium">Cannot drop within 10 days of start.</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : enrollment && enrollment.status === 'pending_approval' ? (
+                    <Button disabled className="bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold rounded-2xl px-6 py-3 cursor-not-allowed flex items-center gap-2">
+                      <Clock className="w-4 h-4" /> Approval Pending
+                    </Button>
+                  ) : enrollment && enrollment.status === 'rejected' ? (
+                    <Button disabled className="bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold rounded-2xl px-6 py-3 cursor-not-allowed flex items-center gap-2">
+                      <XCircle className="w-4 h-4" /> Enrollment Rejected
                     </Button>
                   ) : isFull ? (
                     <div className="space-y-1">
@@ -374,11 +530,11 @@ export function TraineeCourseDetails() {
                   ) : (
                     <div className="space-y-1.5">
                       <Button
-                        onClick={() => enrollMutation.mutate()}
-                        disabled={enrollMutation.isPending}
+                        onClick={() => handleSendOtp('enroll')}
+                        disabled={isSendingOtp || otpDialogType === 'enroll'}
                         className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-extrabold text-base rounded-2xl px-8 py-5 shadow-xl shadow-pink-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                       >
-                        {enrollMutation.isPending
+                        {isSendingOtp && otpDialogType === 'enroll'
                           ? <Loader2 className="w-5 h-5 animate-spin" />
                           : <GraduationCap className="w-5 h-5" />}
                         Enroll in Course
@@ -400,6 +556,22 @@ export function TraineeCourseDetails() {
               {/* Left column (2/3) */}
               <div className="lg:col-span-2 space-y-5">
 
+                {(!enrollment || enrollment.status === 'pending_approval' || enrollment.status === 'rejected') && (
+                  <div className="bg-yellow-50/50 border border-yellow-200 rounded-2xl p-5 mb-6 flex items-start gap-4">
+                    <div className="p-2 bg-yellow-100 rounded-xl shrink-0"><Lock className="w-5 h-5 text-yellow-600" /></div>
+                    <div>
+                      <h4 className="text-sm font-bold text-yellow-900 mb-1">Preview Mode</h4>
+                      <p className="text-sm text-yellow-700/80">
+                        {enrollment?.status === 'pending_approval' 
+                          ? "Your enrollment is pending approval by the instructor. You will gain access to course materials once approved."
+                          : enrollment?.status === 'rejected'
+                          ? "Your enrollment request was rejected. Please contact your instructor for more details."
+                          : "You are currently viewing this course in preview mode. Enroll and get approved to access learning materials and sessions."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* About */}
                 {course.description && (
                   <div className="bg-white border border-purple-500/10 rounded-3xl p-6 shadow-sm">
@@ -407,6 +579,49 @@ export function TraineeCourseDetails() {
                       <BookOpen className="w-4 h-4 text-purple-600" /> About This Course
                     </h2>
                     <p className="text-midnight/70 text-sm leading-relaxed whitespace-pre-wrap">{course.description}</p>
+                  </div>
+                )}
+
+                {/* Announcements & Assessments */}
+                {enrollment && enrollment.status === 'enrolled' && course.assessments?.length > 0 && (
+                  <div className="bg-white border border-purple-500/10 rounded-3xl p-6 shadow-sm">
+                    <h2 className="text-sm font-bold text-midnight mb-4 flex items-center gap-2">
+                      <Target className="w-4 h-4 text-rose-500" /> Announcements & Assessments
+                    </h2>
+                    <div className="space-y-3">
+                      {course.assessments.map((assessment: any) => (
+                        <div key={assessment.id} className="p-4 rounded-2xl border border-purple-100 bg-purple-50/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-purple-300 transition-colors">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-midnight">{assessment.title}</h3>
+                              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                                assessment.assessment_type === 'daily_test' ? 'bg-blue-100 text-blue-700' :
+                                assessment.assessment_type === 'mock_test' ? 'bg-orange-100 text-orange-700' :
+                                'bg-rose-100 text-rose-700'
+                              }`}>
+                                {assessment.assessment_type?.replace('_', ' ') || 'Assessment'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-midnight/60">
+                              {assessment.assessment_type === 'daily_test' 
+                                ? 'Optional practice test. Take at any time.'
+                                : `Strictly timed: ${assessment.duration_minutes || 30} mins. Contributes to internal marks.`}
+                            </p>
+                            {assessment.scheduled_date && (
+                              <p className="text-xs text-purple-700 mt-2 font-medium flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5" /> Scheduled for {new Date(assessment.scheduled_date).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                          <Button 
+                            onClick={() => navigate(`/trainee/courses/${course.id}/assessments/${assessment.id}`)}
+                            className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold"
+                          >
+                            Start Test
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -556,6 +771,11 @@ export function TraineeCourseDetails() {
                                   >
                                     <Video className="w-3.5 h-3.5" /> Join
                                   </a>
+                                )}
+                                {session.location && enrollment && (session.session_type === 'in_person' || session.session_type === 'hybrid') && (
+                                  <span className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-semibold truncate max-w-[120px]">
+                                    <Target className="w-3.5 h-3.5" /> {session.location}
+                                  </span>
                                 )}
                                 {isOpen
                                   ? <ChevronUp className="w-4 h-4 text-purple-500 shrink-0" />
@@ -800,6 +1020,56 @@ export function TraineeCourseDetails() {
         onClose={() => setPreviewMaterial(null)}
         onDownload={() => previewMaterial && handleDownload(previewMaterial)}
       />
+
+      <Dialog open={otpDialogType !== null} onOpenChange={(open) => !open && handleCloseOtpDialog()}>
+        <DialogContent className="max-w-sm rounded-3xl p-6 bg-white border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-midnight text-center mb-1">
+              {otpDialogType === 'enroll' ? 'Confirm Enrollment' : 'Confirm Drop Course'}
+            </DialogTitle>
+            <DialogDescription className="text-center text-midnight/60 text-sm">
+              We've sent a 6-digit code to <strong>{profile?.email}</strong>. 
+              {otpDialogType === 'enroll' 
+                ? ' Enter it below to confirm your enrollment.' 
+                : ' Enter it below to confirm you want to drop this course.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Input
+                placeholder="Enter 6-digit OTP"
+                value={otpInput}
+                onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                className="text-center text-lg tracking-[0.25em] font-bold h-12 rounded-xl border-purple-200 focus-visible:ring-purple-500"
+                maxLength={6}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-col gap-2">
+            <Button
+              onClick={handleVerifyOtp}
+              disabled={isVerifyingOtp || otpInput.length !== 6}
+              className={`w-full font-bold h-11 rounded-xl text-white ${
+                otpDialogType === 'enroll' 
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-purple-500/20' 
+                  : 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-rose-500/20'
+              } shadow-lg transition-all`}
+            >
+              {isVerifyingOtp ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify Code'}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleCloseOtpDialog}
+              disabled={isVerifyingOtp}
+              className="w-full text-midnight/60 hover:text-midnight h-11 rounded-xl"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardShell>
   )
 }

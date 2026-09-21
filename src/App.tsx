@@ -18,6 +18,7 @@ import { SupabaseTest } from './pages/SupabaseTest'
 import { TraineeDashboard, AdminDashboard, SuperAdminDashboard } from './pages/Dashboards'
 import { TraineeCourseCatalog } from './features/courses/TraineeCourseCatalog'
 import { TraineeCourseDetails } from './features/courses/TraineeCourseDetails'
+import { TraineeAssessmentTest } from './features/courses/TraineeAssessmentTest'
 import { TraineeMyLearning } from './features/courses/TraineeMyLearning'
 import { CourseMaterials } from './features/courses/CourseMaterials'
 import { TrainerDashboard } from './features/trainer/TrainerDashboard'
@@ -154,6 +155,7 @@ function AnimatedAppRoutes() {
                   <Route path="/trainee" element={<TraineeDashboard />} />
                   <Route path="/trainee/courses" element={<TraineeCourseCatalog />} />
                   <Route path="/trainee/courses/:courseId" element={<TraineeCourseDetails />} />
+                  <Route path="/trainee/courses/:courseId/assessments/:assessmentId" element={<TraineeAssessmentTest />} />
                   <Route path="/trainee/my-learning" element={<TraineeMyLearning />} />
                   <Route path="/trainee/settings" element={<SettingsPage />} />
                 </Route>

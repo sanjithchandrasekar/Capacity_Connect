@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar, Video, BookOpen } from 'lucide-react'
+import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar, Video, BookOpen, GraduationCap, Award, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { toast } from 'sonner'
@@ -38,18 +38,21 @@ export function CourseDetailPage() {
   const [loading, setLoading] = useState(true)
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [pendingEnrollments, setPendingEnrollments] = useState<any[]>([])
+  const [isProcessingId, setIsProcessingId] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
     setLoading(true)
     try {
-      const [cRes, csRes, mRes, aRes, eRes, sRes] = await Promise.all([
+      const [cRes, csRes, mRes, aRes, eRes, sRes, pendingRes] = await Promise.all([
         supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single(),
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', courseId),
         supabase.from('materials').select('*').eq('course_id', courseId),
         supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).single(),
-        supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId),
+        supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId).neq('status', 'pending_approval'),
         supabase.from('course_sessions').select('*').eq('course_id', courseId).order('order_index'),
+        supabase.from('enrollments').select('*, trainee:profiles(id, full_name, email)').eq('course_id', courseId).eq('status', 'pending_approval'),
       ])
       if (cRes.data) setCourse(cRes.data)
       if (csRes.data) setCourseSkills(csRes.data as any)
@@ -57,6 +60,7 @@ export function CourseDetailPage() {
       if (aRes.data) setAssessment(aRes.data)
       setEnrollmentCount(eRes.count ?? 0)
       if (sRes.data) setSessions(sRes.data)
+      if (pendingRes.data) setPendingEnrollments(pendingRes.data)
     } catch (err) {
       console.error(err)
     } finally {
@@ -65,6 +69,49 @@ export function CourseDetailPage() {
   }, [user, courseId])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const handleApproval = async (enrollmentId: string, action: 'approve' | 'reject', trainee: any) => {
+    setIsProcessingId(enrollmentId)
+    try {
+      const newStatus = action === 'approve' ? 'enrolled' : 'rejected'
+      
+      const { error: updateError } = await supabase
+        .from('enrollments')
+        .update({ status: newStatus })
+        .eq('id', enrollmentId)
+
+      if (updateError) throw updateError
+
+      // Call edge function to send email (don't block UI on it failing)
+      if (trainee?.email) {
+        supabase.functions.invoke('send-enrollment-email', {
+          body: {
+            email: trainee.email,
+            name: trainee.full_name || 'Trainee',
+            courseTitle: course?.title || 'Course',
+            action: action
+          }
+        }).catch(console.error)
+      }
+
+      // Add a notification for the trainee
+      const { error: notificationError } = await supabase.from('notifications').insert({
+        user_id: trainee.id,
+        type: 'enrollment_status',
+        title: `Enrollment ${action === 'approve' ? 'Approved' : 'Rejected'}`,
+        message: `Your request to enroll in ${course?.title} was ${action === 'approve' ? 'approved' : 'rejected'}.`,
+      })
+      if (notificationError) console.error(notificationError)
+
+      toast.success(`Enrollment ${action === 'approve' ? 'approved' : 'rejected'} successfully`)
+      fetchData()
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to process enrollment')
+      console.error(e)
+    } finally {
+      setIsProcessingId(null)
+    }
+  }
 
   const objectives = (course?.learning_objectives as Record<string, string> | null) ?? null
 
@@ -119,6 +166,54 @@ export function CourseDetailPage() {
                   <span className="capitalize flex items-center gap-1"><Video className="w-3.5 h-3.5" /> {course.delivery_mode || 'recorded'}</span>
                   <span>Pass: {course.passing_score}%</span>
                   <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {enrollmentCount} {course.max_trainees ? `/ ${course.max_trainees}` : ''} enrolled</span>
+                </div>
+
+                {/* Pending Enrollments Section */}
+                <div className="mb-4">
+                  <Card className="bg-orange-50/30 border-orange-200">
+                    <CardContent className="p-6">
+                      <h3 className="text-sm font-semibold text-orange-900 mb-4 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-orange-600" /> Pending Enrollment Requests
+                        <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 ml-2">{pendingEnrollments.length}</Badge>
+                      </h3>
+                      <div className="space-y-3">
+                        {pendingEnrollments.length > 0 ? (
+                          pendingEnrollments.map((enrollment) => (
+                            <div key={enrollment.id} className="p-4 rounded-xl bg-white border border-orange-100 flex items-center justify-between">
+                              <div>
+                                <h4 className="text-sm font-semibold text-midnight">{enrollment.trainee?.full_name || 'Unknown Trainee'}</h4>
+                                <p className="text-xs text-midnight/60">{enrollment.trainee?.email}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8"
+                                  disabled={isProcessingId === enrollment.id}
+                                  onClick={() => handleApproval(enrollment.id, 'approve', enrollment.trainee)}
+                                >
+                                  {isProcessingId === enrollment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-rose-200 text-rose-700 hover:bg-rose-50 h-8"
+                                  disabled={isProcessingId === enrollment.id}
+                                  onClick={() => handleApproval(enrollment.id, 'reject', enrollment.trainee)}
+                                >
+                                  {isProcessingId === enrollment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
+                                  Reject
+                                </Button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-orange-800/60">No pending enrollment requests at this time.</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
                 {(course.start_date || course.end_date || course.meet_link || course.live_class_timing || course.mock_test_timing || course.final_exam_timing) && (
                   <div className="bg-ink/5 p-4 rounded-lg space-y-3 mt-4">

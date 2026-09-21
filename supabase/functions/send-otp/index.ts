@@ -61,27 +61,44 @@ serve(async (req) => {
         to: identifier,
         subject: "Your Capacity Connect Verification Code",
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaee; border-radius: 10px; background-color: #ffffff;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <h2 style="color: #4c1d95; margin: 0;">Capacity Connect</h2>
-              <p style="color: #6b7280; margin-top: 5px;">Ministry of Earth Sciences</p>
-            </div>
-            
-            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; text-align: center;">
-              <h3 style="color: #111827; margin-top: 0;">Verify Your Email Address</h3>
-              <p style="color: #4b5563; font-size: 16px;">Please use the following 6-digit code to complete your registration:</p>
-              
-              <div style="background-color: #f3e8ff; border: 1px solid #d8b4fe; border-radius: 8px; padding: 15px; margin: 20px auto; width: fit-content;">
-                <strong style="font-size: 32px; letter-spacing: 4px; color: #7e22ce;">${otp}</strong>
-              </div>
-              
-              <p style="color: #9ca3af; font-size: 14px;">This code will expire in 10 minutes.</p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              <p style="color: #9ca3af; font-size: 12px; margin: 0;">If you didn't request this code, you can safely ignore this email.</p>
-            </div>
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #f3f4f6;">
+          
+          <!-- Header Area -->
+          <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 40px 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em;">Capacity Connect</h1>
+            <p style="color: #e0e7ff; margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Ministry of Earth Sciences</p>
           </div>
+          
+          <!-- Main Content -->
+          <div style="padding: 40px 32px; text-align: center;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background-color: #f3e8ff; color: #7c3aed; margin-bottom: 24px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+            </div>
+            
+            <h2 style="color: #111827; font-size: 24px; font-weight: 700; margin: 0 0 16px 0;">Verify Your Email Address</h2>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0; max-width: 400px; margin-left: auto; margin-right: auto;">
+              Please use the following 6-digit code to complete your verification request.
+            </p>
+            
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 0 auto 24px auto; max-width: 300px; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);">
+              <strong style="font-size: 36px; letter-spacing: 0.25em; color: #4f46e5; font-family: monospace;">${otp}</strong>
+            </div>
+            
+            <p style="color: #64748b; font-size: 14px; font-weight: 500;">
+              ⏳ This code will expire in <span style="color: #4f46e5;">10 minutes</span>.
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #f1f5f9;">
+            <p style="color: #94a3b8; font-size: 13px; margin: 0 0 8px 0; line-height: 1.5;">
+              If you didn't request this code, you can safely ignore this email.
+            </p>
+            <p style="color: #94a3b8; font-size: 13px; margin: 0; line-height: 1.5;">
+              © ${new Date().getFullYear()} Capacity Connect. All rights reserved.
+            </p>
+          </div>
+        </div>
         `,
       })
       

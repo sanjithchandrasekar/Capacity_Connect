@@ -26,6 +26,10 @@ function detectMimeFromPath(path: string | null | undefined): string | null {
   if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg'
   if (lower.endsWith('.gif')) return 'image/gif'
   if (lower.endsWith('.webp')) return 'image/webp'
+  if (lower.endsWith('.doc') || lower.endsWith('.docx')) return 'application/msword'
+  if (lower.endsWith('.ppt') || lower.endsWith('.pptx')) return 'application/vnd.ms-powerpoint'
+  if (lower.endsWith('.xls') || lower.endsWith('.xlsx')) return 'application/vnd.ms-excel'
+  if (lower.endsWith('.txt')) return 'text/plain'
   return null
 }
 
@@ -38,8 +42,11 @@ export function MaterialPreviewDialog({ material, previewUrl, onClose, onDownloa
   const isVideo = mime?.startsWith('video/')
   const isImage = mime?.startsWith('image/')
   const isPdf = mime === 'application/pdf'
-  // Use embedded viewer for images, videos, and PDFs
-  const canEmbedInline = isVideo || isImage || isPdf
+  const isOffice = mime === 'application/msword' || mime === 'application/vnd.ms-powerpoint' || mime === 'application/vnd.ms-excel' || mime?.includes('openxmlformats-officedocument')
+  const isText = mime === 'text/plain'
+  
+  // Use embedded viewer for images, videos, PDFs, Text and Office docs
+  const canEmbedInline = isVideo || isImage || isPdf || isOffice || isText
 
   return (
     <Dialog open={!!material} onOpenChange={(open) => !open && onClose()}>
@@ -80,9 +87,12 @@ export function MaterialPreviewDialog({ material, previewUrl, onClose, onDownloa
             <img src={previewUrl} alt={material?.file_name} className="max-w-full max-h-full object-contain" />
           ) : isPdf ? (
             <iframe src={`${previewUrl}#view=FitH`} className="w-full h-full border-0" title={material?.file_name} />
+          ) : isText ? (
+            <iframe src={previewUrl} className="w-full h-full border-0 bg-white" title={material?.file_name} />
+          ) : isOffice ? (
+            <iframe src={`https://docs.google.com/viewer?url=${encodeURIComponent(previewUrl)}&embedded=true`} className="w-full h-full border-0" title={material?.file_name} />
           ) : (
-            /* For other docs — signed Supabase URLs can't be proxied by Google Viewer.
-               Show a clean "open in new tab" prompt instead. */
+            /* For other unrecognized docs show a fallback */
             <div className="flex flex-col items-center justify-center text-ink/50 gap-4 p-8 text-center">
               <div className="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center">
                 <FileText className="w-8 h-8 text-purple-400" />

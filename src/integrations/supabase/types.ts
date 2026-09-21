@@ -276,6 +276,7 @@ export interface Database {
           created_at: string
           updated_at: string
           session_type: string | null
+          location: string | null
         }
         Insert: {
           id?: string
@@ -289,6 +290,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           session_type?: string | null
+          location?: string | null
         }
         Update: {
           id?: string
@@ -302,6 +304,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
           session_type?: string | null
+          location?: string | null
         }
         Relationships: [
           {
@@ -366,7 +369,7 @@ export interface Database {
           id: string
           user_id: string
           course_id: string
-          status: 'enrolled' | 'in_progress' | 'completed' | 'withdrawn'
+          status: 'pending_approval' | 'enrolled' | 'in_progress' | 'completed' | 'withdrawn' | 'rejected'
           progress_percent: number
           enrolled_at: string
           completed_at: string | null
@@ -375,7 +378,7 @@ export interface Database {
           id?: string
           user_id: string
           course_id: string
-          status?: 'enrolled' | 'in_progress' | 'completed' | 'withdrawn'
+          status?: 'pending_approval' | 'enrolled' | 'in_progress' | 'completed' | 'withdrawn' | 'rejected'
           progress_percent?: number
           enrolled_at?: string
           completed_at?: string | null
@@ -384,7 +387,7 @@ export interface Database {
           id?: string
           user_id?: string
           course_id?: string
-          status?: 'enrolled' | 'in_progress' | 'completed' | 'withdrawn'
+          status?: 'pending_approval' | 'enrolled' | 'in_progress' | 'completed' | 'withdrawn' | 'rejected'
           progress_percent?: number
           enrolled_at?: string
           completed_at?: string | null
@@ -408,6 +411,7 @@ export interface Database {
           scheduled_date: string | null
           start_time: string | null
           end_time: string | null
+          duration_minutes: number | null
         }
         Insert: {
           id?: string
@@ -425,6 +429,7 @@ export interface Database {
           scheduled_date?: string | null
           start_time?: string | null
           end_time?: string | null
+          duration_minutes?: number | null
         }
         Update: {
           id?: string
@@ -442,6 +447,7 @@ export interface Database {
           scheduled_date?: string | null
           start_time?: string | null
           end_time?: string | null
+          duration_minutes?: number | null
         }
         Relationships: []
       }

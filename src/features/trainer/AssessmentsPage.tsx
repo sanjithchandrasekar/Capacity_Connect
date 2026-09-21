@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   ArrowLeft, Plus, Trash2, Loader2, FileText,
-  Save, Send, Target, AlertCircle, Calendar, Clock
+  Save, Send, Target, AlertCircle, Calendar, Clock, Brain
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -68,6 +68,9 @@ export function AssessmentsPage() {
     start_time: '',
     end_time: ''
   })
+
+  const [aiGenDialogOpen, setAiGenDialogOpen] = useState(false)
+  const [aiGenForm, setAiGenForm] = useState({ type: 'daily_test', topic: '' })
 
   const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId)
 
@@ -216,6 +219,25 @@ export function AssessmentsPage() {
     }
   }
 
+  const handleAIGenerate = async () => {
+    if (!aiGenForm.topic) { toast.error('Please enter a topic'); return; }
+    setSaving(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-assessment', {
+        body: { courseId, type: aiGenForm.type, topic: aiGenForm.topic, trainerId: user?.id, passingScore: course?.passing_score ?? 60 }
+      })
+      if (error) throw error
+      toast.success('Assessment generated successfully!')
+      setAiGenDialogOpen(false)
+      setAiGenForm({ type: 'daily_test', topic: '' })
+      fetchData()
+    } catch (err) {
+      toast.error('Failed to generate assessment. Ensure the Edge Function is deployed.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const openEditQuestion = (q: Question) => {
     const opts = q.options as Record<string, string>
     setEditingQuestion({
@@ -272,9 +294,14 @@ export function AssessmentsPage() {
                 <h2 className="text-2xl font-bold tracking-tight text-ink">Tests & Assessments</h2>
                 <p className="text-ink/60 text-sm mt-1">{course?.title}</p>
               </div>
-              <Button onClick={openNewAssessmentDialog} className="bg-ink hover:bg-ink/90 text-cream">
-                <Plus className="w-4 h-4 mr-2" /> Create Test
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setAiGenDialogOpen(true)} variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 font-bold">
+                  <Brain className="w-4 h-4 mr-2" /> Auto-Generate with AI
+                </Button>
+                <Button onClick={openNewAssessmentDialog} className="bg-ink hover:bg-ink/90 text-cream">
+                  <Plus className="w-4 h-4 mr-2" /> Create Test
+                </Button>
+              </div>
             </motion.div>
 
             {assessments.length === 0 ? (
@@ -546,6 +573,45 @@ export function AssessmentsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* AI Generation Dialog */}
+        <Dialog open={aiGenDialogOpen} onOpenChange={setAiGenDialogOpen}>
+          <DialogContent className="sm:max-w-[425px] bg-white border-ink/10">
+            <DialogHeader>
+              <DialogTitle className="text-ink flex items-center gap-2"><Brain className="w-5 h-5 text-purple-600"/> Auto-Generate Assessment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-1.5">
+                <Label className="text-ink/80">Assessment Type</Label>
+                <Select value={aiGenForm.type} onValueChange={v => setAiGenForm({...aiGenForm, type: v})}>
+                  <SelectTrigger className="bg-ink/5 border-ink/20 text-ink"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily_test">Daily Test (Optional, Auto-Approved)</SelectItem>
+                    <SelectItem value="mock_test">Mock Test (Requires Approval)</SelectItem>
+                    <SelectItem value="final">Final Exam (Requires Approval)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-ink/80">Topic / Instructions for AI</Label>
+                <Textarea 
+                  placeholder="e.g. Generate a test about global wind patterns..." 
+                  value={aiGenForm.topic} 
+                  onChange={e => setAiGenForm({...aiGenForm, topic: e.target.value})} 
+                  className="bg-ink/5 border-ink/20 text-ink h-24" 
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAiGenDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAIGenerate} disabled={saving} className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold border-0">
+                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Brain className="w-4 h-4 mr-2" />}
+                Generate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </motion.div>
     </TrainerLayout>
   )

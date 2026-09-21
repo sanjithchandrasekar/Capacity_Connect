@@ -73,6 +73,7 @@ export function CourseSessionsPage() {
           start_time: editingSession.start_time ? new Date(editingSession.start_time).toISOString() : null,
           end_time: editingSession.end_time ? new Date(editingSession.end_time).toISOString() : null,
           meet_link: editingSession.meet_link || null,
+          location: editingSession.location || null,
           session_type: editingSession.session_type || 'recorded'
         }).eq('id', editingSession.id)
         if (error) throw error
@@ -85,6 +86,7 @@ export function CourseSessionsPage() {
           start_time: editingSession.start_time ? new Date(editingSession.start_time).toISOString() : null,
           end_time: editingSession.end_time ? new Date(editingSession.end_time).toISOString() : null,
           meet_link: editingSession.meet_link || null,
+          location: editingSession.location || null,
           order_index: sessions.length,
           session_type: editingSession.session_type || 'recorded'
         })
@@ -112,7 +114,7 @@ export function CourseSessionsPage() {
   }
 
   const openNew = () => {
-    setEditingSession({ title: '', description: '', start_time: '', end_time: '', meet_link: '' })
+    setEditingSession({ title: '', description: '', start_time: '', end_time: '', meet_link: '', location: '' })
     setDialogOpen(true)
   }
 
@@ -164,8 +166,8 @@ export function CourseSessionsPage() {
                           
                           <div className="flex flex-wrap gap-4 mt-3 text-xs text-ink/70">
                             {session.session_type && (
-                              <Badge className={`text-[10px] capitalize ${session.session_type === 'live' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200' : session.session_type === 'recorded' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200' : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200'}`}>
-                                {session.session_type === 'recorded' ? 'Video' : session.session_type} Class
+                              <Badge className={`text-[10px] capitalize ${session.session_type === 'live' || session.session_type === 'hybrid' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200' : session.session_type === 'recorded' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200' : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200'}`}>
+                                {session.session_type.replace('_', ' ')}
                               </Badge>
                             )}
                             {session.start_time && (
@@ -175,6 +177,11 @@ export function CourseSessionsPage() {
                               <a href={session.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-blue-600 hover:underline">
                                 <Video className="w-3.5 h-3.5" /> Join Live Class
                               </a>
+                            )}
+                            {session.location && (session.session_type === 'in_person' || session.session_type === 'hybrid') && (
+                              <span className="flex items-center gap-1.5 text-ink/70">
+                                <Globe className="w-3.5 h-3.5" /> {session.location}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -238,9 +245,10 @@ export function CourseSessionsPage() {
               <Select value={editingSession?.session_type || 'recorded'} onValueChange={v => setEditingSession({ ...editingSession, session_type: v })}>
                 <SelectTrigger className="bg-ink/5 border-ink/20 text-ink"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="recorded">Pre-recorded Video</SelectItem>
-                  <SelectItem value="live">Live Online Class</SelectItem>
-                  <SelectItem value="hybrid">Hybrid (Both)</SelectItem>
+                  <SelectItem value="recorded">Fully Video Class</SelectItem>
+                  <SelectItem value="live">Only Online Live Class</SelectItem>
+                  <SelectItem value="in_person">Fully In-Person Class</SelectItem>
+                  <SelectItem value="hybrid">Hybrid (Both Live & Video / In-Person)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -254,10 +262,16 @@ export function CourseSessionsPage() {
                 <Input className="bg-ink/5 border-ink/20 text-ink" type="datetime-local" value={editingSession?.end_time || ''} onChange={e => setEditingSession({ ...editingSession, end_time: e.target.value })} />
               </div>
             </div>
-            {editingSession?.session_type !== 'recorded' && (
+            {(editingSession?.session_type === 'live' || editingSession?.session_type === 'hybrid') && (
               <div className="space-y-1.5">
                 <Label className="text-ink/80">Live Class Meet Link</Label>
                 <Input className="bg-ink/5 border-ink/20 text-ink" type="url" value={editingSession?.meet_link || ''} onChange={e => setEditingSession({ ...editingSession, meet_link: e.target.value })} placeholder="https://meet.google.com/..." />
+              </div>
+            )}
+            {(editingSession?.session_type === 'in_person' || editingSession?.session_type === 'hybrid') && (
+              <div className="space-y-1.5">
+                <Label className="text-ink/80">Physical Location</Label>
+                <Input className="bg-ink/5 border-ink/20 text-ink" type="text" value={editingSession?.location || ''} onChange={e => setEditingSession({ ...editingSession, location: e.target.value })} placeholder="e.g. Room 402, Main Campus" />
               </div>
             )}
           </div>
