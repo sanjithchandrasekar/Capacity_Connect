@@ -38,6 +38,7 @@ import { PublicCourseCatalog } from './pages/PublicCourseCatalog'
 import { PublicCourseDetails } from './pages/PublicCourseDetails'
 import { ChatBot } from './components/ChatBot'
 import { AdminCourseCreatePage } from './features/admin/AdminCourseCreatePage'
+import { AdminCourseEditPage } from './features/admin/AdminCourseEditPage'
 
 function RouteThemeManager() {
   const location = useLocation()
@@ -181,6 +182,7 @@ function AnimatedAppRoutes() {
                 <Route element={<RoleRoute allowedRoles={['admin', 'super_admin']} />}>
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/courses/new" element={<AdminCourseCreatePage />} />
+                  <Route path="/admin/courses/:courseId/edit" element={<AdminCourseEditPage />} />
                   <Route path="/admin/settings" element={<SettingsPage />} />
                 </Route>
 

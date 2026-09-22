@@ -33,7 +33,12 @@ export function ChatBot() {
     setInputValue('')
     setIsLoading(true)
 
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '' // fallback to user provided key if any
+    let API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+    const API_KEYS_STRING = import.meta.env.VITE_GEMINI_API_KEYS;
+    if (API_KEYS_STRING) {
+      const keys = API_KEYS_STRING.split(',');
+      API_KEY = keys[Math.floor(Math.random() * keys.length)].trim();
+    }
 
     try {
       const formattedMessages = updatedMessages.map(msg => ({

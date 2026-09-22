@@ -27,6 +27,7 @@ import { format } from 'date-fns'
 type Course = Database['public']['Tables']['courses']['Row']
 type Assessment = Database['public']['Tables']['assessments']['Row']
 type Question = Database['public']['Tables']['questions']['Row']
+type Material = Database['public']['Tables']['materials']['Row']
 
 interface QuestionForm {
   question_text: string
@@ -49,6 +50,7 @@ export function AssessmentsPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
+  const [materials, setMaterials] = useState<Material[]>([])
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -61,16 +63,15 @@ export function AssessmentsPage() {
   const [editingAssessmentId, setEditingAssessmentId] = useState<string | null>(null)
   const [assessmentForm, setAssessmentForm] = useState({
     title: '',
-    assessment_type: 'final',
-    requires_sea: false,
-    sea_link: '',
+    assessment_type: 'final' as 'daily' | 'mock' | 'final' | 'assessment',
+    requires_sea: true,
     scheduled_date: '',
     start_time: '',
-    end_time: ''
+    end_time: '',
   })
 
   const [aiGenDialogOpen, setAiGenDialogOpen] = useState(false)
-  const [aiGenForm, setAiGenForm] = useState({ type: 'daily_test', topic: '' })
+  const [aiGenForm, setAiGenForm] = useState({ type: 'daily_test', topic: '', material_id: 'none', count: 5, difficulty: 'mixed' })
 
   const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId)
 
@@ -88,6 +89,9 @@ export function AssessmentsPage() {
         const { data: q } = await supabase.from('questions').select('*').eq('assessment_id', selectedAssessmentId).order('position')
         if (q) setQuestions(q)
       }
+      
+      const { data: mList } = await supabase.from('materials').select('*').eq('course_id', courseId).order('created_at', { ascending: false })
+      if (mList) setMaterials(mList)
     } catch (err) {
       console.error(err)
     } finally {
@@ -120,8 +124,8 @@ export function AssessmentsPage() {
       const payload = {
         title: assessmentForm.title || `${assessmentForm.assessment_type} Test`,
         assessment_type: assessmentForm.assessment_type,
+        status: 'draft' as const,
         requires_sea: assessmentForm.requires_sea,
-        sea_link: assessmentForm.requires_sea ? assessmentForm.sea_link : null,
         scheduled_date: assessmentForm.scheduled_date || null,
         start_time: assessmentForm.start_time ? new Date(assessmentForm.start_time).toISOString() : null,
         end_time: assessmentForm.end_time ? new Date(assessmentForm.end_time).toISOString() : null,
@@ -209,8 +213,13 @@ export function AssessmentsPage() {
     if (!selectedAssessment) return
     setSaving(true)
     try {
-      await supabase.from('assessments').update({ status: 'pending_review' }).eq('id', selectedAssessment.id)
-      toast.success('Assessment submitted for review')
+      if (selectedAssessment.assessment_type === 'final') {
+        await supabase.from('assessments').update({ status: 'pending_review' }).eq('id', selectedAssessment.id)
+        toast.success('Final Exam submitted to Admin for review')
+      } else {
+        await supabase.from('assessments').update({ status: 'published' }).eq('id', selectedAssessment.id)
+        toast.success('Assessment approved and published!')
+      }
       fetchData()
     } catch (err) {
       toast.error('Failed')
@@ -220,19 +229,142 @@ export function AssessmentsPage() {
   }
 
   const handleAIGenerate = async () => {
-    if (!aiGenForm.topic) { toast.error('Please enter a topic'); return; }
+    if (aiGenForm.material_id === 'none' && !aiGenForm.topic) { 
+      toast.error('Please enter a topic or select a material'); 
+      return; 
+    }
     setSaving(true)
     try {
-      const { data, error } = await supabase.functions.invoke('generate-assessment', {
-        body: { courseId, type: aiGenForm.type, topic: aiGenForm.topic, trainerId: user?.id, passingScore: course?.passing_score ?? 60 }
-      })
-      if (error) throw error
+      let apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+      const apiKeysStr = import.meta.env.VITE_GEMINI_API_KEYS;
+      if (apiKeysStr) {
+        const keys = apiKeysStr.split(',');
+        apiKey = keys[Math.floor(Math.random() * keys.length)].trim();
+      }
+      if (!apiKey) throw new Error("Missing Gemini API Key in .env.local");
+      
+      let contextStr = "";
+      let testTitle = aiGenForm.topic ? `${aiGenForm.topic} Test` : "AI Generated Test";
+
+      let inlineData: { mimeType: string, data: string } | null = null;
+      if (aiGenForm.material_id !== 'none') {
+        const selectedMaterial = materials.find(m => m.id === aiGenForm.material_id);
+        if (selectedMaterial) {
+          if (!aiGenForm.topic) {
+            testTitle = `${selectedMaterial.file_name} Test`;
+          }
+          if (selectedMaterial.extracted_text) {
+             contextStr = `\n\nCOURSE MATERIAL CONTENT FOR CONTEXT:\n------------------------\n${selectedMaterial.extracted_text.substring(0, 15000)}\n------------------------\n`;
+          } else if (selectedMaterial.storage_path) {
+             // No extracted text, download the file directly for Gemini to read natively
+             const { data: fileBlob, error: downloadError } = await supabase.storage.from('materials').download(selectedMaterial.storage_path);
+             if (!downloadError && fileBlob) {
+                const toBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+                    reader.onerror = error => reject(error);
+                });
+                try {
+                    const base64data = await toBase64(fileBlob);
+                    inlineData = {
+                        mimeType: fileBlob.type || "application/pdf",
+                        data: base64data
+                    };
+                    contextStr = `\n\nI have attached the course material file. Please read it and base the questions on it.\n`;
+                } catch (e) {
+                    contextStr = `\n\nCOURSE MATERIAL TITLE FOR CONTEXT: ${selectedMaterial.file_name}\n`;
+                }
+             } else {
+                 contextStr = `\n\nCOURSE MATERIAL TITLE FOR CONTEXT: ${selectedMaterial.file_name}\n`;
+             }
+          } else {
+             contextStr = `\n\nCOURSE MATERIAL TITLE FOR CONTEXT: ${selectedMaterial.file_name}\n`;
+          }
+        }
+      }
+
+      const baseTopic = aiGenForm.topic ? `about the following topic: "${aiGenForm.topic}"` : "based primarily on the provided course material";
+      
+      // System prompt for generating assessment
+      const prompt = `You are an expert educator. Generate a strictly formatted JSON array of ${aiGenForm.count} multiple-choice questions ${baseTopic}. ${contextStr}
+      The difficulty of these questions should be: ${aiGenForm.difficulty}.
+      The JSON must be an array of objects where each object has:
+      - "question_text" (string)
+      - "options" (object with keys "A", "B", "C", "D" mapped to string answers)
+      - "correct_answer" (string: "A", "B", "C", or "D")
+      - "explanation" (string: brief explanation of why the answer is correct)
+      Only return the raw JSON array. Do not include markdown code blocks.`;
+
+      const parts: any[] = [{ text: prompt }];
+      if (inlineData) {
+          parts.push({ inlineData });
+      }
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { temperature: 0.7 }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("GEMINI API ERROR:", response.status, errorText);
+        throw new Error(`Failed to reach Gemini API: ${response.status}`);
+      }
+      const jsonRes = await response.json();
+      let text = jsonRes.candidates[0].content.parts[0].text;
+      
+      // Clean up markdown formatting if Gemini includes it
+      text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const generatedQuestions = JSON.parse(text);
+
+      // Map form type value to DB column value
+      const typeMap: Record<string, string> = {
+        'daily_test': 'daily',
+        'mock_test': 'mock',
+        'assessment_test': 'assessment',
+        'final': 'final',
+      };
+      const dbType = typeMap[aiGenForm.type] || 'daily';
+
+      // Create Assessment record
+      const { data: assessment, error: assessmentError } = await supabase.from('assessments').insert({
+        course_id: courseId || '',
+        title: testTitle,
+        assessment_type: dbType,
+        requires_sea: true,
+        created_by: user?.id || '',
+        passing_score: course?.passing_score ?? 60,
+        status: 'draft'
+      }).select().single();
+
+      if (assessmentError) throw assessmentError;
+
+      // Insert questions
+      const questionsToInsert = generatedQuestions.map((q: any, i: number) => ({
+        assessment_id: assessment.id,
+        question_text: q.question_text,
+        options: q.options,
+        correct_answer: q.correct_answer,
+        explanation: q.explanation,
+        position: i + 1,
+        approved: false
+      }));
+
+      const { error: questionsError } = await supabase.from('questions').insert(questionsToInsert);
+      if (questionsError) throw questionsError;
+
       toast.success('Assessment generated successfully!')
       setAiGenDialogOpen(false)
-      setAiGenForm({ type: 'daily_test', topic: '' })
+      setAiGenForm({ type: 'daily_test', topic: '', material_id: 'none', count: 5, difficulty: 'mixed' })
       fetchData()
     } catch (err) {
-      toast.error('Failed to generate assessment. Ensure the Edge Function is deployed.')
+      console.error(err);
+      toast.error((err as any)?.message || (err as any)?.details || String(err) || 'Failed to generate assessment.')
     } finally {
       setSaving(false)
     }
@@ -252,7 +384,7 @@ export function AssessmentsPage() {
   const openNewAssessmentDialog = () => {
     setEditingAssessmentId(null)
     setAssessmentForm({
-      title: '', assessment_type: 'final', requires_sea: false, sea_link: '', scheduled_date: '', start_time: '', end_time: ''
+      title: '', assessment_type: 'final', requires_sea: true, scheduled_date: '', start_time: '', end_time: ''
     })
     setAssessmentDialogOpen(true)
   }
@@ -261,10 +393,9 @@ export function AssessmentsPage() {
     setEditingAssessmentId(a.id)
     setAssessmentForm({
       title: a.title,
-      assessment_type: a.assessment_type || 'final',
-      requires_sea: a.requires_sea || false,
-      sea_link: a.sea_link || '',
-      scheduled_date: a.scheduled_date || '',
+      assessment_type: (a.assessment_type || 'final') as 'daily' | 'mock' | 'final',
+      requires_sea: a.requires_sea,
+      scheduled_date: a.scheduled_date ? new Date(a.scheduled_date).toISOString().slice(0, 10) : '',
       start_time: a.start_time || '',
       end_time: a.end_time || '',
     })
@@ -288,7 +419,7 @@ export function AssessmentsPage() {
           <>
             <motion.div variants={fadeUp} className="flex items-center justify-between">
               <div>
-                <Link to={`/trainer/courses/${courseId}/edit`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+                <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
                   <ArrowLeft className="w-4 h-4" /> Back to Course
                 </Link>
                 <h2 className="text-2xl font-bold tracking-tight text-ink">Tests & Assessments</h2>
@@ -305,14 +436,48 @@ export function AssessmentsPage() {
             </motion.div>
 
             {assessments.length === 0 ? (
-              <motion.div variants={fadeUp}>
-                <Card className="bg-white border-ink/10">
-                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <Target className="h-12 w-12 text-ink/40 mb-4" />
-                    <h3 className="font-semibold text-lg text-ink mb-1">No tests yet</h3>
-                    <p className="text-ink/60 text-sm mb-4">Create mock tests, daily assessments, and final exams.</p>
-                  </CardContent>
-                </Card>
+              <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                {/* Premium AI Generation Card */}
+                <motion.div whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="relative overflow-hidden group border border-purple-100 hover:border-purple-300 shadow-sm hover:shadow-xl h-full cursor-pointer bg-gradient-to-br from-white to-purple-50/50" onClick={() => setAiGenDialogOpen(true)}>
+                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse" />
+                    
+                    <CardContent className="p-8 relative z-10 h-full flex flex-col justify-between rounded-xl">
+                      <div>
+                        <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-purple-200 shadow-sm group-hover:shadow-md transition-all">
+                          <Brain className="w-7 h-7 text-purple-600" />
+                        </div>
+                        <h3 className="text-2xl font-extrabold text-ink mb-3 tracking-tight">Auto-Generate with AI</h3>
+                        <p className="text-sm text-ink/70 mb-8 leading-relaxed font-medium">
+                          Instantly generate a complete, high-quality assessment tailored perfectly to your course content, objectives, and desired difficulty level.
+                        </p>
+                      </div>
+                      <Button className="w-full bg-purple-600 text-white hover:bg-purple-700 shadow-sm font-bold text-sm h-12 rounded-xl group-hover:scale-[1.02] transition-transform">
+                        <Brain className="w-4 h-4 mr-2" /> Start AI Generation
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                {/* Neo-Brutalist Manual Creation Card */}
+                <motion.div whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="relative overflow-hidden group border-2 border-ink shadow-[8px_8px_0px_0px_#1E1E24] hover:shadow-[12px_12px_0px_0px_#1E1E24] hover:-translate-x-1 hover:-translate-y-1 transition-all h-full cursor-pointer bg-white" onClick={openNewAssessmentDialog}>
+                    <CardContent className="p-8 relative z-10 h-full flex flex-col justify-between">
+                      <div>
+                        <div className="w-14 h-14 bg-ink text-white rounded-2xl flex items-center justify-center mb-6 transform group-hover:rotate-12 transition-transform duration-300">
+                          <Plus className="w-7 h-7" />
+                        </div>
+                        <h3 className="text-2xl font-black text-ink mb-3 tracking-tight">Create Manually</h3>
+                        <p className="text-sm text-ink/70 mb-8 leading-relaxed font-medium">
+                          Build your assessment from scratch. Define your own questions, options, and passing criteria with absolute precision and control.
+                        </p>
+                      </div>
+                      <Button variant="outline" className="w-full border-2 border-ink text-ink hover:bg-ink hover:text-white font-bold text-sm h-12 rounded-xl transition-colors">
+                        Create Blank Test
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </motion.div>
             ) : (
               <motion.div variants={fadeUp} className="space-y-4">
@@ -377,7 +542,7 @@ export function AssessmentsPage() {
                     <Plus className="w-4 h-4 mr-2" /> Add Question
                   </Button>
                   <Button onClick={handleSubmitForReview} disabled={saving || questions.length === 0} variant="outline" className="border-ink/20 text-ink">
-                    <Send className="w-4 h-4 mr-2" /> Submit for Review
+                    <Send className="w-4 h-4 mr-2" /> {selectedAssessment?.assessment_type === 'final' ? 'Submit for Admin Review' : 'Approve & Publish'}
                   </Button>
                 </div>
               </div>
@@ -495,7 +660,7 @@ export function AssessmentsPage() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-ink/80">Assessment Type</Label>
-                <Select value={assessmentForm.assessment_type} onValueChange={(v) => setAssessmentForm({ ...assessmentForm, assessment_type: v })}>
+                <Select value={assessmentForm.assessment_type} onValueChange={(v) => setAssessmentForm({ ...assessmentForm, assessment_type: v as any })}>
                   <SelectTrigger className="bg-ink/5 border-ink/20 text-ink"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Daily Assessment</SelectItem>
@@ -541,28 +706,22 @@ export function AssessmentsPage() {
                 </>
               )}
               
-              <div className="flex items-center space-x-2 border border-ink/10 p-3 rounded-lg bg-ink/5 mt-4">
+              <div className="flex items-center space-x-2 border border-brand/20 p-3 rounded-lg bg-brand/5 mt-4 opacity-80 pointer-events-none">
                 <input 
                   type="checkbox" 
                   id="requires_sea" 
-                  className="w-4 h-4 rounded border-ink/20 text-ink focus:ring-ink"
-                  checked={assessmentForm.requires_sea}
-                  onChange={(e) => setAssessmentForm({ ...assessmentForm, requires_sea: e.target.checked })}
+                  className="w-4 h-4 rounded text-brand border-brand/30"
+                  checked={true}
+                  disabled
+                  onChange={() => {}}
                 />
-                <Label htmlFor="requires_sea" className="text-ink font-medium cursor-pointer flex-1">Require SEA (Secure Enable App)</Label>
+                <Label htmlFor="requires_sea" className="text-brand font-bold flex-1">
+                  Require SEA (Secure Exam Mode)
+                </Label>
               </div>
-
-              {assessmentForm.requires_sea && (
-                <div className="space-y-1.5 pl-6 border-l-2 border-ink/10 ml-2 animate-in fade-in slide-in-from-top-2">
-                  <Label className="text-ink/80 text-xs">SEA Link</Label>
-                  <Input 
-                    value={assessmentForm.sea_link}
-                    onChange={(e) => setAssessmentForm({ ...assessmentForm, sea_link: e.target.value })}
-                    placeholder="https://..." 
-                    className="bg-ink/5 border-ink/20 text-ink h-9" 
-                  />
-                </div>
-              )}
+              <div className="text-xs text-brand/80 pl-8 pb-2 font-medium">
+                Locked: Secure Exam Mode (SEA) is permanently enabled for all assessments.
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)} className="border-ink/20 text-ink">Cancel</Button>
@@ -574,41 +733,107 @@ export function AssessmentsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* AI Generation Dialog */}
+        {/* AI Generation Dialog (Light Theme) */}
         <Dialog open={aiGenDialogOpen} onOpenChange={setAiGenDialogOpen}>
-          <DialogContent className="sm:max-w-[425px] bg-white border-ink/10">
-            <DialogHeader>
-              <DialogTitle className="text-ink flex items-center gap-2"><Brain className="w-5 h-5 text-purple-600"/> Auto-Generate Assessment</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-1.5">
-                <Label className="text-ink/80">Assessment Type</Label>
-                <Select value={aiGenForm.type} onValueChange={v => setAiGenForm({...aiGenForm, type: v})}>
-                  <SelectTrigger className="bg-ink/5 border-ink/20 text-ink"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily_test">Daily Test (Optional, Auto-Approved)</SelectItem>
-                    <SelectItem value="mock_test">Mock Test (Requires Approval)</SelectItem>
-                    <SelectItem value="final">Final Exam (Requires Approval)</SelectItem>
-                  </SelectContent>
-                </Select>
+          <DialogContent className="sm:max-w-[500px] bg-white border border-purple-100 shadow-xl !rounded-2xl overflow-hidden p-0">
+            <div className="relative z-10 p-6">
+              <DialogHeader className="mb-6">
+                <DialogTitle className="text-xl font-bold text-ink flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg border border-purple-200">
+                    <Brain className="w-5 h-5 text-purple-600"/> 
+                  </div>
+                  Auto-Generate Test
+                </DialogTitle>
+                <p className="text-ink/60 text-sm mt-1">Harness AI to instantly create a highly effective assessment.</p>
+              </DialogHeader>
+
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Assessment Type</Label>
+                  <Select value={aiGenForm.type} onValueChange={v => setAiGenForm({...aiGenForm, type: v})}>
+                    <SelectTrigger className="bg-ink/5 border-ink/10 text-ink h-10 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-ink/10 text-ink rounded-lg">
+                      <SelectItem value="daily_test" className="focus:bg-purple-50 focus:text-purple-700">Daily Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="assessment_test" className="focus:bg-purple-50 focus:text-purple-700">Assessment Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="mock_test" className="focus:bg-purple-50 focus:text-purple-700">Mock Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="final" className="focus:bg-purple-50 focus:text-purple-700">Final Exam (Admin Approval Required)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Source Material (Optional)</Label>
+                  <Select value={aiGenForm.material_id} onValueChange={v => setAiGenForm({...aiGenForm, material_id: v})}>
+                    <SelectTrigger className="bg-ink/5 border-ink/10 text-ink h-10 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all">
+                      <SelectValue placeholder="Select a course material" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-ink/10 text-ink rounded-lg max-h-60">
+                      <SelectItem value="none" className="focus:bg-purple-50 focus:text-purple-700">None (Provide topic manually)</SelectItem>
+                      {materials.map(m => (
+                        <SelectItem key={m.id} value={m.id} className="focus:bg-purple-50 focus:text-purple-700">
+                          {m.file_name} {m.extracted_text ? '' : '(No text)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1.5">
+                  <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Topic / Instructions for AI {aiGenForm.material_id !== 'none' && '(Optional)'}</Label>
+                  <div className="relative">
+                    <Textarea 
+                      placeholder="e.g. Generate a test about advanced marine biology and coral reefs..." 
+                      value={aiGenForm.topic} 
+                      onChange={e => setAiGenForm({...aiGenForm, topic: e.target.value})} 
+                      className="bg-ink/5 border-ink/10 text-ink h-24 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all resize-none p-3 placeholder:text-ink/30" 
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Number of Questions</Label>
+                    <Input 
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={aiGenForm.count}
+                      onChange={e => setAiGenForm({...aiGenForm, count: parseInt(e.target.value) || 5})}
+                      className="bg-ink/5 border-ink/10 text-ink h-10 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Difficulty Level</Label>
+                    <Select value={aiGenForm.difficulty} onValueChange={v => setAiGenForm({...aiGenForm, difficulty: v})}>
+                      <SelectTrigger className="bg-ink/5 border-ink/10 text-ink h-10 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-ink/10 text-ink rounded-lg">
+                        <SelectItem value="mixed" className="focus:bg-purple-50 focus:text-purple-700">Mixed Combinations</SelectItem>
+                        <SelectItem value="easy" className="focus:bg-purple-50 focus:text-purple-700">Easy</SelectItem>
+                        <SelectItem value="medium" className="focus:bg-purple-50 focus:text-purple-700">Medium</SelectItem>
+                        <SelectItem value="hard" className="focus:bg-purple-50 focus:text-purple-700">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-ink/80">Topic / Instructions for AI</Label>
-                <Textarea 
-                  placeholder="e.g. Generate a test about global wind patterns..." 
-                  value={aiGenForm.topic} 
-                  onChange={e => setAiGenForm({...aiGenForm, topic: e.target.value})} 
-                  className="bg-ink/5 border-ink/20 text-ink h-24" 
-                />
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button variant="ghost" onClick={() => setAiGenDialogOpen(false)} className="text-ink/60 hover:text-ink hover:bg-ink/5 h-10 rounded-lg px-4 border-0">
+                  Cancel
+                </Button>
+                <Button onClick={handleAIGenerate} disabled={saving} className="bg-purple-600 text-white hover:bg-purple-700 font-semibold h-10 rounded-lg px-6 shadow-sm transition-all border-0">
+                  {saving ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin text-white/80" /> Synthesizing...</>
+                  ) : (
+                    <><Brain className="w-4 h-4 mr-2" /> Generate Now</>
+                  )}
+                </Button>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAiGenDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAIGenerate} disabled={saving} className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold border-0">
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Brain className="w-4 h-4 mr-2" />}
-                Generate
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 

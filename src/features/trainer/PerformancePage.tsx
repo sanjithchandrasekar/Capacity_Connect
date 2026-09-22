@@ -111,7 +111,7 @@ export function PerformancePage() {
     <TrainerLayout>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-6xl mx-auto space-y-6">
         <motion.div variants={fadeUp}>
-          <Link to={`/trainer/courses/${courseId}/edit`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
           <h2 className="text-2xl font-bold tracking-tight text-ink">Trainee Performance</h2>

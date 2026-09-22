@@ -432,7 +432,7 @@ export function CourseDetailPage() {
           </motion.div>
         )}
 
-        {sessions.length > 0 && (
+        {sessions.length > 0 ? (
           <motion.div variants={fadeUp}>
             <Card className="bg-white border-ink/10">
               <CardContent className="p-6">
@@ -458,6 +458,21 @@ export function CourseDetailPage() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : (
+          <motion.div variants={fadeUp}>
+            <Card className="bg-white border-ink/10 border-dashed">
+              <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+                <Calendar className="w-10 h-10 text-ink/20 mb-3" />
+                <h3 className="text-sm font-semibold text-ink mb-1">No Course Sessions</h3>
+                <p className="text-xs text-ink/60 mb-4 max-w-xs">Break your course down into topics or schedule live classes.</p>
+                <RouterLink to={`/trainer/courses/${courseId}/sessions`}>
+                  <Button variant="outline" size="sm" className="border-ink/20 text-ink bg-transparent hover:bg-ink/5">
+                    Create First Session
+                  </Button>
+                </RouterLink>
               </CardContent>
             </Card>
           </motion.div>

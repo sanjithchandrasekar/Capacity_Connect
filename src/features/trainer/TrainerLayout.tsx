@@ -5,14 +5,13 @@ import { supabase } from '@/lib/supabase'
 import {
   Globe, LogOut, BookOpen, BarChart3,
   Settings, Bell, Menu, X,
-  Award, User, ChevronRight, GraduationCap, PlusCircle
+  User, ChevronRight, GraduationCap, PlusCircle
 } from 'lucide-react'
 
 const navItems = [
   { to: '/trainer', label: 'Dashboard', icon: BarChart3, exact: true },
   { to: '/trainer/courses', label: 'My Courses', icon: BookOpen },
   { to: '/trainer/courses/new', label: 'Create Course', icon: PlusCircle },
-  { to: '/trainer/skills', label: 'Skills & Expertise', icon: Award },
   { to: '/trainer/notifications', label: 'Notifications', icon: Bell },
   { to: '/trainer/profile', label: 'Profile', icon: User },
   { to: '/trainer/settings', label: 'Settings', icon: Settings },

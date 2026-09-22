@@ -130,7 +130,7 @@ export function TraineeCourseDetails() {
 
       const { data: assessmentsData } = await supabase
         .from('assessments')
-        .select('*')
+        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, instructions, created_at')
         .eq('course_id', courseId!)
         .eq('status', 'published')
         .order('created_at')

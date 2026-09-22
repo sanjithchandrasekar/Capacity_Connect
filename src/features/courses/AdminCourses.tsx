@@ -392,9 +392,14 @@ export function AdminCourses() {
           {selectedCourse && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-midnight flex items-center gap-2 font-bold">
-                  <BookOpen className="w-5 h-5 text-purple-600" />
-                  Course Details
+                <DialogTitle className="text-midnight flex items-center justify-between gap-2 font-bold w-full pr-6">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-purple-600" />
+                    Course Details
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/admin/courses/${selectedCourse.id}/edit`)}>
+                    Edit Course
+                  </Button>
                 </DialogTitle>
               </DialogHeader>
 

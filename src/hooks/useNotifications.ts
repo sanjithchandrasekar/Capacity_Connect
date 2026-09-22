@@ -93,7 +93,52 @@ export function useNotifications() {
     }
   }
 
+  const deleteNotification = async (id: string) => {
+    if (!profile) return
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', profile.id)
+
+    if (!error) {
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    }
+  }
+
+  const clearAllNotifications = async () => {
+    if (!profile) return
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', profile.id)
+
+    if (!error) {
+      setNotifications([])
+    }
+  }
+
   const unreadCount = notifications.filter(n => !n.read_at).length
 
-  return { notifications, loading, markAsRead, markAllAsRead, unreadCount }
+  return { notifications, loading, markAsRead, markAllAsRead, deleteNotification, clearAllNotifications, unreadCount }
+}
+
+export function getNotificationRedirectUrl(type: string, role: string | undefined): string {
+  if (!role) return '/'
+  
+  switch (type) {
+    case 'user_registration':
+    case 'course_submission':
+      return role === 'super_admin' ? '/super-admin' : '/admin'
+    case 'course_status':
+    case 'course_assigned':
+    case 'enrollment_request':
+      return '/trainer/courses'
+    case 'enrollment_status':
+    case 'certificate_issued':
+    case 'assessment_result':
+      return '/trainee/my-learning'
+    default:
+      return `/${role}`
+  }
 }

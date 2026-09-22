@@ -19,7 +19,7 @@ import {
   Menu, X, Trash2, Loader2, LayoutDashboard
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useNotifications } from '@/hooks/useNotifications'
+import { useNotifications, getNotificationRedirectUrl } from '@/hooks/useNotifications'
 import { formatDistanceToNow } from 'date-fns'
 import {
   DropdownMenu,
@@ -62,7 +62,7 @@ export function DashboardShell({
   const location = useLocation()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { notifications, loading: notifsLoading, unreadCount, markAsRead } = useNotifications()
+  const { notifications, loading: notifsLoading, unreadCount, markAsRead, clearAllNotifications, deleteNotification, markAllAsRead } = useNotifications()
 
   const handleResetPassword = async () => {
     if (!profile?.email) return;
@@ -265,7 +265,21 @@ export function DashboardShell({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64 max-h-96 overflow-y-auto">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <div className="flex items-center justify-between px-2 pb-2">
+                  <DropdownMenuLabel className="pb-0">Notifications</DropdownMenuLabel>
+                  <div className="flex items-center gap-1 pr-2">
+                    {unreadCount > 0 && (
+                      <button onClick={(e) => { e.preventDefault(); markAllAsRead() }} className="text-[10px] font-bold text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                        Mark read
+                      </button>
+                    )}
+                    {notifications.length > 0 && (
+                      <button onClick={(e) => { e.preventDefault(); clearAllNotifications() }} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-2 py-1 rounded">
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <DropdownMenuSeparator />
                 
                 {notifsLoading ? (
@@ -277,11 +291,27 @@ export function DashboardShell({
                     <React.Fragment key={notif.id}>
                       <DropdownMenuItem 
                         className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notif.read_at ? 'bg-purple-50/50' : ''}`}
-                        onClick={() => !notif.read_at && markAsRead(notif.id)}
+                        onClick={() => {
+                          if (!notif.read_at) markAsRead(notif.id);
+                          navigate(getNotificationRedirectUrl(notif.type, profile?.role));
+                        }}
                       >
-                        <div className="flex items-center gap-2 w-full">
-                          {!notif.read_at && <div className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0" />}
-                          <span className="text-sm font-semibold text-midnight truncate">{notif.title}</span>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            {!notif.read_at && <div className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0" />}
+                            <span className="text-sm font-semibold text-midnight truncate max-w-[160px]">{notif.title}</span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              deleteNotification(notif.id)
+                            }}
+                            className="text-rose-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors"
+                            title="Clear message"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                         <span className="text-xs text-midnight/60">{notif.message}</span>
                         <span className="text-[10px] text-midnight/40 mt-1">
@@ -974,16 +1004,18 @@ export function AdminDashboard() {
 
   const [previewMaterial, setPreviewMaterial] = useState<{file_name: string, storage_path: string} | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [pendingCoursesCount, setPendingCoursesCount] = useState(0)
 
   const fetchData = async () => {
     setLoading(true)
     try {
       console.log('Fetching data for Admin Dashboard...')
-      const [trRes, trnRes, admRes, logRes] = await Promise.all([
+      const [trRes, trnRes, admRes, logRes, coursesRes] = await Promise.all([
         supabase.from('trainees').select('*').order('created_at', { ascending: false }),
         supabase.from('trainers').select('*').order('created_at', { ascending: false }),
         supabase.from('admins').select('*').order('created_at', { ascending: false }),
         supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('courses').select('id', { count: 'exact' }).eq('status', 'pending_review'),
       ])
       
       console.log('Trainees fetch result:', trRes)
@@ -999,6 +1031,7 @@ export function AdminDashboard() {
       console.log('Combined users:', allUsers)
       setUsers(allUsers as any)
       if (logRes.data) setLogs(logRes.data)
+      setPendingCoursesCount(coursesRes.count || 0)
     } catch (e) {
       console.error('Exception in fetchData:', e)
     } finally {
@@ -1199,7 +1232,8 @@ export function AdminDashboard() {
         icon: tab.icon,
         badge: tab.key === 'trainees' ? pendingTrainees || undefined :
                tab.key === 'trainers' ? pendingTrainers || undefined :
-               tab.key === 'admins' ? pendingAdmins || undefined : undefined,
+               tab.key === 'admins' ? pendingAdmins || undefined :
+               tab.key === 'courses' ? pendingCoursesCount || undefined : undefined,
         isActive: activeTab === tab.key,
         onClick: () => setActiveTab(tab.key as any)
       }))}
@@ -1249,8 +1283,8 @@ export function AdminDashboard() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tabs moved to sidebar */}
-          <motion.div variants={fadeUp} className="lg:col-span-2 space-y-4 min-w-0">
+          {/* Main Content Area */}
+          <motion.div variants={fadeUp} className={`space-y-4 min-w-0 ${activeTab === 'overview' ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
 
             {/* Tab: Overview */}
             <AnimatePresence mode="wait">
@@ -1704,8 +1738,9 @@ export function AdminDashboard() {
           </motion.div>
 
           {/* Recent Activity Sidebar */}
-          <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm flex flex-col">
-            <div className="pb-4 border-b border-purple-500/10">
+          {activeTab === 'overview' && (
+            <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm flex flex-col">
+              <div className="pb-4 border-b border-purple-500/10">
               <h3 className="text-base font-bold text-midnight">System Activity</h3>
               <p className="text-xs text-midnight/50">Live audit events</p>
             </div>
@@ -1715,6 +1750,7 @@ export function AdminDashboard() {
               ))}
             </div>
           </motion.div>
+          )}
         </div>
 
         {/* Quick Actions */}
