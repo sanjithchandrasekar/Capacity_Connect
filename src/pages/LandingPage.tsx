@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { StarfieldCanvas } from '@/components/space/StarfieldCanvas';
 import { StickyScrollFeatures } from '@/components/landing/StickyScrollFeatures';
+import { MissionExplodedView } from '@/components/landing/MissionExplodedView';
 import {
   BookOpen,
   GraduationCap,
@@ -56,7 +57,7 @@ import {
 function AnimatedCounter({
   target,
   suffix = '',
-  duration = 2.2,
+  duration = 1.8,
 }: {
   target: number;
   suffix?: string;
@@ -64,27 +65,35 @@ function AnimatedCounter({
 }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement | null>(null);
-  const isInView = useInView(ref, { once: true, margin: '-40px' });
+  const isInView = useInView(ref, { once: false, margin: '-20px' });
 
   useEffect(() => {
-    if (!isInView) return;
+    let animationFrameId: number;
 
-    let startTimestamp: number | null = null;
-    const step = (timestamp: number) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / (duration * 1000), 1);
-      // Ease out cubic
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(easeOut * target));
+    if (isInView) {
+      let startTimestamp: number | null = null;
+      const step = (timestamp: number) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / (duration * 1000), 1);
+        // Ease out cubic for smooth accelerating-to-settling counter
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        setCount(Math.floor(easeOut * target));
 
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        setCount(target);
-      }
+        if (progress < 1) {
+          animationFrameId = requestAnimationFrame(step);
+        } else {
+          setCount(target);
+        }
+      };
+
+      animationFrameId = requestAnimationFrame(step);
+    } else {
+      setCount(0);
+    }
+
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
-
-    requestAnimationFrame(step);
   }, [isInView, target, duration]);
 
   return (
@@ -147,10 +156,10 @@ const stats = [
     suffix: '+',
     icon: BookOpen,
     desc: 'All MoES-certified',
-    glow: 'from-purple-500/10 to-purple-500/0',
-    border: 'border-purple-200 hover:border-purple-300',
-    iconColor: 'text-purple-600',
-    iconBg: 'bg-purple-50 border border-purple-200',
+    glow: 'from-cyan-500/20 to-transparent',
+    border: 'border-cyan-500/30 hover:border-cyan-400',
+    iconColor: 'text-cyan-400',
+    iconBg: 'bg-cyan-950/80 border border-cyan-500/40',
   },
   {
     label: 'Active Users',
@@ -158,10 +167,10 @@ const stats = [
     suffix: '+',
     icon: Users,
     desc: 'Real scientists, real officers',
-    glow: 'from-pink-500/10 to-pink-500/0',
-    border: 'border-pink-200 hover:border-pink-300',
-    iconColor: 'text-pink-600',
-    iconBg: 'bg-pink-50 border border-pink-200',
+    glow: 'from-sky-500/20 to-transparent',
+    border: 'border-sky-500/30 hover:border-sky-400',
+    iconColor: 'text-sky-400',
+    iconBg: 'bg-sky-950/80 border border-sky-500/40',
   },
   {
     label: 'Completion Rate',
@@ -169,10 +178,10 @@ const stats = [
     suffix: '%',
     icon: BarChart3,
     desc: 'Learners who actually finish',
-    glow: 'from-orange-500/10 to-orange-500/0',
-    border: 'border-orange-200 hover:border-orange-300',
-    iconColor: 'text-orange-600',
-    iconBg: 'bg-orange-50 border border-orange-200',
+    glow: 'from-amber-500/20 to-transparent',
+    border: 'border-amber-500/30 hover:border-amber-400',
+    iconColor: 'text-amber-400',
+    iconBg: 'bg-amber-950/80 border border-amber-500/40',
   },
   {
     label: 'Certificates Issued',
@@ -180,10 +189,10 @@ const stats = [
     suffix: '+',
     icon: Star,
     desc: 'Credentials that hold up',
-    glow: 'from-cyan-500/10 to-cyan-500/0',
-    border: 'border-cyan-200 hover:border-cyan-300',
-    iconColor: 'text-cyan-600',
-    iconBg: 'bg-cyan-50 border border-cyan-200',
+    glow: 'from-emerald-500/20 to-transparent',
+    border: 'border-emerald-500/30 hover:border-emerald-400',
+    iconColor: 'text-emerald-400',
+    iconBg: 'bg-emerald-950/80 border border-emerald-500/40',
   },
 ];
 
@@ -192,31 +201,31 @@ const roles = [
     icon: GraduationCap,
     title: 'Trainees & Field Scientists',
     badge: 'Operational Learning',
-    desc: 'Learn the way field work actually happens — hands-on radar labs, real assessments, and a certificate that means something when you show it.',
+    desc: 'Learn the way field work actually happens — hands-on radar labs, real telemetry assessments, and verifiable government micro-credentials.',
     highlights: [
       'Interactive satellite & telemetry lab modules',
       'Progress tracking with skill competency maps',
       'Verifiable government micro-credentials',
     ],
-    border: 'border-purple-200 hover:border-purple-400',
-    bg: 'bg-white',
-    iconBg: 'bg-gradient-to-br from-purple-600 to-indigo-600 shadow-md shadow-purple-600/25',
-    badgeColor: 'text-purple-800 bg-purple-50 border-purple-200',
+    border: 'border-cyan-500/30 hover:border-cyan-400',
+    bg: 'bg-[#081022]/90',
+    iconBg: 'bg-gradient-to-br from-cyan-600 to-blue-700 shadow-lg shadow-cyan-600/30',
+    badgeColor: 'text-cyan-300 bg-cyan-950/80 border-cyan-500/40',
   },
   {
     icon: BookOpen,
     title: 'Trainers & Domain Experts',
     badge: 'Content Authoring',
-    desc: 'Spend less time grading, more time teaching. Build your course once, let the platform handle scheduling and scoring.',
+    desc: 'Spend less time grading, more time teaching. Build your course once, let the platform handle telemetry simulation grading and cohort analytics.',
     highlights: [
       'Multi-format lecture & simulation builder',
       'Real-time student cohort performance analytics',
       'Automated assessment generation & scoring',
     ],
-    border: 'border-pink-200 hover:border-pink-400',
-    bg: 'bg-white',
-    iconBg: 'bg-gradient-to-br from-pink-600 to-rose-600 shadow-md shadow-pink-600/25',
-    badgeColor: 'text-pink-800 bg-pink-50 border-pink-200',
+    border: 'border-amber-500/30 hover:border-amber-400',
+    bg: 'bg-[#081022]/90',
+    iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30',
+    badgeColor: 'text-amber-300 bg-amber-950/80 border-amber-500/40',
   },
 ];
 
@@ -224,50 +233,65 @@ const upcomingCourses = [
   {
     title: 'Dual-Pol Doppler Radar & Severe Storm Nowcasting',
     status: 'Pre-Registration Open',
-    statusColor: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-    dotColor: 'bg-emerald-500',
+    statusColor: 'text-emerald-300 bg-emerald-950/80 border-emerald-500/40',
+    dotColor: 'bg-emerald-400',
     date: 'Starts Oct 15, 2026',
-    duration: '4 Weeks • Live Radar Labs',
+    duration: '4 Weeks',
+    format: 'Live Radar Labs',
+    seatsLeft: '24 Seats Left',
     level: 'Advanced Specialist',
     department: 'IMD Radar Operations Division',
+    badge: 'IMD-ROD',
     desc: "Go deep on polarimetric radar and real-time storm tracking, with live radar feeds you'll actually use in the field.",
+    keySkills: ['Polarimetric Refl.', 'Hydrometeor Class.', 'Mesocyclone Detection'],
     icon: Radio,
-    color: 'from-purple-50/80 via-white to-purple-50/40',
-    border: 'border-purple-200 hover:border-purple-400',
-    glow: 'from-purple-500/10 to-transparent',
-    iconBg: 'bg-purple-100/90 border border-purple-200 text-purple-700',
+    color: 'from-[#081226] via-[#060D1E] to-[#040814]',
+    border: 'border-cyan-500/30 hover:border-cyan-400',
+    glow: 'from-cyan-500/20 via-sky-500/10 to-transparent',
+    iconBg: 'bg-gradient-to-br from-cyan-950 to-blue-950 border border-cyan-500/40 text-cyan-400',
+    accentColor: 'text-cyan-400',
   },
   {
     title: 'AI & Deep Learning in Numerical Weather Prediction',
-    status: 'Limited 60 Seats',
-    statusColor: 'text-pink-700 bg-pink-50 border-pink-200',
-    dotColor: 'bg-pink-500',
+    status: 'Limited Cohort',
+    statusColor: 'text-sky-300 bg-sky-950/80 border-sky-500/40',
+    dotColor: 'bg-sky-400',
     date: 'Starts Nov 02, 2026',
-    duration: '6 Weeks • Hybrid Cohort',
+    duration: '6 Weeks',
+    format: 'HPC Supercomputing',
+    seatsLeft: '18 Seats Left',
     level: 'Specialized Track',
     department: 'MoES High Performance Computing',
+    badge: 'MoES-HPC',
     desc: 'Hands-on machine learning for weather models and ensemble forecasts, built for real computational pipelines.',
+    keySkills: ['Graph Neural Nets', 'Ensemble Prediction', 'CUDA Acceleration'],
     icon: Cpu,
-    color: 'from-pink-50/80 via-white to-pink-50/40',
-    border: 'border-pink-200 hover:border-pink-400',
-    glow: 'from-pink-500/10 to-transparent',
-    iconBg: 'bg-pink-100/90 border border-pink-200 text-pink-700',
+    color: 'from-[#081226] via-[#060D1E] to-[#040814]',
+    border: 'border-sky-500/30 hover:border-sky-400',
+    glow: 'from-sky-500/20 via-blue-500/10 to-transparent',
+    iconBg: 'bg-gradient-to-br from-sky-950 to-indigo-950 border border-sky-500/40 text-sky-400',
+    accentColor: 'text-sky-400',
   },
   {
     title: 'Coastal Early Warning & Ocean Telemetry Protocol',
-    status: 'Announcing Soon',
-    statusColor: 'text-amber-800 bg-amber-50 border-amber-200',
-    dotColor: 'bg-amber-500',
+    status: 'Fast Filling',
+    statusColor: 'text-amber-300 bg-amber-950/80 border-amber-500/40',
+    dotColor: 'bg-amber-400',
     date: 'Starts Dec 01, 2026',
-    duration: '3 Weeks • Field & Web',
+    duration: '3 Weeks',
+    format: 'Field Buoy & In-Situ',
+    seatsLeft: '12 Seats Left',
     level: 'Executive Protocol',
     department: 'INCOIS & IMD Cyclone Center',
+    badge: 'INCOIS-MoES',
     desc: 'Master storm surge alerting and ocean buoy data workflows alongside joint INCOIS and IMD teams.',
+    keySkills: ['Tsunami Sensor Array', 'Storm Surge Modeling', 'In-Situ Buoy QC'],
     icon: Satellite,
-    color: 'from-orange-50/80 via-white to-orange-50/40',
-    border: 'border-orange-200 hover:border-orange-400',
-    glow: 'from-orange-500/10 to-transparent',
-    iconBg: 'bg-orange-100/90 border border-orange-200 text-orange-700',
+    color: 'from-[#081226] via-[#060D1E] to-[#040814]',
+    border: 'border-amber-500/30 hover:border-amber-400',
+    glow: 'from-amber-500/20 via-orange-500/10 to-transparent',
+    iconBg: 'bg-gradient-to-br from-amber-950 to-orange-950 border border-amber-500/40 text-amber-400',
+    accentColor: 'text-amber-400',
   },
 ];
 
@@ -357,14 +381,14 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-midnight font-sans relative selection:bg-pink-500 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#030712] text-white font-sans relative selection:bg-cyan-500 selection:text-white overflow-x-hidden">
       {/* Background Starfield Particle Canvas */}
       <StarfieldCanvas />
 
-      {/* Decorative subtle ambient glow orbs */}
-      <div className="pointer-events-none fixed -top-40 -left-40 w-[650px] h-[650px] rounded-full bg-purple-400/10 blur-[150px] z-0" />
-      <div className="pointer-events-none fixed top-1/3 -right-40 w-[600px] h-[600px] rounded-full bg-pink-400/10 blur-[150px] z-0" />
-      <div className="pointer-events-none fixed bottom-10 left-1/4 w-[500px] h-[500px] rounded-full bg-orange-400/10 blur-[150px] z-0" />
+      {/* Decorative subtle ambient atmospheric glow orbs */}
+      <div className="pointer-events-none fixed -top-40 -left-40 w-[650px] h-[650px] rounded-full bg-cyan-500/10 blur-[150px] z-0" />
+      <div className="pointer-events-none fixed top-1/3 -right-40 w-[600px] h-[600px] rounded-full bg-blue-500/10 blur-[150px] z-0" />
+      <div className="pointer-events-none fixed bottom-10 left-1/4 w-[500px] h-[500px] rounded-full bg-amber-500/10 blur-[150px] z-0" />
 
       {/* ========================================================================= */}
       {/* 1. TOP NAVBAR (Clean Transparent, Get Started in Middle, No Sign In)      */}
@@ -372,7 +396,7 @@ export function LandingPage() {
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? 'bg-[#FAF9F6]/85 backdrop-blur-xl border-b border-purple-100/60 py-3'
+            ? 'bg-[#040814]/90 backdrop-blur-xl border-b border-cyan-500/20 py-3 shadow-2xl shadow-cyan-950/60'
             : 'bg-transparent py-5'
         }`}
       >
@@ -381,8 +405,8 @@ export function LandingPage() {
           <Link to="/" onClick={scrollToTop} className="flex items-center gap-3 group cursor-pointer shrink-0">
             <img src="/logo.png" alt="Capacity Connect Logo" className="w-8 h-8 object-contain shrink-0 group-hover:scale-105 transition-transform" />
             <span className="text-lg font-bold font-display tracking-tight leading-tight">
-              <span className={scrolled ? 'text-purple-900' : 'text-white'}>Capacity</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400">
+              <span className="text-white">Capacity</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-400">
                 {' '}
                 Connect
               </span>
@@ -393,35 +417,27 @@ export function LandingPage() {
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
             <Link
               to="/courses"
-              className={`text-sm font-semibold transition-colors ${
-                scrolled ? 'text-midnight/80 hover:text-purple-700' : 'text-white/90 hover:text-white drop-shadow-sm'
-              }`}
+              className="text-sm font-semibold text-slate-300 hover:text-cyan-400 transition-colors drop-shadow-sm"
             >
               Courses
             </Link>
             <button
               type="button"
               onClick={scrollToAbout}
-              className={`text-sm font-semibold transition-colors cursor-pointer ${
-                scrolled ? 'text-midnight/80 hover:text-purple-700' : 'text-white/90 hover:text-white drop-shadow-sm'
-              }`}
+              className="text-sm font-semibold text-slate-300 hover:text-cyan-400 transition-colors cursor-pointer drop-shadow-sm"
             >
               About
             </button>
             <button
               type="button"
               onClick={() => setIsContactOpen(true)}
-              className={`text-sm font-semibold transition-colors cursor-pointer ${
-                scrolled ? 'text-midnight/80 hover:text-purple-700' : 'text-white/90 hover:text-white drop-shadow-sm'
-              }`}
+              className="text-sm font-semibold text-slate-300 hover:text-cyan-400 transition-colors cursor-pointer drop-shadow-sm"
             >
               Contact
             </button>
             <Link
               to="/register"
-              className={`text-sm font-semibold transition-colors ${
-                scrolled ? 'text-midnight/80 hover:text-purple-700' : 'text-white/90 hover:text-white drop-shadow-sm'
-              }`}
+              className="text-sm font-semibold text-cyan-300 hover:text-white transition-colors drop-shadow-sm"
             >
               Get Started
             </Link>
@@ -435,9 +451,7 @@ export function LandingPage() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                scrolled ? 'text-midnight/80 hover:text-purple-700' : 'text-white hover:text-pink-300'
-              }`}
+              className="p-2 rounded-xl transition-colors cursor-pointer text-white hover:text-cyan-300"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -452,19 +466,19 @@ export function LandingPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden border-t border-purple-100 bg-[#FAF9F6]/95 backdrop-blur-xl px-6 py-4 mt-3 space-y-3 shadow-xl"
+              className="md:hidden border-t border-cyan-500/20 bg-[#040814]/98 backdrop-blur-xl px-6 py-4 mt-3 space-y-3 shadow-2xl"
             >
               <Link
                 to="/courses"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm font-semibold text-midnight/80 hover:text-purple-700 py-1.5"
+                className="block text-sm font-semibold text-slate-300 hover:text-cyan-400 py-1.5"
               >
                 Courses
               </Link>
               <button
                 type="button"
                 onClick={scrollToAbout}
-                className="block w-full text-left text-sm font-semibold text-midnight/80 hover:text-purple-700 py-1.5 cursor-pointer"
+                className="block w-full text-left text-sm font-semibold text-slate-300 hover:text-cyan-400 py-1.5 cursor-pointer"
               >
                 About
               </button>
@@ -474,14 +488,14 @@ export function LandingPage() {
                   setMobileMenuOpen(false);
                   setIsContactOpen(true);
                 }}
-                className="block w-full text-left text-sm font-semibold text-midnight/80 hover:text-purple-700 py-1.5 cursor-pointer"
+                className="block w-full text-left text-sm font-semibold text-slate-300 hover:text-cyan-400 py-1.5 cursor-pointer"
               >
                 Contact
               </button>
               <Link
                 to="/register"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm font-semibold text-midnight/80 hover:text-purple-700 py-1.5"
+                className="block text-sm font-semibold text-cyan-300 hover:text-white py-1.5"
               >
                 Get Started
               </Link>
@@ -512,10 +526,10 @@ export function LandingPage() {
             className="w-full flex flex-col items-center text-center justify-center max-w-4xl mx-auto"
           >
             {/* Tier 1: Eyebrow Tag Pill (Uppercase, letter-spaced, Ashoka Chakra Indian Emblem) */}
-            <motion.div variants={fadeUp} className="mb-4 sm:mb-5">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 text-zinc-200 backdrop-blur-md text-[10px] sm:text-xs font-semibold tracking-wider uppercase shadow-sm">
-                <IndianAshokaChakraIcon className="w-3.5 h-3.5 shrink-0" />
-                Ministry of Earth Sciences, Government of India
+            <motion.div variants={fadeUp} className="mb-4 sm:mb-5 max-w-full flex justify-center">
+              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-1 rounded-full bg-white/10 border border-white/20 text-zinc-200 backdrop-blur-md text-[8.5px] min-[380px]:text-[9.5px] sm:text-xs font-semibold tracking-wide sm:tracking-wider uppercase shadow-sm whitespace-nowrap max-w-full">
+                <IndianAshokaChakraIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-white" />
+                <span className="truncate">Ministry of Earth Sciences, Government of India</span>
               </div>
             </motion.div>
 
@@ -555,7 +569,7 @@ export function LandingPage() {
           className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-1.5 text-white/70 hover:text-white transition-colors group cursor-pointer"
           aria-label="Scroll to explore"
         >
-          <span className="text-[10px] font-mono uppercase tracking-widest text-white/70 group-hover:text-pink-400 transition-colors">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-white/70 group-hover:text-cyan-400 transition-colors">
             Scroll to explore
           </span>
           <div className="w-7 h-7 rounded-full border border-white/30 bg-black/40 backdrop-blur-md flex items-center justify-center group-hover:border-white shadow-sm transition-all">
@@ -565,75 +579,65 @@ export function LandingPage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. STICKY SCROLL SCROLLYTELLING SECTION                                    */}
+      {/* 2. CORE PLATFORM ARCHITECTURE (Sticky Scroll Scrollytelling)              */}
       {/* ========================================================================= */}
       <StickyScrollFeatures />
 
       {/* ========================================================================= */}
-      {/* 4. FINAL CALL TO ACTION (CTA BAND)                                       */}
+      {/* 3. STATS OVERVIEW SECTION (200+ Courses, 5000+ Users, 94% Completion, etc) */}
       {/* ========================================================================= */}
-      <section className="relative py-28 bg-gradient-to-b from-[#FAF9F6] via-purple-50/40 to-white border-t border-purple-100 overflow-hidden">
-        {/* Orbital rings background visual */}
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-purple-300/30 animate-orbit-slow" />
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full border border-pink-300/20 animate-orbit-slow" />
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-purple-400/10 via-pink-400/10 to-orange-400/10 blur-3xl" />
-
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-100/90 border border-purple-200 text-purple-800 text-xs font-semibold uppercase tracking-wider mb-6 shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-            Join the Next Generation of Earth Scientists
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display text-midnight tracking-[-0.02em] leading-tight mb-6">
-            Ready to Build Capacity for a{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500">
-              Changing Climate?
-            </span>
-          </h2>
-
-          <p className="text-midnight/70 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10 tracking-[-0.01em]">
-            Join hundreds of field officers, meteorologists, and data analysts across India. Get started
-            today with official government certification tracks.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/register" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto h-14 px-10 text-base font-semibold bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 hover:opacity-95 text-white shadow-2xl shadow-pink-500/25 rounded-xl tracking-[-0.01em]"
+      <section id="stats-section" className="relative py-20 bg-[#030712] border-t border-cyan-500/20">
+        <div className="max-w-7xl mx-auto px-6">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.2 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          >
+            {stats.map((s) => (
+              <motion.div
+                key={s.label}
+                variants={fadeUp}
+                className={`group relative bg-[#070E20]/90 border ${s.border} rounded-2xl p-6 text-center hover:scale-[1.02] shadow-xl shadow-cyan-950/40 transition-all duration-300 overflow-hidden`}
               >
-                Join the Platform
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </Link>
-            <Link to="/courses" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto h-14 px-8 text-base font-semibold border-purple-300/80 bg-transparent hover:bg-purple-100/50 text-midnight rounded-xl shadow-none hover:border-purple-500 transition-all duration-300 tracking-[-0.01em]"
-              >
-                Browse All Courses
-                <Compass className="ml-2 w-4 h-4 text-pink-600" />
-              </Button>
-            </Link>
-          </div>
+                {/* Background gradient glow on hover */}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${s.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}
+                />
+
+                <div className="relative z-10">
+                  <div
+                    className={`w-12 h-12 rounded-xl ${s.iconBg} flex items-center justify-center mx-auto mb-4 ${s.iconColor} group-hover:scale-110 transition-transform duration-300 shadow-md`}
+                  >
+                    <s.icon className="w-6 h-6" />
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-extrabold font-display text-white mb-1 tracking-tight">
+                    <AnimatedCounter target={s.target} suffix={s.suffix} />
+                  </div>
+                  <div className="text-sm font-semibold text-slate-200 mb-1 tracking-[-0.01em]">{s.label}</div>
+                  <div className="text-xs text-slate-400 font-mono">{s.desc}</div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. "BUILT FOR EVERY ROLE" (Trainees, Trainers, Coordinators)              */}
+      {/* 4. "BUILT FOR EVERY ROLE" (Trainees, Trainers, Coordinators)              */}
       {/* ========================================================================= */}
-      <section id="roles-section" className="relative py-24 bg-white border-t border-purple-100">
+      <section id="roles-section" className="relative py-24 bg-[#040814] border-t border-cyan-500/20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-100/90 border border-purple-200 text-purple-800 text-xs font-semibold uppercase tracking-wider mb-4 shadow-sm">
-              <Layers className="w-3.5 h-3.5 text-pink-600" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/70 border border-cyan-500/30 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-4 shadow-lg shadow-cyan-950/50">
+              <Layers className="w-3.5 h-3.5 text-cyan-400" />
               Role-Specific Workspaces
             </div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-display text-midnight tracking-[-0.02em] mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-display text-white tracking-[-0.02em] mb-4">
               Designed for Every Stakeholder
             </h2>
-            <p className="text-midnight/60 text-base sm:text-lg tracking-[-0.01em]">
+            <p className="text-slate-300 text-base sm:text-lg tracking-[-0.01em]">
               Tailored dashboards and tools configured specifically for field trainees, scientific
               instructors, and ministry administrators.
             </p>
@@ -647,7 +651,7 @@ export function LandingPage() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className={`group relative p-8 sm:p-10 rounded-3xl border ${r.border} ${r.bg} backdrop-blur-xl shadow-lg shadow-purple-900/5 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 overflow-hidden flex flex-col justify-between`}
+                className={`group relative p-8 sm:p-10 rounded-3xl border ${r.border} ${r.bg} backdrop-blur-xl shadow-2xl shadow-cyan-950/60 hover:shadow-cyan-500/10 transition-all duration-500 hover:-translate-y-1 overflow-hidden flex flex-col justify-between`}
               >
                 <div className="relative z-10">
                   <div className="flex items-center justify-between gap-4 mb-6">
@@ -661,32 +665,32 @@ export function LandingPage() {
                     </span>
                   </div>
 
-                  <h3 className="text-2xl font-bold font-display text-midnight mb-3 tracking-[-0.015em]">
+                  <h3 className="text-2xl font-bold font-display text-white mb-3 tracking-[-0.015em]">
                     {r.title}
                   </h3>
-                  <p className="text-midnight/70 text-sm sm:text-base leading-relaxed mb-6 tracking-[-0.01em]">
+                  <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6 tracking-[-0.01em]">
                     {r.desc}
                   </p>
 
                   <div className="space-y-3 mb-8">
                     {r.highlights.map((h) => (
-                      <div key={h} className="flex items-start gap-3 text-xs sm:text-sm text-midnight/80 tracking-[-0.005em]">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div key={h} className="flex items-start gap-3 text-xs sm:text-sm text-slate-200 tracking-[-0.005em]">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                         <span>{h}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-purple-100 flex items-center justify-between relative z-10">
+                <div className="pt-6 border-t border-cyan-500/20 flex items-center justify-between relative z-10">
                   <Link
                     to="/register"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-pink-600 hover:text-pink-700 transition-colors tracking-[-0.01em]"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300 transition-colors tracking-[-0.01em]"
                   >
                     <span>Get Started in this Role</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
-                  <span className="text-xs font-mono text-midnight/40">Fast-track Onboarding</span>
+                  <span className="text-xs font-mono text-slate-400">Fast-track Onboarding</span>
                 </div>
               </motion.div>
             ))}
@@ -695,96 +699,97 @@ export function LandingPage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 6. MISSION / IMPACT STATEMENT BAND & GLOWING STATS                        */}
+      {/* 5. "3D LAYER SPLIT / EXPLODED VIEW" MISSION SECTION                        */}
       {/* ========================================================================= */}
-      <section id="mission-section" className="relative py-24 bg-[#FAF9F6] border-t border-purple-100">
-        <div className="max-w-7xl mx-auto px-6">
-          {/* Mission statement */}
-          <div className="relative rounded-3xl p-10 md:p-14 bg-white border border-purple-100/80 shadow-xl shadow-purple-900/5 mb-16 overflow-hidden">
-            <div className="pointer-events-none absolute -top-32 -left-32 w-80 h-80 bg-purple-400/10 rounded-full blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-32 -right-32 w-80 h-80 bg-orange-400/10 rounded-full blur-3xl" />
+      <MissionExplodedView id="mission-section" />
 
-            <div className="max-w-4xl mx-auto text-center relative z-10">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-xs font-mono uppercase tracking-wider text-purple-800 mb-6">
-                <Globe className="w-3.5 h-3.5 text-pink-600" />
-                National Earth Sciences Mission
-              </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold font-display text-midnight tracking-[-0.02em] leading-tight mb-6">
-                Strengthening India&apos;s Meteorological Readiness for a Changing Climate
-              </h2>
-              <p className="text-midnight/70 text-base sm:text-lg leading-relaxed font-normal max-w-3xl mx-auto tracking-[-0.01em]">
-                One platform, every skill IMD and MoES need &mdash; cyclone tracking, monsoon forecasting, seismology, ocean observation &mdash; built for the people doing the actual work.
-              </p>
-            </div>
+      {/* ========================================================================= */}
+      {/* 6. FINAL CALL TO ACTION (CTA BAND)                                       */}
+      {/* ========================================================================= */}
+      <section className="relative py-28 bg-gradient-to-b from-[#040814] via-[#081226] to-[#030712] border-t border-cyan-500/20 overflow-hidden">
+        {/* Orbital rings background visual */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-cyan-500/20 animate-orbit-slow" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full border border-amber-500/15 animate-orbit-slow" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-cyan-500/15 via-blue-500/15 to-amber-500/15 blur-3xl" />
+
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-950/60 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-6 shadow-lg shadow-amber-950/50">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            Join the Next Generation of Earth Scientists
           </div>
 
-          {/* Glowing Stat Cards */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            {stats.map((s) => (
-              <motion.div
-                key={s.label}
-                variants={fadeUp}
-                className={`group relative bg-white border ${s.border} rounded-2xl p-6 text-center hover:scale-[1.02] shadow-md shadow-purple-900/5 hover:shadow-xl transition-all duration-300 overflow-hidden`}
-              >
-                {/* Background gradient glow on hover */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${s.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}
-                />
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display text-white tracking-[-0.02em] leading-tight mb-6">
+            Ready to Build Capacity for a{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-400">
+              Changing Climate?
+            </span>
+          </h2>
 
-                <div className="relative z-10">
-                  <div
-                    className={`w-12 h-12 rounded-xl ${s.iconBg} flex items-center justify-center mx-auto mb-4 ${s.iconColor} group-hover:scale-110 transition-transform duration-300 shadow-sm`}
-                  >
-                    <s.icon className="w-6 h-6" />
-                  </div>
-                  <div className="text-3xl sm:text-4xl font-extrabold font-display text-midnight mb-1 tracking-tight">
-                    <AnimatedCounter target={s.target} suffix={s.suffix} />
-                  </div>
-                  <div className="text-sm font-semibold text-midnight/90 mb-1 tracking-[-0.01em]">{s.label}</div>
-                  <div className="text-xs text-midnight/50 font-mono">{s.desc}</div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+          <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10 tracking-[-0.01em]">
+            Join hundreds of field officers, meteorologists, and data analysts across India. Get started
+            today with official government certification tracks.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/register" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto h-14 px-10 text-base font-semibold bg-gradient-to-r from-cyan-500 via-blue-600 to-amber-500 hover:opacity-95 text-white shadow-2xl shadow-cyan-500/25 rounded-xl tracking-[-0.01em]"
+              >
+                Join the Platform
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </Link>
+            <Link to="/courses" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto h-14 px-8 text-base font-semibold border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-white rounded-xl shadow-none hover:border-cyan-400 transition-all duration-300 tracking-[-0.01em]"
+              >
+                Browse All Courses
+                <Compass className="ml-2 w-4 h-4 text-cyan-400" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* ========================================================================= */}
       {/* 7. UPCOMING COURSES & ANNOUNCEMENTS PREVIEW                               */}
       {/* ========================================================================= */}
-      <section id="courses-preview" className="relative py-24 bg-white border-t border-purple-100">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+      <section
+        id="courses-preview"
+        className="relative py-24 sm:py-32 bg-[#030712] border-t border-cyan-500/20 overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Inter',sans-serif]"
+      >
+        {/* Ambient atmospheric backdrop glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-cyan-500/5 rounded-full blur-[140px] pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-pink-50 border border-pink-200 text-pink-700 text-xs font-semibold uppercase tracking-wider mb-4 shadow-sm">
-                <Sparkles className="w-3.5 h-3.5 text-pink-600 animate-pulse" />
-                Upcoming Announcements
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 text-zinc-200 text-[11px] font-medium tracking-wide uppercase mb-3 sm:mb-4 shadow-sm backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Upcoming Announcements</span>
               </div>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-display text-midnight tracking-[-0.02em]">
-                Upcoming Specialized Earth Sciences Tracks
+              <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-[-0.025em] leading-[1.08] text-white">
+                Specialized Earth Sciences Tracks.
               </h2>
-              <p className="text-midnight/60 text-sm sm:text-base max-w-2xl mt-3 tracking-[-0.01em]">
-                Pre-register for next-generation meteorological cohorts, high-resolution radar masterclasses, and executive certification tracks.
+              <p className="text-base sm:text-xl md:text-2xl font-normal text-slate-200 tracking-[-0.015em] leading-snug mt-2 sm:mt-3 max-w-2xl">
+                Pre-register for next-generation cohorts and masterclasses.
               </p>
             </div>
             <Link to="/courses">
               <Button
                 variant="outline"
-                className="border-pink-200 bg-pink-50/60 text-pink-700 hover:text-pink-800 hover:bg-pink-100 rounded-xl shadow-sm tracking-[-0.01em]"
+                className="border-white/20 bg-white/5 hover:bg-white text-zinc-200 hover:text-black rounded-full shadow-sm transition-all duration-300 tracking-[-0.01em] group h-11 px-6 font-medium text-sm"
               >
-                View Complete Course Catalog
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <span>View Complete Catalog</span>
+                <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
             {upcomingCourses.map((c) => (
               <motion.div
                 key={c.title}
@@ -792,49 +797,72 @@ export function LandingPage() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className={`relative p-7 rounded-2xl bg-gradient-to-b ${c.color} border ${c.border} backdrop-blur-xl flex flex-col justify-between group transition-all duration-300 shadow-md hover:shadow-xl overflow-hidden`}
+                className={`relative p-5 sm:p-6 rounded-2xl bg-gradient-to-b ${c.color} border ${c.border} backdrop-blur-xl flex flex-col justify-between group transition-all duration-300 shadow-xl shadow-black/70 hover:shadow-[0_0_30px_rgba(0,210,255,0.12)] hover:-translate-y-1 overflow-hidden`}
               >
                 {/* Glow effect on hover */}
                 <div
-                  className={`absolute inset-0 bg-gradient-to-br ${c.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}
+                  className={`absolute inset-0 bg-gradient-to-br ${c.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}
                 />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10">
-                  {/* Icon & Department */}
+                  {/* Top Header: Icon + Badge + Department */}
                   <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${c.iconBg} shadow-sm`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.iconBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
                       <c.icon className="w-5 h-5" />
                     </div>
-                    <div className="text-xs font-mono text-midnight/60 line-clamp-1">
-                      {c.department}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-white/10 border border-white/15 text-slate-200 tracking-wider font-semibold">
+                          {c.badge}
+                        </span>
+                        <span className="text-[11px] font-mono text-cyan-400 font-medium truncate">{c.level}</span>
+                      </div>
+                      <div className="text-xs font-mono text-slate-400 truncate mt-0.5">
+                        {c.department}
+                      </div>
                     </div>
                   </div>
 
                   {/* Title & Desc */}
-                  <h3 className="text-xl font-bold font-display text-midnight mb-3 group-hover:text-purple-700 transition-colors leading-snug tracking-[-0.015em]">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors leading-snug tracking-[-0.02em] min-h-[52px] flex items-center">
                     {c.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-midnight/70 leading-relaxed mb-6 tracking-[-0.01em]">
+                  <p className="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed mb-4 tracking-[-0.01em] line-clamp-3">
                     {c.desc}
                   </p>
+
+                  {/* Key Skills Tags */}
+                  <div className="mb-4 flex flex-wrap gap-1.5">
+                    {c.keySkills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300 group-hover:border-cyan-500/30 transition-colors"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Card Footer with schedule and action */}
-                <div className="relative z-10 pt-4 border-t border-purple-100 flex flex-col gap-3">
-                  <div className="flex items-center justify-between text-xs font-mono text-midnight/70">
-                    <span className="flex items-center gap-1.5 text-midnight/80 font-semibold">
-                      <Calendar className="w-3.5 h-3.5 text-pink-600" />
-                      {c.date}
-                    </span>
-                    <span className="text-midnight/50 text-[11px]">{c.duration}</span>
+                {/* Card Footer with Schedule Grid and Pre-Register CTA */}
+                <div className="relative z-10 pt-3.5 border-t border-cyan-500/20 flex flex-col gap-3">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-300 px-1">
+                    <div className="flex items-center gap-1.5 text-slate-200 font-medium">
+                      <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>{c.date}</span>
+                    </div>
+                    <div className="text-slate-400">
+                      <span>{c.duration}</span>
+                    </div>
                   </div>
 
                   <Link
                     to="/register"
-                    className="w-full mt-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-purple-50 group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:via-pink-500 group-hover:to-orange-500 border border-purple-200 group-hover:border-transparent text-purple-900 group-hover:text-white font-semibold text-xs tracking-wide transition-all duration-300 shadow-none group-hover:shadow-md group-hover:shadow-pink-500/25"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-cyan-950/70 hover:bg-gradient-to-r hover:from-cyan-500 hover:via-blue-600 hover:to-amber-500 border border-cyan-500/30 hover:border-transparent text-cyan-200 hover:text-white font-semibold text-xs tracking-wide transition-all duration-300 shadow-none hover:shadow-lg hover:shadow-cyan-500/20 group/btn"
                   >
                     <span>Pre-Register Cohort</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:translate-x-1" />
                   </Link>
                 </div>
               </motion.div>
@@ -846,14 +874,14 @@ export function LandingPage() {
       {/* ========================================================================= */}
       {/* 8. TESTIMONIALS & TRUST BAND                                              */}
       {/* ========================================================================= */}
-      <section className="relative py-24 bg-[#FAF9F6] border-t border-purple-100">
+      <section className="relative py-24 bg-[#040814] border-t border-cyan-500/20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-100/90 border border-purple-200 text-purple-800 text-xs font-semibold uppercase tracking-wider mb-4 shadow-sm">
-              <Quote className="w-3.5 h-3.5 text-pink-600" />
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/70 border border-cyan-500/30 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-4 shadow-sm">
+              <Quote className="w-3.5 h-3.5 text-cyan-400" />
               Field Impact
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold font-display text-midnight tracking-[-0.02em] mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold font-display text-white tracking-[-0.02em] mb-4">
               Trusted by Meteorological Centres Across India
             </h2>
           </div>
@@ -866,16 +894,16 @@ export function LandingPage() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className="p-8 rounded-3xl bg-white border border-purple-100 shadow-md shadow-purple-900/5 hover:shadow-xl flex flex-col justify-between relative overflow-hidden transition-all duration-300"
+                className="p-8 rounded-3xl bg-[#070E20]/90 border border-cyan-500/20 shadow-2xl shadow-cyan-950/60 hover:border-cyan-400/40 flex flex-col justify-between relative overflow-hidden transition-all duration-300"
               >
-                <div className="text-pink-500/30 mb-4">
+                <div className="text-cyan-400/30 mb-4">
                   <Quote className="w-8 h-8" />
                 </div>
-                <p className="text-midnight/75 text-sm leading-relaxed mb-6 italic tracking-[-0.01em]">&ldquo;{t.quote}&rdquo;</p>
-                <div className="pt-4 border-t border-purple-100">
-                  <div className="text-sm font-bold text-midnight tracking-[-0.01em]">{t.author}</div>
-                  <div className="text-xs text-purple-700 font-semibold">{t.role}</div>
-                  <div className="text-[11px] font-mono text-midnight/50 mt-1">{t.division}</div>
+                <p className="text-slate-300 text-sm leading-relaxed mb-6 italic tracking-[-0.01em]">&ldquo;{t.quote}&rdquo;</p>
+                <div className="pt-4 border-t border-cyan-500/20">
+                  <div className="text-sm font-bold text-white tracking-[-0.01em]">{t.author}</div>
+                  <div className="text-xs text-cyan-400 font-semibold">{t.role}</div>
+                  <div className="text-[11px] font-mono text-slate-400 mt-1">{t.division}</div>
                 </div>
               </motion.div>
             ))}
@@ -884,27 +912,27 @@ export function LandingPage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 9. LIGHT THEME FOOTER                                                     */}
+      {/* 9. DEEP SPACE FOOTER                                                      */}
       {/* ========================================================================= */}
-      <footer className="relative z-10 bg-white border-t border-purple-100 py-12">
+      <footer className="relative z-10 bg-[#02050E] border-t border-cyan-500/20 py-12 text-slate-400">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <Link to="/" onClick={scrollToTop} className="flex items-center gap-3 mb-2 group cursor-pointer">
               <img src="/logo.png" alt="Capacity Connect" className="w-8 h-8 object-contain shrink-0 group-hover:scale-105 transition-transform" />
               <span className="text-xl font-bold font-display">
-                <span className="text-purple-900">Capacity</span>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500">
+                <span className="text-white">Capacity</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-400">
                   {' '}
                   Connect
                 </span>
               </span>
             </Link>
-            <p className="text-sm text-midnight/60 max-w-xl">
+            <p className="text-sm text-slate-400 max-w-xl">
               Digital Capacity Building & Learning Portal developed for the Ministry of Earth Sciences (MoES) & India Meteorological Department (IMD).
             </p>
           </div>
 
-          <div className="text-xs font-mono text-midnight/40 text-center md:text-right shrink-0">
+          <div className="text-xs font-mono text-slate-500 text-center md:text-right shrink-0">
             © 2026 Capacity Connect • All rights reserved.
           </div>
         </div>
@@ -914,42 +942,42 @@ export function LandingPage() {
       {/* 10. GET IN TOUCH MODAL DIALOG                                             */}
       {/* ========================================================================= */}
       <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
-        <DialogContent className="max-w-lg rounded-3xl bg-white border border-purple-100 shadow-2xl p-6 sm:p-8">
+        <DialogContent className="max-w-lg rounded-3xl bg-[#081022] border border-cyan-500/30 shadow-2xl text-white p-6 sm:p-8">
           <DialogHeader className="text-left space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold uppercase tracking-wider w-fit mb-1">
-              <Mail className="w-3.5 h-3.5 text-pink-600" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/70 text-cyan-300 text-xs font-semibold uppercase tracking-wider w-fit mb-1 border border-cyan-500/30">
+              <Mail className="w-3.5 h-3.5 text-cyan-400" />
               Contact & Inquiries
             </div>
-            <DialogTitle className="text-2xl font-bold font-display text-midnight tracking-tight">
+            <DialogTitle className="text-2xl font-bold font-display text-white tracking-tight">
               Get in Touch
             </DialogTitle>
-            <DialogDescription className="text-sm text-midnight/65">
+            <DialogDescription className="text-sm text-slate-300">
               Have questions about MoES certifications, Doppler radar training tracks, or institutional onboarding? Reach out to our team.
             </DialogDescription>
           </DialogHeader>
 
           {/* Quick contact info cards */}
           <div className="grid grid-cols-2 gap-3 my-1 text-xs">
-            <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-100 flex items-start gap-2.5">
-              <Mail className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-2xl bg-[#040816] border border-cyan-500/20 flex items-start gap-2.5">
+              <Mail className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-midnight block">Email Support</span>
-                <span className="text-midnight/60 text-[11px] block break-all">support@moes.gov.in</span>
+                <span className="font-bold text-white block">Email Support</span>
+                <span className="text-slate-400 text-[11px] block break-all">support@moes.gov.in</span>
               </div>
             </div>
-            <div className="p-3 rounded-2xl bg-pink-50/70 border border-pink-100 flex items-start gap-2.5">
-              <Phone className="w-4 h-4 text-pink-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-2xl bg-[#040816] border border-amber-500/20 flex items-start gap-2.5">
+              <Phone className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-midnight block">Helpline</span>
-                <span className="text-midnight/60 text-[11px] block">+91 11 24669500</span>
+                <span className="font-bold text-white block">Helpline</span>
+                <span className="text-slate-400 text-[11px] block">+91 11 24669500</span>
               </div>
             </div>
           </div>
 
           <form onSubmit={handleContactSubmit} className="space-y-3.5 mt-2">
             <div className="space-y-1.5">
-              <Label htmlFor="contact-name" className="text-xs font-semibold text-midnight/80">
-                Full Name <span className="text-red-500">*</span>
+              <Label htmlFor="contact-name" className="text-xs font-semibold text-slate-200">
+                Full Name <span className="text-red-400">*</span>
               </Label>
               <Input
                 id="contact-name"
@@ -957,13 +985,13 @@ export function LandingPage() {
                 placeholder="e.g. Dr. Rajesh Sharma"
                 value={contactForm.name}
                 onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                className="bg-purple-50/30 border-purple-200 text-midnight text-sm rounded-xl focus:border-pink-500"
+                className="bg-[#040816] border-slate-700 text-white placeholder:text-slate-500 text-sm rounded-xl focus:border-cyan-400"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="contact-email" className="text-xs font-semibold text-midnight/80">
-                Work / Official Email <span className="text-red-500">*</span>
+              <Label htmlFor="contact-email" className="text-xs font-semibold text-slate-200">
+                Work / Official Email <span className="text-red-400">*</span>
               </Label>
               <Input
                 id="contact-email"
@@ -972,12 +1000,12 @@ export function LandingPage() {
                 placeholder="name@imd.gov.in"
                 value={contactForm.email}
                 onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                className="bg-purple-50/30 border-purple-200 text-midnight text-sm rounded-xl focus:border-pink-500"
+                className="bg-[#040816] border-slate-700 text-white placeholder:text-slate-500 text-sm rounded-xl focus:border-cyan-400"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="contact-dept" className="text-xs font-semibold text-midnight/80">
+              <Label htmlFor="contact-dept" className="text-xs font-semibold text-slate-200">
                 Department / Organization (Optional)
               </Label>
               <Input
@@ -985,13 +1013,13 @@ export function LandingPage() {
                 placeholder="e.g. IMD Radar Operations, RMC Chennai"
                 value={contactForm.department}
                 onChange={(e) => setContactForm({ ...contactForm, department: e.target.value })}
-                className="bg-purple-50/30 border-purple-200 text-midnight text-sm rounded-xl focus:border-pink-500"
+                className="bg-[#040816] border-slate-700 text-white placeholder:text-slate-500 text-sm rounded-xl focus:border-cyan-400"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="contact-msg" className="text-xs font-semibold text-midnight/80">
-                Message / Inquiry <span className="text-red-500">*</span>
+              <Label htmlFor="contact-msg" className="text-xs font-semibold text-slate-200">
+                Message / Inquiry <span className="text-red-400">*</span>
               </Label>
               <textarea
                 id="contact-msg"
@@ -1000,14 +1028,14 @@ export function LandingPage() {
                 placeholder="How can we help your division?"
                 value={contactForm.message}
                 onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                className="w-full bg-purple-50/30 border border-purple-200 rounded-xl p-3 text-sm text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500/30 resize-none"
+                className="w-full bg-[#040816] border border-slate-700 rounded-xl p-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 resize-none"
               />
             </div>
 
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-11 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/20 hover:opacity-95"
+              className="w-full h-11 bg-gradient-to-r from-cyan-500 via-blue-600 to-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-cyan-500/25 hover:opacity-95"
             >
               {isSubmitting ? (
                 <>
