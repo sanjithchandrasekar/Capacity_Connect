@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
 import { Database } from '@/integrations/supabase/types'
@@ -43,6 +44,7 @@ export function useNotifications() {
         (payload) => {
           const newNotif = payload.new as Notification
           setNotifications((prev) => [newNotif, ...prev].slice(0, 10))
+          toast.info(newNotif.title, { description: newNotif.message })
         }
       )
       .on(
