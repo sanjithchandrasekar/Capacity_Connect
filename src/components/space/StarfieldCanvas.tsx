@@ -27,28 +27,28 @@ export function StarfieldCanvas({ className = '' }: { className?: string }) {
     let height = (canvas.height = canvas.parentElement?.clientHeight || window.innerHeight);
 
     const colors = [
-      '#ffffff',
-      '#dbeafe', // soft nebula blue
-      '#f5d0fe', // soft purple
-      '#fed7aa', // soft warm orange
-      '#bae6fd', // cyan-blue
+      '#9333ea', // purple
+      '#ec4899', // pink
+      '#f97316', // orange
+      '#0284c7', // cyan
+      '#8b5cf6', // violet
     ];
 
-    const starCount = Math.floor((width * height) / 8000);
+    const starCount = Math.floor((width * height) / 10000);
     const stars: Star[] = [];
 
-    for (let i = 0; i < Math.min(starCount, 220); i++) {
-      const baseAlpha = Math.random() * 0.7 + 0.2;
+    for (let i = 0; i < Math.min(starCount, 160); i++) {
+      const baseAlpha = Math.random() * 0.25 + 0.08;
       stars.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        radius: Math.random() * 1.6 + 0.4,
+        radius: Math.random() * 1.8 + 0.6,
         alpha: baseAlpha,
         baseAlpha,
         twinkleSpeed: Math.random() * 0.02 + 0.005,
         color: colors[Math.floor(Math.random() * colors.length)],
-        vx: (Math.random() - 0.5) * 0.08,
-        vy: (Math.random() - 0.5) * 0.08,
+        vx: (Math.random() - 0.5) * 0.06,
+        vy: (Math.random() - 0.5) * 0.06,
       });
     }
 

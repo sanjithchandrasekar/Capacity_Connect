@@ -46,31 +46,22 @@ function RouteThemeManager() {
     // Smooth scroll to top on navigation
     window.scrollTo(0, 0)
 
-    const isLandingPage = location.pathname === '/'
-    if (isLandingPage) {
-      document.documentElement.classList.add('theme-dark')
-      document.documentElement.classList.remove('theme-light')
-      document.body.classList.add('theme-dark')
-      document.body.classList.remove('theme-light')
-      document.body.style.backgroundColor = '#05060F'
-    } else {
-      document.documentElement.classList.add('theme-light')
-      document.documentElement.classList.remove('theme-dark')
-      document.body.classList.add('theme-light')
-      document.body.classList.remove('theme-dark')
-      document.body.style.backgroundColor = '#FAF9F6'
-    }
+    document.documentElement.classList.add('theme-light')
+    document.documentElement.classList.remove('theme-dark')
+    document.body.classList.add('theme-light')
+    document.body.classList.remove('theme-dark')
+    document.body.style.backgroundColor = '#FAF9F6'
   }, [location.pathname])
 
   return null
 }
 
-function AtmosphericThemeVeil({ isDark }: { isDark: boolean }) {
+function AtmosphericThemeVeil() {
   return (
     <motion.div
       initial={false}
       animate={{
-        opacity: isDark ? 0 : 1,
+        opacity: 1,
       }}
       transition={{
         duration: 0.85,
@@ -117,7 +108,7 @@ function AnimatedAppRoutes() {
   return (
     <>
       <RouteThemeManager />
-      <AtmosphericThemeVeil isDark={isLandingPage} />
+      <AtmosphericThemeVeil />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={routeKey}
