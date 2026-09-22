@@ -125,15 +125,17 @@ export function StickyScrollFeatures() {
       const panelsCount = steps.length;
       // Total horizontal shift to reveal the last panel: (panelsCount - 1) / panelsCount * 100%
       const totalXPercent = -((panelsCount - 1) / panelsCount) * 100;
-      const getScrollDistance = () => Math.max(window.innerHeight * 3.2, 2800);
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const getScrollDistance = () => (isMobile ? window.innerHeight * 1.4 : window.innerHeight * 2.0);
 
       gsap.to(trackRef.current, {
         xPercent: totalXPercent,
         ease: 'none',
+        force3D: true,
         scrollTrigger: {
           trigger: pinWrapperRef.current,
           pin: true,
-          scrub: 1.2,
+          scrub: isMobile ? 0.4 : 0.6,
           start: 'top top',
           end: () => `+=${getScrollDistance()}`,
           invalidateOnRefresh: true,
@@ -186,7 +188,8 @@ export function StickyScrollFeatures() {
       {/* Horizontal Scroll Panels Track */}
       <div
         ref={trackRef}
-        className="pin-track flex flex-row w-[300%] h-full items-center z-10 flex-1 min-h-0 py-1 overflow-hidden"
+        style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+        className="pin-track flex flex-row w-[300%] h-full items-center z-10 flex-1 min-h-0 py-1 overflow-hidden will-change-transform"
       >
         {steps.map((step, idx) => {
           const isEven = idx % 2 === 1;
