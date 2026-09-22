@@ -194,7 +194,7 @@ export function MissionExplodedView({
             ref={videoRef}
             muted
             playsInline
-            preload="auto"
+            preload="metadata"
             onLoadedMetadata={handleLoadedMetadata}
             className={`w-full h-full object-cover object-center brightness-[0.95] contrast-[1.10] saturate-[1.15] transition-opacity duration-700 ${
               isVideoLoaded ? 'opacity-100' : 'opacity-0'
