@@ -8,6 +8,7 @@ import { Database } from '@/integrations/supabase/types'
 import { AdminCourses } from '@/features/courses/AdminCourses'
 import { TrainerAssignmentBanner } from '@/features/admin/TrainerAssignmentBanner'
 import { AdminAnnouncements } from '@/features/admin/AdminAnnouncements'
+import { AdminHomePageSettings } from '@/features/admin/AdminHomePageSettings'
 import { Button } from '@/components/ui/button'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
@@ -1046,7 +1047,7 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<Profile[]>([])
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements' | 'home_page'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended' | 'rejected'>('all')
 
@@ -1248,6 +1249,7 @@ export function AdminDashboard() {
     ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins', icon: Shield }] : []),
     { key: 'courses', label: 'Courses', icon: BookOpen },
     { key: 'announcements', label: 'Announcements', icon: Megaphone },
+    { key: 'home_page', label: 'Home Page', icon: Globe },
     ...(isSuperAdmin ? [{ key: 'logs', label: 'Audit Logs', icon: BarChart3 }] : []),
   ] as const
 
@@ -1751,6 +1753,13 @@ export function AdminDashboard() {
                 </motion.div>
               )}
 
+              {/* Tab: Home Page Management */}
+              {activeTab === 'home_page' && (
+                <motion.div key="home_page" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
+                  <AdminHomePageSettings />
+                </motion.div>
+              )}
+
               {/* Tab: Audit Logs */}
               {activeTab === 'logs' && (
                 <motion.div key="logs" variants={scaleIn} initial="hidden" animate="visible" exit="hidden" className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden">
@@ -1809,29 +1818,31 @@ export function AdminDashboard() {
           )}
         </div>
 
-        {/* Quick Actions */}
-        <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { icon: Users, title: 'Manage Users', desc: 'Approve, suspend, or promote accounts', to: '/admin', gradient: 'from-purple-600 to-purple-800' },
-            { icon: Shield, title: 'System Governance', desc: 'Configure platform access & policies', to: '/admin', gradient: 'from-pink-500 to-rose-600' },
-            { icon: BarChart3, title: 'Platform Analytics', desc: 'Usage metrics, completions & trends', to: '/admin', gradient: 'from-orange-400 to-orange-600' },
-          ].map(action => (
-            <Link key={action.title} to={action.to}>
-              <div className="p-5 rounded-3xl bg-[#070E20]/90 border border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-xl hover:shadow-cyan-950/50 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.gradient} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
-                    <action.icon className="w-5 h-5" />
+        {/* Quick Actions (Overview Tab Only) */}
+        {activeTab === 'overview' && (
+          <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { icon: Users, title: 'Manage Users', desc: 'Approve, suspend, or promote accounts', to: '/admin', gradient: 'from-purple-600 to-purple-800' },
+              { icon: Shield, title: 'System Governance', desc: 'Configure platform access & policies', to: '/admin', gradient: 'from-pink-500 to-rose-600' },
+              { icon: BarChart3, title: 'Platform Analytics', desc: 'Usage metrics, completions & trends', to: '/admin', gradient: 'from-orange-400 to-orange-600' },
+            ].map(action => (
+              <Link key={action.title} to={action.to}>
+                <div className="p-5 rounded-3xl bg-[#070E20]/90 border border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-xl hover:shadow-cyan-950/50 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.gradient} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
+                      <action.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-zinc-200 group-hover:text-cyan-400 transition-colors">{action.title}</h4>
+                      <p className="text-xs text-zinc-200/55">{action.desc}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-zinc-200 group-hover:text-cyan-400 transition-colors">{action.title}</h4>
-                    <p className="text-xs text-zinc-200/55">{action.desc}</p>
-                  </div>
+                  <ChevronRight className="w-5 h-5 text-zinc-200/30 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-zinc-200/30 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
-              </div>
-            </Link>
-          ))}
-        </motion.div>
+              </Link>
+            ))}
+          </motion.div>
+        )}
       </motion.div>
     </DashboardShell>
       <MaterialPreviewDialog
