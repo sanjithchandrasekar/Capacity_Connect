@@ -27,6 +27,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ImageCropperModal } from '@/components/ui/ImageCropperModal';
 import { supabase } from '@/lib/supabase';
 import {
   useHomePageSettings,
@@ -43,6 +44,10 @@ export function AdminHomePageSettings() {
   const [formData, setFormData] = useState<HomePageSettings>(settings);
   const [activeSectionTab, setActiveSectionTab] = useState<'programs' | 'announcements' | 'tracks'>('programs');
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [rawImageFile, setRawImageFile] = useState<File | null>(null);
+  const [croppingIndex, setCroppingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (settings) {
@@ -460,7 +465,7 @@ export function AdminHomePageSettings() {
                   {/* Thumbnail Image Picker & Preview */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="block text-[10px] font-semibold text-slate-400">Card Thumbnail Photo</label>
+                      <label className="block text-[10px] font-semibold text-slate-400">Card Thumbnail Photo <span className="font-normal text-slate-500">(Recommended: 800x400 pixels, 2:1 ratio)</span></label>
                       {prog.thumbnail_url && (
                         <span className="text-[9px] font-mono text-emerald-400">Linked to Storage</span>
                       )}
@@ -481,7 +486,12 @@ export function AdminHomePageSettings() {
                               accept="image/*"
                               className="hidden"
                               onChange={(e) => {
-                                if (e.target.files?.[0]) handleThumbnailUpload(idx, e.target.files[0]);
+                                if (e.target.files?.[0]) {
+                                  setRawImageFile(e.target.files[0]);
+                                  setCroppingIndex(idx);
+                                  setIsCropperOpen(true);
+                                  e.target.value = '';
+                                }
                               }}
                             />
                           </label>
@@ -514,7 +524,12 @@ export function AdminHomePageSettings() {
                               accept="image/*"
                               className="hidden"
                               onChange={(e) => {
-                                if (e.target.files?.[0]) handleThumbnailUpload(idx, e.target.files[0]);
+                                if (e.target.files?.[0]) {
+                                  setRawImageFile(e.target.files[0]);
+                                  setCroppingIndex(idx);
+                                  setIsCropperOpen(true);
+                                  e.target.value = '';
+                                }
                               }}
                             />
                           </>
@@ -1010,6 +1025,24 @@ export function AdminHomePageSettings() {
           </Button>
         </div>
       </div>
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageFile={rawImageFile}
+        aspectRatio={2 / 1}
+        onClose={() => {
+          setIsCropperOpen(false);
+          setRawImageFile(null);
+          setCroppingIndex(null);
+        }}
+        onCropComplete={(croppedFile) => {
+          setIsCropperOpen(false);
+          setRawImageFile(null);
+          if (croppingIndex !== null) {
+            handleThumbnailUpload(croppingIndex, croppedFile);
+          }
+        }}
+      />
     </div>
   );
 }
