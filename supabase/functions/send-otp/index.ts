@@ -60,6 +60,13 @@ serve(async (req) => {
         from: `"Capacity Connect" <${gmailUser}>`,
         to: identifier,
         subject: "Your Capacity Connect Verification Code",
+        text: `Your Capacity Connect verification code is: ${otp}\nThis code will expire in 10 minutes.`,
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Importance': 'high',
+          'List-Unsubscribe': `<mailto:${gmailUser}?subject=unsubscribe>`
+        },
         html: `
         <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #f3f4f6;">
           

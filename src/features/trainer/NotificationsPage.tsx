@@ -37,7 +37,7 @@ export function NotificationsPage() {
   }
 
   if (loading) {
-    return <TrainerLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div></TrainerLayout>
+    return <TrainerLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-zinc-200" /></div></TrainerLayout>
   }
 
   const filteredNotifications = notifications.filter(n => {
@@ -51,30 +51,30 @@ export function NotificationsPage() {
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-3xl mx-auto space-y-6">
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-ink">Notifications</h2>
-            <p className="text-ink/60 text-sm mt-1">{unreadCount} unread</p>
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Notifications</h2>
+            <p className="text-zinc-200/60 text-sm mt-1">{unreadCount} unread</p>
           </div>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
-              <Button onClick={markAllAsRead} variant="outline" size="sm" className="border-ink/10 text-ink">
+              <Button onClick={markAllAsRead} variant="outline" size="sm" className="border-cyan-500/30 text-zinc-200">
                 <CheckCircle className="w-3.5 h-3.5 mr-1.5" /> Mark all read
               </Button>
             )}
             {notifications.length > 0 && (
-              <Button onClick={handleClearAll} variant="outline" size="sm" className="border-ink/10 text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+              <Button onClick={handleClearAll} variant="outline" size="sm" className="border-cyan-500/30 text-rose-600 hover:text-rose-700 hover:bg-rose-50">
                 <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Clear all
               </Button>
             )}
           </div>
         </motion.div>
 
-        <motion.div variants={fadeUp} className="flex bg-ink/5 p-1 rounded-xl border border-ink/10 w-fit">
+        <motion.div variants={fadeUp} className="flex bg-ink/5 p-1 rounded-xl border border-cyan-500/30 w-fit">
           {(['all', 'unread', 'read'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize whitespace-nowrap ${
-                filter === f ? 'bg-white text-ink shadow-sm' : 'text-ink/60 hover:text-ink hover:bg-ink/10'
+                filter === f ? 'bg-[#070E20]/90 text-zinc-200 shadow-sm' : 'text-zinc-200/60 hover:text-zinc-200 hover:bg-ink/10'
               }`}
             >
               {f}
@@ -84,10 +84,10 @@ export function NotificationsPage() {
 
         {filteredNotifications.length === 0 ? (
           <motion.div variants={fadeUp}>
-            <Card className="bg-white border-ink/10">
+            <Card className="bg-[#070E20]/90 border-cyan-500/30">
               <CardContent className="py-16 text-center">
-                <Inbox className="w-12 h-12 text-ink/40 mx-auto mb-4" />
-                <p className="text-ink/60">No notifications yet.</p>
+                <Inbox className="w-12 h-12 text-zinc-200/40 mx-auto mb-4" />
+                <p className="text-zinc-200/60">No notifications yet.</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -102,18 +102,18 @@ export function NotificationsPage() {
                 }}
                 className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
                   n.read_at
-                    ? 'bg-ink/5 border-ink/5'
-                    : 'bg-ink/5 border-ink/20'
+                    ? 'bg-ink/5 border-cyan-500/30'
+                    : 'bg-ink/5 border-cyan-500/30'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       {!n.read_at && <div className="w-2 h-2 rounded-full bg-ink shrink-0" />}
-                      <p className="text-sm font-medium text-ink">{n.title}</p>
+                      <p className="text-sm font-medium text-zinc-200">{n.title}</p>
                     </div>
-                    <p className="text-xs text-ink/60">{n.message}</p>
-                    <p className="text-[10px] text-ink/40 mt-1">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
+                    <p className="text-xs text-zinc-200/60">{n.message}</p>
+                    <p className="text-[10px] text-zinc-200/40 mt-1">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {!n.read_at && (
@@ -123,7 +123,7 @@ export function NotificationsPage() {
                           handleMarkAsRead(n.id)
                         }} 
                         disabled={markingId === n.id} 
-                        className="text-xs text-ink/50 hover:text-ink transition-colors shrink-0"
+                        className="text-xs text-zinc-200/50 hover:text-zinc-200 transition-colors shrink-0"
                       >
                         {markingId === n.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Mark read'}
                       </button>

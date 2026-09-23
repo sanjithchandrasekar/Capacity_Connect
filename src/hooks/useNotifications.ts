@@ -125,7 +125,15 @@ export function useNotifications() {
 
 export function getNotificationRedirectUrl(type: string, role: string | undefined): string {
   if (!role) return '/'
-  
+  if (type.startsWith('enrollment_request:')) {
+    const courseId = type.split(':')[1]
+    return `/trainer/courses/${courseId}`
+  }
+  if (type.startsWith('enrollment_status:')) {
+    const courseId = type.split(':')[1]
+    return `/trainee/courses/${courseId}`
+  }
+
   switch (type) {
     case 'user_registration':
     case 'course_submission':

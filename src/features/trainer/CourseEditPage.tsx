@@ -271,7 +271,7 @@ export function CourseEditPage() {
   if (loading) {
     return (
       <TrainerLayout>
-        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-zinc-200" /></div>
       </TrainerLayout>
     )
   }
@@ -284,17 +284,17 @@ export function CourseEditPage() {
     <TrainerLayout>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-3xl mx-auto space-y-6">
         <motion.div variants={fadeUp}>
-          <button onClick={() => navigate('/trainer/courses')} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+          <button onClick={() => navigate('/trainer/courses')} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Courses
           </button>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-ink">{course.title}</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-zinc-200">{course.title}</h2>
               <div className="flex items-center gap-2 mt-1">
                 <Badge className={
-                  course.status === 'draft' ? 'bg-ink/10 text-ink/80 border border-ink/20' :
+                  course.status === 'draft' ? 'bg-ink/10 text-zinc-200/80 border border-cyan-500/30' :
                   course.status === 'pending_review' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
-                  course.status === 'published' ? 'bg-ink/10 text-ink/70 border border-ink/20' :
+                  course.status === 'published' ? 'bg-ink/10 text-zinc-200/70 border border-cyan-500/30' :
                   'bg-red-50 text-red-600 border border-red-200'
                 }>
                   {course.status.replace('_', ' ')}
@@ -306,24 +306,24 @@ export function CourseEditPage() {
 
         {canEdit ? (
           <motion.div variants={fadeUp}>
-            <Card className="bg-white border-ink/10">
-              <CardHeader><CardTitle className="text-ink">Course Details</CardTitle></CardHeader>
+            <Card className="bg-[#070E20]/90 border-cyan-500/30">
+              <CardHeader><CardTitle className="text-zinc-200">Course Details</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80">Title *</Label>
-                  <Input {...register('title')} className="bg-ink/5 border-ink/20 text-ink" />
+                  <Label className="text-zinc-200/80">Title *</Label>
+                  <Input {...register('title')} className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                   {errors.title && <p className="text-xs text-red-600">{errors.title.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80">Description *</Label>
-                  <Textarea {...register('description')} rows={4} className="bg-ink/5 border-ink/20 text-ink" />
+                  <Label className="text-zinc-200/80">Description *</Label>
+                  <Textarea {...register('description')} rows={4} className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                   {errors.description && <p className="text-xs text-red-600">{errors.description.message}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80">Type</Label>
+                    <Label className="text-zinc-200/80">Type</Label>
                     <Select value={watch('course_type')} onValueChange={(v) => setValue('course_type', v as 'standard' | 'scenario')}>
-                      <SelectTrigger className="bg-ink/5 border-ink/20 text-ink"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="standard">Standard</SelectItem>
                         <SelectItem value="scenario">Scenario</SelectItem>
@@ -331,35 +331,35 @@ export function CourseEditPage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80">Department</Label>
-                    <Input {...register('department')} className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-zinc-200/80">Department</Label>
+                    <Input {...register('department')} className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Duration (hours)</Label>
-                    <Input type="number" {...register('duration_hours')} placeholder="e.g. 20" className="bg-ink/5 border-ink/20 text-ink h-10" />
-                    <p className="text-[10px] text-ink/40">Leave empty for self-paced</p>
+                    <Label className="text-zinc-200/80 text-xs">Duration (hours)</Label>
+                    <Input type="number" {...register('duration_hours')} placeholder="e.g. 20" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <p className="text-[10px] text-zinc-200/40">Leave empty for self-paced</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80">Passing Score (%)</Label>
-                    <Input type="number" {...register('passing_score')} className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-zinc-200/80">Passing Score (%)</Label>
+                    <Input type="number" {...register('passing_score')} className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                   </div>
                   <div className="space-y-1.5 col-span-2">
-                    <Label className="text-ink/80">Live Meeting Link</Label>
-                    <Input type="url" {...register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-zinc-200/80">Live Meeting Link</Label>
+                    <Input type="url" {...register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                     {errors.meet_link && <p className="text-xs text-red-600">{errors.meet_link.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80">Start Date</Label>
-                    <Input type="datetime-local" {...register('start_date')} className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-zinc-200/80">Start Date</Label>
+                    <Input type="datetime-local" {...register('start_date')} className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                     {errors.start_date && (
                       <p className="text-[10px] text-red-500">{errors.start_date.message as string}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80">End Date</Label>
-                    <Input type="datetime-local" {...register('end_date')} className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-zinc-200/80">End Date</Label>
+                    <Input type="datetime-local" {...register('end_date')} className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                     {errors.end_date && (
                       <p className="text-[10px] text-red-500">{errors.end_date.message as string}</p>
                     )}
@@ -371,44 +371,44 @@ export function CourseEditPage() {
                   )}
                 </div>
 
-                <div className="space-y-1.5 pt-4 border-t border-ink/10">
-                  <Label className="text-ink/80">Course Thumbnail</Label>
+                <div className="space-y-1.5 pt-4 border-t border-cyan-500/30">
+                  <Label className="text-zinc-200/80">Course Thumbnail</Label>
                   <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
                   {thumbnailPreview ? (
-                    <div className="relative w-full max-w-sm h-40 rounded-lg overflow-hidden border border-ink/20 bg-ink/5">
+                    <div className="relative w-full max-w-sm h-40 rounded-lg overflow-hidden border border-cyan-500/30 bg-ink/5">
                       <img src={thumbnailPreview} alt="" className="w-full h-full object-cover" />
                       <button type="button" onClick={() => { setThumbnail(null); setThumbnailPreview(null) }} className="absolute top-2 right-2 p-1.5 rounded-full bg-ink/80 text-cream hover:bg-red-600 transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => thumbRef.current?.click()} className="w-full max-w-sm h-32 border-2 border-dashed border-ink/20 rounded-lg flex flex-col items-center justify-center gap-2 text-ink/40 hover:text-ink hover:border-ink/30 transition-all bg-ink/5">
+                    <button type="button" onClick={() => thumbRef.current?.click()} className="w-full max-w-sm h-32 border-2 border-dashed border-cyan-500/30 rounded-lg flex flex-col items-center justify-center gap-2 text-zinc-200/40 hover:text-zinc-200 hover:border-cyan-500/30 transition-all bg-ink/5">
                       <Upload className="w-6 h-6" />
                       <span className="text-xs">Click to upload thumbnail</span>
-                      <span className="text-[10px] text-ink/30">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
+                      <span className="text-[10px] text-zinc-200/30">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
                     </button>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-white border-ink/10 mt-4">
-              <CardHeader><CardTitle className="text-ink">Session Flow</CardTitle></CardHeader>
+            <Card className="bg-[#070E20]/90 border-cyan-500/30 mt-4">
+              <CardHeader><CardTitle className="text-zinc-200">Session Flow</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80">Session Flow Details</Label>
-                  <Textarea {...register('session_flow_text')} rows={6} className="bg-ink/5 border-ink/20 text-ink" placeholder="Describe the session flow, topics covered, and engagement plan..." />
+                  <Label className="text-zinc-200/80">Session Flow Details</Label>
+                  <Textarea {...register('session_flow_text')} rows={6} className="bg-ink/5 border-cyan-500/30 text-zinc-200" placeholder="Describe the session flow, topics covered, and engagement plan..." />
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80">Session Flow Document</Label>
+                  <Label className="text-zinc-200/80">Session Flow Document</Label>
                   {sessionFlowDocPath || sessionFlowDoc ? (
-                    <div className="flex items-center justify-between p-3 bg-ink/5 border border-ink/20 rounded-lg max-w-sm">
-                      <div className="flex items-center gap-2 text-sm text-ink truncate">
-                        <FileText className="w-4 h-4 shrink-0 text-ink/60" />
+                    <div className="flex items-center justify-between p-3 bg-ink/5 border border-cyan-500/30 rounded-lg max-w-sm">
+                      <div className="flex items-center gap-2 text-sm text-zinc-200 truncate">
+                        <FileText className="w-4 h-4 shrink-0 text-zinc-200/60" />
                         <span className="truncate">{sessionFlowDoc ? sessionFlowDoc.name : sessionFlowDocPath?.split('/').pop()}</span>
                       </div>
-                      <button type="button" onClick={() => { setSessionFlowDoc(null); setSessionFlowDocPath(null) }} className="p-1.5 rounded-full hover:bg-red-50 text-ink/40 hover:text-red-500 transition-colors">
+                      <button type="button" onClick={() => { setSessionFlowDoc(null); setSessionFlowDocPath(null) }} className="p-1.5 rounded-full hover:bg-red-50 text-zinc-200/40 hover:text-red-500 transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -417,7 +417,7 @@ export function CourseEditPage() {
                       <Input
                         type="file"
                         accept=".pdf,.doc,.docx,.txt"
-                        className="bg-ink/5 border-ink/20 text-ink cursor-pointer max-w-sm"
+                        className="bg-ink/5 border-cyan-500/30 text-zinc-200 cursor-pointer max-w-sm"
                         onChange={(e) => {
                           const file = e.target.files?.[0]
                           if (file) {
@@ -435,17 +435,17 @@ export function CourseEditPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white border-ink/10 mt-4">
-              <CardHeader><CardTitle className="text-ink">Required Skills</CardTitle></CardHeader>
+            <Card className="bg-[#070E20]/90 border-cyan-500/30 mt-4">
+              <CardHeader><CardTitle className="text-zinc-200">Required Skills</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-xs text-ink/50">Select existing skills or add your own.</p>
+                <p className="text-xs text-zinc-200/50">Select existing skills or add your own.</p>
                 <div className="flex gap-2">
                   <Input
                     value={customSkillName}
                     onChange={e => setCustomSkillName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill() } }}
                     placeholder="Add a custom skill..."
-                    className="bg-ink/5 border-ink/20 text-ink h-9 text-xs"
+                    className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs"
                     disabled={addingSkill}
                   />
                   <Button
@@ -453,7 +453,7 @@ export function CourseEditPage() {
                     variant="outline"
                     onClick={addCustomSkill}
                     disabled={!customSkillName.trim() || addingSkill}
-                    className="border-ink/20 text-ink h-9 px-3 shrink-0"
+                    className="border-cyan-500/30 text-zinc-200 h-9 px-3 shrink-0"
                   >
                     {addingSkill ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                   </Button>
@@ -463,8 +463,8 @@ export function CourseEditPage() {
                     <button key={skill.id} onClick={() => toggleSkill(skill.id)}
                       className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
                         selectedSkills.includes(skill.id)
-                          ? 'bg-ink/20 text-ink border-ink/30'
-                          : 'bg-ink/5 text-ink/60 border-ink/20 hover:border-ink/30'
+                          ? 'bg-ink/20 text-zinc-200 border-cyan-500/30'
+                          : 'bg-ink/5 text-zinc-200/60 border-cyan-500/30 hover:border-cyan-500/30'
                       }`}>
                       {skill.name}
                     </button>
@@ -475,10 +475,10 @@ export function CourseEditPage() {
           </motion.div>
         ) : (
           <motion.div variants={fadeUp}>
-            <Card className="bg-white border-ink/10">
+            <Card className="bg-[#070E20]/90 border-cyan-500/30">
               <CardContent className="py-8 text-center">
-                <p className="text-ink/60">This course is <strong>{course.status}</strong> and cannot be edited.</p>
-                {course.status === 'pending_review' && <p className="text-sm text-ink/50 mt-1">Wait for admin review or contact an admin.</p>}
+                <p className="text-zinc-200/60">This course is <strong>{course.status}</strong> and cannot be edited.</p>
+                {course.status === 'pending_review' && <p className="text-sm text-zinc-200/50 mt-1">Wait for admin review or contact an admin.</p>}
               </CardContent>
             </Card>
           </motion.div>
@@ -486,7 +486,7 @@ export function CourseEditPage() {
 
         {canEdit && (
           <motion.div variants={fadeUp} className="flex items-center justify-between">
-            <Button variant="outline" onClick={() => navigate('/trainer/courses')} className="border-ink/20 text-ink">
+            <Button variant="outline" onClick={() => navigate('/trainer/courses')} className="border-cyan-500/30 text-zinc-200">
               <ArrowLeft className="w-4 h-4 mr-2" /> Cancel
             </Button>
             <div className="flex items-center gap-3">
@@ -497,11 +497,11 @@ export function CourseEditPage() {
                 </span>
               )}
               {materialCount > 0 && (
-                <span className="text-xs text-ink/50">
+                <span className="text-xs text-zinc-200/50">
                   {materialCount} material{materialCount !== 1 ? 's' : ''}
                 </span>
               )}
-              <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="border-ink/20 text-ink">
+              <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="border-cyan-500/30 text-zinc-200">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Save Draft
               </Button>
@@ -514,34 +514,34 @@ export function CourseEditPage() {
         )}
 
         <motion.div variants={fadeUp}>
-          <Card className="bg-white border-ink/10">
+          <Card className="bg-[#070E20]/90 border-cyan-500/30">
             <CardContent className="p-6">
-              <h3 className="text-sm font-semibold text-ink mb-4">Course Materials</h3>
+              <h3 className="text-sm font-semibold text-zinc-200 mb-4">Course Materials</h3>
               <CourseMaterials embedded onMaterialCountChange={setMaterialCount} />
             </CardContent>
           </Card>
         </motion.div>
 
         <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Link to={`/trainer/courses/${courseId}/sessions`} className="p-4 rounded-xl bg-ink/5 border border-ink/10 hover:border-ink/30 transition-all text-center group">
-            <Calendar className="w-5 h-5 text-ink mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-ink font-medium">Sessions</span>
+          <Link to={`/trainer/courses/${courseId}/sessions`} className="p-4 rounded-xl bg-ink/5 border border-cyan-500/30 hover:border-cyan-500/30 transition-all text-center group">
+            <Calendar className="w-5 h-5 text-zinc-200 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-zinc-200 font-medium">Sessions</span>
           </Link>
-          <Link to={`/trainer/courses/${courseId}/materials`} className="p-4 rounded-xl bg-ink/5 border border-ink/10 hover:border-ink/30 transition-all text-center group">
-            <FileText className="w-5 h-5 text-ink mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-ink font-medium">Materials</span>
+          <Link to={`/trainer/courses/${courseId}/materials`} className="p-4 rounded-xl bg-ink/5 border border-cyan-500/30 hover:border-cyan-500/30 transition-all text-center group">
+            <FileText className="w-5 h-5 text-zinc-200 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-zinc-200 font-medium">Materials</span>
           </Link>
-          <Link to={`/trainer/courses/${courseId}/assessments`} className="p-4 rounded-xl bg-ink/5 border border-ink/10 hover:border-ink/30 transition-all text-center group">
-            <Target className="w-5 h-5 text-ink mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-ink font-medium">Assessments</span>
+          <Link to={`/trainer/courses/${courseId}/assessments`} className="p-4 rounded-xl bg-ink/5 border border-cyan-500/30 hover:border-cyan-500/30 transition-all text-center group">
+            <Target className="w-5 h-5 text-zinc-200 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-zinc-200 font-medium">Assessments</span>
           </Link>
-          <Link to={`/trainer/courses/${courseId}/performance`} className="p-4 rounded-xl bg-ink/5 border border-ink/10 hover:border-ink/30 transition-all text-center group">
-            <BarChart3 className="w-5 h-5 text-ink mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-ink font-medium">Performance</span>
+          <Link to={`/trainer/courses/${courseId}/performance`} className="p-4 rounded-xl bg-ink/5 border border-cyan-500/30 hover:border-cyan-500/30 transition-all text-center group">
+            <BarChart3 className="w-5 h-5 text-zinc-200 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-zinc-200 font-medium">Performance</span>
           </Link>
-          <div className="p-4 rounded-xl bg-ink/5 border border-ink/10 text-center">
-            <Award className="w-5 h-5 text-ink/50 mx-auto mb-2" />
-            <span className="text-xs text-ink/50">Preview</span>
+          <div className="p-4 rounded-xl bg-ink/5 border border-cyan-500/30 text-center">
+            <Award className="w-5 h-5 text-zinc-200/50 mx-auto mb-2" />
+            <span className="text-xs text-zinc-200/50">Preview</span>
           </div>
         </motion.div>
       </motion.div>

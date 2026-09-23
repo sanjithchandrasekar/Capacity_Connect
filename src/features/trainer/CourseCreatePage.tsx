@@ -523,11 +523,11 @@ export function CourseCreatePage() {
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <motion.div variants={fadeUp}>
-          <button onClick={() => navigate('/trainer/courses')} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+          <button onClick={() => navigate('/trainer/courses')} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Courses
           </button>
-          <h2 className="text-2xl font-bold tracking-tight text-ink">Create Course</h2>
-          <p className="text-sm text-ink/50 mt-1">Fill in the details, add materials, and submit for review.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Create Course</h2>
+          <p className="text-sm text-zinc-200/50 mt-1">Fill in the details, add materials, and submit for review.</p>
         </motion.div>
 
         {/* Progress Steps */}
@@ -537,12 +537,12 @@ export function CourseCreatePage() {
               <React.Fragment key={s.id}>
                 <button
                   onClick={() => { if (s.id < step) setStep(s.id) }}
-                  className={`flex items-center gap-1.5 transition-all ${s.id <= step ? 'text-ink' : 'text-ink/30'} ${s.id < step ? 'cursor-pointer' : 'cursor-default'}`}
+                  className={`flex items-center gap-1.5 transition-all ${s.id <= step ? 'text-zinc-200' : 'text-zinc-200/30'} ${s.id < step ? 'cursor-pointer' : 'cursor-default'}`}
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all ${
-                    step > s.id ? 'bg-ink/20 border-ink/30 text-ink' :
+                    step > s.id ? 'bg-ink/20 border-cyan-500/30 text-zinc-200' :
                     step === s.id ? 'bg-ink text-cream border-ink' :
-                    'border-ink/20 text-ink/40'
+                    'border-cyan-500/30 text-zinc-200/40'
                   }`}>
                     {step > s.id ? <CheckCircle className="w-3.5 h-3.5" /> : <s.icon className="w-3.5 h-3.5" />}
                   </div>
@@ -558,25 +558,25 @@ export function CourseCreatePage() {
         <motion.div variants={fadeUp}>
           {/* Step 1: Course Details */}
           {step === 1 && (
-            <Card className="bg-cream border-ink/10">
+            <Card className="bg-[#040814] border-cyan-500/30">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="w-4 h-4 text-ink/60" />
-                  <h3 className="text-sm font-semibold text-ink">Course Details</h3>
+                  <BookOpen className="w-4 h-4 text-zinc-200/60" />
+                  <h3 className="text-sm font-semibold text-zinc-200">Course Details</h3>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Course Title *</Label>
-                  <Input {...detailsForm.register('title')} placeholder="e.g. Cyclone Response and Warning Communication" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                  <Label className="text-zinc-200/80 text-xs">Course Title *</Label>
+                  <Input {...detailsForm.register('title')} placeholder="e.g. Cyclone Response and Warning Communication" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                   {detailsForm.formState.errors.title && <p className="text-xs text-red-600">{detailsForm.formState.errors.title.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Description *</Label>
-                  <Textarea {...detailsForm.register('description')} rows={4} placeholder="Describe what this course covers, its target audience, and key topics..." className="bg-ink/5 border-ink/20 text-ink" />
+                  <Label className="text-zinc-200/80 text-xs">Description *</Label>
+                  <Textarea {...detailsForm.register('description')} rows={4} placeholder="Describe what this course covers, its target audience, and key topics..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                   {detailsForm.formState.errors.description && <p className="text-xs text-red-600">{detailsForm.formState.errors.description.message}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Course Type</Label>
+                    <Label className="text-zinc-200/80 text-xs">Course Type</Label>
                     <Select 
                       value={isCustomType ? 'custom' : detailsForm.watch('course_type')} 
                       onValueChange={v => {
@@ -589,7 +589,7 @@ export function CourseCreatePage() {
                         }
                       }}
                     >
-                      <SelectTrigger className="bg-ink/5 border-ink/20 text-ink h-10"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="standard">Standard Training</SelectItem>
                         <SelectItem value="scenario">Scenario-Based Training</SelectItem>
@@ -601,14 +601,14 @@ export function CourseCreatePage() {
                       <Input 
                         {...detailsForm.register('course_type')} 
                         placeholder="Enter custom course type" 
-                        className="bg-ink/5 border-ink/20 text-ink h-10 mt-2" 
+                        className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 mt-2" 
                       />
                     )}
                     {detailsForm.formState.errors.course_type && <p className="text-xs text-red-600">{detailsForm.formState.errors.course_type.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Department</Label>
-                    <Input {...detailsForm.register('department')} placeholder="e.g. IMD, CWC, NIOT" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <Label className="text-zinc-200/80 text-xs">Department</Label>
+                    <Input {...detailsForm.register('department')} placeholder="e.g. IMD, CWC, NIOT" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                   </div>
                 </div>
               </CardContent>
@@ -617,38 +617,38 @@ export function CourseCreatePage() {
 
           {/* Step 2: Course Configuration */}
           {step === 2 && (
-            <Card className="bg-cream border-ink/10">
+            <Card className="bg-[#040814] border-cyan-500/30">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Settings className="w-4 h-4 text-ink/60" />
-                  <h3 className="text-sm font-semibold text-ink">Course Configuration</h3>
+                  <Settings className="w-4 h-4 text-zinc-200/60" />
+                  <h3 className="text-sm font-semibold text-zinc-200">Course Configuration</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Duration (hours)</Label>
-                    <Input type="number" {...settingsForm.register('duration_hours')} placeholder="e.g. 20" className="bg-ink/5 border-ink/20 text-ink h-10" />
-                    <p className="text-[10px] text-ink/40">Leave empty for self-paced</p>
+                    <Label className="text-zinc-200/80 text-xs">Duration (hours)</Label>
+                    <Input type="number" {...settingsForm.register('duration_hours')} placeholder="e.g. 20" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <p className="text-[10px] text-zinc-200/40">Leave empty for self-paced</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Passing Score (%)</Label>
-                    <Input type="number" {...settingsForm.register('passing_score')} placeholder="60" className="bg-ink/5 border-ink/20 text-ink h-10" />
-                    <p className="text-[10px] text-ink/40">Minimum score to pass</p>
+                    <Label className="text-zinc-200/80 text-xs">Passing Score (%)</Label>
+                    <Input type="number" {...settingsForm.register('passing_score')} placeholder="60" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <p className="text-[10px] text-zinc-200/40">Minimum score to pass</p>
                   </div>
                   <div className="space-y-1.5 col-span-2">
-                    <Label className="text-ink/80 text-xs">Live Meeting Link</Label>
-                    <Input type="url" {...settingsForm.register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <Label className="text-zinc-200/80 text-xs">Live Meeting Link</Label>
+                    <Input type="url" {...settingsForm.register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                     {settingsForm.formState.errors.meet_link && <p className="text-[10px] text-red-600">{settingsForm.formState.errors.meet_link.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Start Date</Label>
-                    <Input type="date" {...settingsForm.register('start_date')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <Label className="text-zinc-200/80 text-xs">Start Date</Label>
+                    <Input type="date" {...settingsForm.register('start_date')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                     {settingsForm.formState.errors.start_date && (
                       <p className="text-[10px] text-red-500">{settingsForm.formState.errors.start_date.message}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">End Date</Label>
-                    <Input type="date" {...settingsForm.register('end_date')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <Label className="text-zinc-200/80 text-xs">End Date</Label>
+                    <Input type="date" {...settingsForm.register('end_date')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                     {settingsForm.formState.errors.end_date && (
                       <p className="text-[10px] text-red-500">{settingsForm.formState.errors.end_date.message}</p>
                     )}
@@ -661,60 +661,60 @@ export function CourseCreatePage() {
                   
                   {/* Capacity */}
                   <div className="space-y-1.5 col-span-2">
-                    <Label className="text-ink/80 text-xs">Trainee Capacity Limit</Label>
-                    <Input type="number" {...settingsForm.register('max_trainees')} placeholder="e.g. 50" className="bg-ink/5 border-ink/20 text-ink h-10" />
-                    <p className="text-[10px] text-ink/40">Must be between 50 and 250</p>
+                    <Label className="text-zinc-200/80 text-xs">Trainee Capacity Limit</Label>
+                    <Input type="number" {...settingsForm.register('max_trainees')} placeholder="e.g. 50" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <p className="text-[10px] text-zinc-200/40">Must be between 50 and 250</p>
                   </div>
                   
                   {/* Trainer Suggestion / Notice */}
                   <div className="space-y-1.5 col-span-2">
-                    <Label className="text-ink/80 text-xs flex items-center gap-2">Notice to Admin <Badge variant="secondary" className="text-[9px] h-4 bg-purple-100 text-purple-700">Optional</Badge></Label>
-                    <Textarea {...settingsForm.register('trainer_suggestion')} placeholder="Add any notes or suggestions for the admin approving this course..." className="bg-ink/5 border-ink/20 text-ink min-h-[60px]" />
+                    <Label className="text-zinc-200/80 text-xs flex items-center gap-2">Notice to Admin <Badge variant="secondary" className="text-[9px] h-4 bg-purple-100 text-cyan-400">Optional</Badge></Label>
+                    <Textarea {...settingsForm.register('trainer_suggestion')} placeholder="Add any notes or suggestions for the admin approving this course..." className="bg-ink/5 border-cyan-500/30 text-zinc-200 min-h-[60px]" />
                   </div>
                   
                   {/* Test Planning */}
-                  <div className="space-y-1.5 col-span-2 mt-2 pt-4 border-t border-ink/10">
-                    <Label className="text-ink font-medium">Test & Assessment Plan</Label>
+                  <div className="space-y-1.5 col-span-2 mt-2 pt-4 border-t border-cyan-500/30">
+                    <Label className="text-zinc-200 font-medium">Test & Assessment Plan</Label>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Planned Daily Assessments</Label>
-                    <Input type="number" {...settingsForm.register('planned_assessments_count')} placeholder="e.g. 10" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <Label className="text-zinc-200/80 text-xs">Planned Daily Assessments</Label>
+                    <Input type="number" {...settingsForm.register('planned_assessments_count')} placeholder="e.g. 10" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Planned Mock Tests</Label>
-                    <Input type="number" {...settingsForm.register('planned_mock_tests_count')} placeholder="e.g. 2" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <Label className="text-zinc-200/80 text-xs">Planned Mock Tests</Label>
+                    <Input type="number" {...settingsForm.register('planned_mock_tests_count')} placeholder="e.g. 2" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                   </div>
                   <div className="space-y-1.5 col-span-2">
-                    <Label className="text-ink/80 text-xs font-semibold mt-2">Final Exam Details</Label>
+                    <Label className="text-zinc-200/80 text-xs font-semibold mt-2">Final Exam Details</Label>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Date</Label>
-                    <Input type="date" {...settingsForm.register('final_test_date')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                    <Label className="text-zinc-200/80 text-xs">Date</Label>
+                    <Input type="date" {...settingsForm.register('final_test_date')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                   </div>
                   <div className="grid grid-cols-2 gap-4 col-span-1">
                     <div className="space-y-1.5">
-                      <Label className="text-ink/80 text-xs">Start Time</Label>
-                      <Input type="time" {...settingsForm.register('final_test_start_time')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                      <Label className="text-zinc-200/80 text-xs">Start Time</Label>
+                      <Input type="time" {...settingsForm.register('final_test_start_time')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-ink/80 text-xs">End Time</Label>
-                      <Input type="time" {...settingsForm.register('final_test_end_time')} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                      <Label className="text-zinc-200/80 text-xs">End Time</Label>
+                      <Input type="time" {...settingsForm.register('final_test_end_time')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                     </div>
                   </div>
                   {examDuration && (
-                    <div className="col-span-2 text-xs font-medium text-ink/70">
+                    <div className="col-span-2 text-xs font-medium text-zinc-200/70">
                       Duration: <span className="text-brand">{examDuration}</span>
                     </div>
                   )}
                   
                   {/* Delivery & Schedule Fields */}
-                  <div className="space-y-1.5 col-span-2 mt-2 pt-4 border-t border-ink/10">
-                    <Label className="text-ink font-medium">Delivery & Schedule</Label>
+                  <div className="space-y-1.5 col-span-2 mt-2 pt-4 border-t border-cyan-500/30">
+                    <Label className="text-zinc-200 font-medium">Delivery & Schedule</Label>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Delivery Mode</Label>
+                    <Label className="text-zinc-200/80 text-xs">Delivery Mode</Label>
                     <Select value={settingsForm.watch('delivery_mode')} onValueChange={v => settingsForm.setValue('delivery_mode', v as any)}>
-                      <SelectTrigger className="bg-ink/5 border-ink/20 text-ink h-10"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="recorded">Pre-recorded Videos</SelectItem>
                         <SelectItem value="live">Live Online Classes</SelectItem>
@@ -724,20 +724,20 @@ export function CourseCreatePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Course Thumbnail</Label>
+                  <Label className="text-zinc-200/80 text-xs">Course Thumbnail</Label>
                   <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
                   {thumbnailPreview ? (
-                    <div className="relative w-full h-40 rounded-lg overflow-hidden border border-ink/20">
+                    <div className="relative w-full h-40 rounded-lg overflow-hidden border border-cyan-500/30">
                       <img src={thumbnailPreview} alt="" className="w-full h-full object-cover" />
                       <button onClick={() => { setThumbnail(null); setThumbnailPreview(null) }} className="absolute top-2 right-2 p-1.5 rounded-full bg-ink/80 text-cream hover:bg-red-600 transition-colors">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => thumbRef.current?.click()} className="w-full h-32 border-2 border-dashed border-ink/20 rounded-lg flex flex-col items-center justify-center gap-2 text-ink/40 hover:text-ink hover:border-ink/30 transition-all">
+                    <button onClick={() => thumbRef.current?.click()} className="w-full h-32 border-2 border-dashed border-cyan-500/30 rounded-lg flex flex-col items-center justify-center gap-2 text-zinc-200/40 hover:text-zinc-200 hover:border-cyan-500/30 transition-all">
                       <Upload className="w-6 h-6" />
                       <span className="text-xs">Click to upload thumbnail</span>
-                      <span className="text-[10px] text-ink/30">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
+                      <span className="text-[10px] text-zinc-200/30">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
                     </button>
                   )}
                 </div>
@@ -747,28 +747,28 @@ export function CourseCreatePage() {
 
           {/* Step 3: Session Flow */}
           {step === 3 && (
-            <Card className="bg-cream border-ink/10">
+            <Card className="bg-[#040814] border-cyan-500/30">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4 text-ink/60" />
-                  <h3 className="text-sm font-semibold text-ink">Session Flow</h3>
+                  <FileText className="w-4 h-4 text-zinc-200/60" />
+                  <h3 className="text-sm font-semibold text-zinc-200">Session Flow</h3>
                 </div>
-                <p className="text-xs text-ink/50">Outline how the sessions will be engaged and what topics will be covered.</p>
+                <p className="text-xs text-zinc-200/50">Outline how the sessions will be engaged and what topics will be covered.</p>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Session Flow Details</Label>
-                  <Textarea {...sessionFlowForm.register('session_flow_text')} rows={6} placeholder="Describe the session flow, topics covered, and engagement plan..." className="bg-ink/5 border-ink/20 text-ink" />
+                  <Label className="text-zinc-200/80 text-xs">Session Flow Details</Label>
+                  <Textarea {...sessionFlowForm.register('session_flow_text')} rows={6} placeholder="Describe the session flow, topics covered, and engagement plan..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                 </div>
 
                 <div className="space-y-1.5 mt-4">
-                  <Label className="text-ink/80 text-xs">Session Flow Document (Optional)</Label>
+                  <Label className="text-zinc-200/80 text-xs">Session Flow Document (Optional)</Label>
                   {sessionFlowDoc ? (
-                    <div className="flex items-center justify-between p-3 bg-ink/5 border border-ink/20 rounded-lg">
-                      <div className="flex items-center gap-2 text-sm text-ink truncate">
-                        <FileText className="w-4 h-4 shrink-0 text-ink/60" />
+                    <div className="flex items-center justify-between p-3 bg-ink/5 border border-cyan-500/30 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm text-zinc-200 truncate">
+                        <FileText className="w-4 h-4 shrink-0 text-zinc-200/60" />
                         <span className="truncate">{sessionFlowDoc.name}</span>
                       </div>
-                      <button onClick={() => setSessionFlowDoc(null)} className="p-1.5 rounded-full hover:bg-red-50 text-ink/40 hover:text-red-500 transition-colors">
+                      <button onClick={() => setSessionFlowDoc(null)} className="p-1.5 rounded-full hover:bg-red-50 text-zinc-200/40 hover:text-red-500 transition-colors">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -777,7 +777,7 @@ export function CourseCreatePage() {
                       <Input
                         type="file"
                         accept=".pdf,.doc,.docx,.txt"
-                        className="bg-ink/5 border-ink/20 text-ink cursor-pointer"
+                        className="bg-ink/5 border-cyan-500/30 text-zinc-200 cursor-pointer"
                         onChange={(e) => {
                           const file = e.target.files?.[0]
                           if (file) {
@@ -791,7 +791,7 @@ export function CourseCreatePage() {
                       />
                     </div>
                   )}
-                  <p className="text-[10px] text-ink/40">Upload a PDF or Word document outlining the flow (max 20MB).</p>
+                  <p className="text-[10px] text-zinc-200/40">Upload a PDF or Word document outlining the flow (max 20MB).</p>
                 </div>
               </CardContent>
             </Card>
@@ -800,55 +800,55 @@ export function CourseCreatePage() {
           {/* Step 4: Learning Objectives & Skills */}
           {step === 4 && (
             <div className="space-y-4">
-              <Card className="bg-cream border-ink/10">
+              <Card className="bg-[#040814] border-cyan-500/30">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-4 h-4 text-ink/60" />
-                    <h3 className="text-sm font-semibold text-ink">Learning Objectives</h3>
+                    <Target className="w-4 h-4 text-zinc-200/60" />
+                    <h3 className="text-sm font-semibold text-zinc-200">Learning Objectives</h3>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">What will learners understand? *</Label>
-                    <Textarea {...objectivesForm.register('understand')} rows={3} placeholder="e.g. The principles of cyclone formation, warning systems..." className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-zinc-200/80 text-xs">What will learners understand? *</Label>
+                    <Textarea {...objectivesForm.register('understand')} rows={3} placeholder="e.g. The principles of cyclone formation, warning systems..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                     {objectivesForm.formState.errors.understand && <p className="text-xs text-red-600">{objectivesForm.formState.errors.understand.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">What will learners be able to do? *</Label>
-                    <Textarea {...objectivesForm.register('able_to_do')} rows={3} placeholder="e.g. Interpret cyclone warnings, coordinate emergency responses..." className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-zinc-200/80 text-xs">What will learners be able to do? *</Label>
+                    <Textarea {...objectivesForm.register('able_to_do')} rows={3} placeholder="e.g. Interpret cyclone warnings, coordinate emergency responses..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                     {objectivesForm.formState.errors.able_to_do && <p className="text-xs text-red-600">{objectivesForm.formState.errors.able_to_do.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 text-xs">Competencies this course builds *</Label>
-                    <Textarea {...objectivesForm.register('competencies_built')} rows={3} placeholder="e.g. Emergency coordination, public advisory preparation..." className="bg-ink/5 border-ink/20 text-ink" />
+                    <Label className="text-zinc-200/80 text-xs">Competencies this course builds *</Label>
+                    <Textarea {...objectivesForm.register('competencies_built')} rows={3} placeholder="e.g. Emergency coordination, public advisory preparation..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                     {objectivesForm.formState.errors.competencies_built && <p className="text-xs text-red-600">{objectivesForm.formState.errors.competencies_built.message}</p>}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-cream border-ink/10">
+              <Card className="bg-[#040814] border-cyan-500/30">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-4 h-4 text-ink/60" />
-                    <h3 className="text-sm font-semibold text-ink">Required Skills</h3>
+                    <Target className="w-4 h-4 text-zinc-200/60" />
+                    <h3 className="text-sm font-semibold text-zinc-200">Required Skills</h3>
                   </div>
-                  <p className="text-xs text-ink/50">Select the skills this course requires or develops.</p>
+                  <p className="text-xs text-zinc-200/50">Select the skills this course requires or develops.</p>
                   <div className="flex gap-2">
-                    <Input value={customSkillName} onChange={e => setCustomSkillName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill() } }} placeholder="Add a custom skill..." className="bg-ink/5 border-ink/20 text-ink h-9 text-xs" disabled={addingSkill} />
-                    <Button type="button" variant="outline" onClick={addCustomSkill} disabled={!customSkillName.trim() || addingSkill} className="border-ink/20 text-ink h-9 px-3 shrink-0">
+                    <Input value={customSkillName} onChange={e => setCustomSkillName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill() } }} placeholder="Add a custom skill..." className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs" disabled={addingSkill} />
+                    <Button type="button" variant="outline" onClick={addCustomSkill} disabled={!customSkillName.trim() || addingSkill} className="border-cyan-500/30 text-zinc-200 h-9 px-3 shrink-0">
                       {addingSkill ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                     </Button>
                   </div>
                   {skills.length === 0 ? (
-                    <p className="text-sm text-ink/50 py-4 text-center">No skills yet. Add one above.</p>
+                    <p className="text-sm text-zinc-200/50 py-4 text-center">No skills yet. Add one above.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {skills.map(s => (
-                        <button key={s.id} onClick={() => toggleSkill(s.id)} className={`px-3 py-1.5 rounded-full text-xs border transition-all ${selectedSkills.includes(s.id) ? 'bg-ink text-cream border-ink' : 'bg-ink/5 border-ink/10 text-ink/60 hover:text-ink hover:border-ink/20'}`}>
+                        <button key={s.id} onClick={() => toggleSkill(s.id)} className={`px-3 py-1.5 rounded-full text-xs border transition-all ${selectedSkills.includes(s.id) ? 'bg-ink text-cream border-ink' : 'bg-ink/5 border-cyan-500/30 text-zinc-200/60 hover:text-zinc-200 hover:border-cyan-500/30'}`}>
                           {s.name}
                         </button>
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-ink/50">{selectedSkills.length} skill{selectedSkills.length !== 1 ? 's' : ''} selected</p>
+                  <p className="text-xs text-zinc-200/50">{selectedSkills.length} skill{selectedSkills.length !== 1 ? 's' : ''} selected</p>
                 </CardContent>
               </Card>
             </div>
@@ -857,20 +857,20 @@ export function CourseCreatePage() {
           {/* Step 5: Materials */}
           {step === 5 && (
             <div className="space-y-4">
-              <Card className="bg-cream border-ink/10">
+              <Card className="bg-[#040814] border-cyan-500/30">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-ink/60" />
-                    <h3 className="text-sm font-semibold text-ink">Course Materials</h3>
+                    <FileText className="w-4 h-4 text-zinc-200/60" />
+                    <h3 className="text-sm font-semibold text-zinc-200">Course Materials</h3>
                   </div>
-                  <p className="text-xs text-ink/50">Add documents, videos, and links. You can add more materials after the course is approved.</p>
+                  <p className="text-xs text-zinc-200/50">Add documents, videos, and links. You can add more materials after the course is approved.</p>
 
                   {/* Tab Toggle */}
                   <div className="flex gap-2 p-1 bg-ink/5 rounded-lg">
-                    <button onClick={() => setActiveTab('files')} className={`flex-1 py-2 text-xs font-medium rounded-md transition-all ${activeTab === 'files' ? 'bg-cream text-ink shadow-sm' : 'text-ink/50 hover:text-ink'}`}>
+                    <button onClick={() => setActiveTab('files')} className={`flex-1 py-2 text-xs font-medium rounded-md transition-all ${activeTab === 'files' ? 'bg-[#040814] text-zinc-200 shadow-sm' : 'text-zinc-200/50 hover:text-zinc-200'}`}>
                       <FileText className="w-3.5 h-3.5 inline mr-1.5" /> Files & Videos
                     </button>
-                    <button onClick={() => setActiveTab('links')} className={`flex-1 py-2 text-xs font-medium rounded-md transition-all ${activeTab === 'links' ? 'bg-cream text-ink shadow-sm' : 'text-ink/50 hover:text-ink'}`}>
+                    <button onClick={() => setActiveTab('links')} className={`flex-1 py-2 text-xs font-medium rounded-md transition-all ${activeTab === 'links' ? 'bg-[#040814] text-zinc-200 shadow-sm' : 'text-zinc-200/50 hover:text-zinc-200'}`}>
                       <Globe className="w-3.5 h-3.5 inline mr-1.5" /> Links
                     </button>
                   </div>
@@ -881,13 +881,13 @@ export function CourseCreatePage() {
                       onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                       onDragLeave={() => setDragOver(false)}
                       onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${dragOver ? 'border-ink bg-ink/5' : 'border-ink/20 hover:border-ink/30'}`}
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${dragOver ? 'border-ink bg-ink/5' : 'border-cyan-500/30 hover:border-cyan-500/30'}`}
                     >
                       <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.pptx,.ppt,.txt,.mp4,.webm,.mov,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileInput} />
-                      <Upload className="w-8 h-8 text-ink/30 mx-auto mb-2" />
-                      <p className="text-sm text-ink/60 mb-1">Drag & drop files here, or click to browse</p>
-                      <p className="text-[10px] text-ink/40 mb-3">PDF, DOC, PPTX, MP4, images — up to 100MB each</p>
-                      <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="border-ink/20 text-ink">
+                      <Upload className="w-8 h-8 text-zinc-200/30 mx-auto mb-2" />
+                      <p className="text-sm text-zinc-200/60 mb-1">Drag & drop files here, or click to browse</p>
+                      <p className="text-[10px] text-zinc-200/40 mb-3">PDF, DOC, PPTX, MP4, images — up to 100MB each</p>
+                      <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="border-cyan-500/30 text-zinc-200">
                         <Upload className="w-3.5 h-3.5 mr-1.5" /> Choose Files
                       </Button>
                     </div>
@@ -897,14 +897,14 @@ export function CourseCreatePage() {
                   {activeTab === 'links' && (
                     <div className="space-y-3">
                       <div className="space-y-1.5">
-                        <Label className="text-ink/80 text-xs">URL *</Label>
-                        <Input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://example.com/video-or-document" className="bg-ink/5 border-ink/20 text-ink h-9 text-xs" />
+                        <Label className="text-zinc-200/80 text-xs">URL *</Label>
+                        <Input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://example.com/video-or-document" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-ink/80 text-xs">Title (optional)</Label>
-                        <Input value={linkTitle} onChange={e => setLinkTitle(e.target.value)} placeholder="Descriptive title" className="bg-ink/5 border-ink/20 text-ink h-9 text-xs" />
+                        <Label className="text-zinc-200/80 text-xs">Title (optional)</Label>
+                        <Input value={linkTitle} onChange={e => setLinkTitle(e.target.value)} placeholder="Descriptive title" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs" />
                       </div>
-                      <Button variant="outline" size="sm" onClick={addLinkMaterial} disabled={!linkUrl.trim()} className="border-ink/20 text-ink">
+                      <Button variant="outline" size="sm" onClick={addLinkMaterial} disabled={!linkUrl.trim()} className="border-cyan-500/30 text-zinc-200">
                         <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Link
                       </Button>
                     </div>
@@ -914,8 +914,8 @@ export function CourseCreatePage() {
                   {pendingMaterials.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-medium text-ink">Added Materials ({pendingMaterials.length})</h4>
-                        <span className="text-[10px] text-ink/40">{formatFileSize(totalMaterialSize)}</span>
+                        <h4 className="text-xs font-medium text-zinc-200">Added Materials ({pendingMaterials.length})</h4>
+                        <span className="text-[10px] text-zinc-200/40">{formatFileSize(totalMaterialSize)}</span>
                       </div>
                       <div className="space-y-1.5 max-h-60 overflow-y-auto">
                         {pendingMaterials.map(mat => {
@@ -923,20 +923,20 @@ export function CourseCreatePage() {
                             ? (mat.url?.includes('youtube') || mat.url?.includes('vimeo') ? Video : Globe)
                             : getFileIcon(mat.mimeType)
                           return (
-                            <div key={mat.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-ink/5 border border-ink/10 group">
+                            <div key={mat.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-ink/5 border border-cyan-500/30 group">
                               <div className="w-8 h-8 rounded-md bg-ink/10 flex items-center justify-center shrink-0">
-                                <Icon className="w-4 h-4 text-ink/60" />
+                                <Icon className="w-4 h-4 text-zinc-200/60" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-ink truncate">{mat.fileName}</p>
-                                <p className="text-[10px] text-ink/40">
+                                <p className="text-xs font-medium text-zinc-200 truncate">{mat.fileName}</p>
+                                <p className="text-[10px] text-zinc-200/40">
                                   {mat.materialType === 'link' || mat.materialType === 'video' ? mat.url : formatFileSize(mat.fileSize)}
                                 </p>
                               </div>
-                              <Badge className={`text-[9px] h-4 ${mat.materialType === 'video' ? 'bg-ink/10 text-ink border-ink/20' : mat.materialType === 'link' ? 'bg-ink/10 text-ink border-ink/20' : 'bg-ink/10 text-ink border-ink/20'}`}>
+                              <Badge className={`text-[9px] h-4 ${mat.materialType === 'video' ? 'bg-ink/10 text-zinc-200 border-cyan-500/30' : mat.materialType === 'link' ? 'bg-ink/10 text-zinc-200 border-cyan-500/30' : 'bg-ink/10 text-zinc-200 border-cyan-500/30'}`}>
                                 {mat.materialType}
                               </Badge>
-                              <button onClick={() => removeMaterial(mat.id)} className="p-1 rounded hover:bg-red-50 text-ink/30 hover:text-red-500 transition-colors shrink-0">
+                              <button onClick={() => removeMaterial(mat.id)} className="p-1 rounded hover:bg-red-50 text-zinc-200/30 hover:text-red-500 transition-colors shrink-0">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -953,55 +953,55 @@ export function CourseCreatePage() {
           {/* Step 6: Review */}
           {step === 6 && (
             <div className="space-y-4">
-              <Card className="bg-cream border-ink/10">
+              <Card className="bg-[#040814] border-cyan-500/30">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Eye className="w-4 h-4 text-ink/60" />
-                    <h3 className="text-sm font-semibold text-ink">Review Course</h3>
+                    <Eye className="w-4 h-4 text-zinc-200/60" />
+                    <h3 className="text-sm font-semibold text-zinc-200">Review Course</h3>
                   </div>
-                  <p className="text-xs text-ink/50">Review everything before creating the course.</p>
+                  <p className="text-xs text-zinc-200/50">Review everything before creating the course.</p>
 
                   {/* Course Details */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-ink/50 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
                       <BookOpen className="w-3 h-3" /> Course Details
                     </div>
                     <div className="bg-ink/5 rounded-lg p-3 space-y-2">
-                      <div><span className="text-[10px] text-ink/40">Title</span><p className="text-sm font-medium text-ink">{watchedValues.title || '—'}</p></div>
-                      <div><span className="text-[10px] text-ink/40">Description</span><p className="text-xs text-ink/60 line-clamp-2">{watchedValues.description || '—'}</p></div>
+                      <div><span className="text-[10px] text-zinc-200/40">Title</span><p className="text-sm font-medium text-zinc-200">{watchedValues.title || '—'}</p></div>
+                      <div><span className="text-[10px] text-zinc-200/40">Description</span><p className="text-xs text-zinc-200/60 line-clamp-2">{watchedValues.description || '—'}</p></div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div><span className="text-[10px] text-ink/40">Type</span><p className="text-xs text-ink capitalize">{watchedValues.course_type}</p></div>
-                        <div><span className="text-[10px] text-ink/40">Department</span><p className="text-xs text-ink">{watchedValues.department || '—'}</p></div>
+                        <div><span className="text-[10px] text-zinc-200/40">Type</span><p className="text-xs text-zinc-200 capitalize">{watchedValues.course_type}</p></div>
+                        <div><span className="text-[10px] text-zinc-200/40">Department</span><p className="text-xs text-zinc-200">{watchedValues.department || '—'}</p></div>
                       </div>
                     </div>
                   </div>
 
                   {/* Settings */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-ink/50 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
                       <Settings className="w-3 h-3" /> Settings
                     </div>
                     <div className="bg-ink/5 rounded-lg p-3 grid grid-cols-2 gap-3">
-                      <div><span className="text-[10px] text-ink/40">Duration</span><p className="text-xs text-ink">{watchedValues.duration_hours ? `${watchedValues.duration_hours} hours` : 'Self-paced'}</p></div>
-                      <div><span className="text-[10px] text-ink/40">Passing Score</span><p className="text-xs text-ink">{watchedValues.passing_score || 60}%</p></div>
+                      <div><span className="text-[10px] text-zinc-200/40">Duration</span><p className="text-xs text-zinc-200">{watchedValues.duration_hours ? `${watchedValues.duration_hours} hours` : 'Self-paced'}</p></div>
+                      <div><span className="text-[10px] text-zinc-200/40">Passing Score</span><p className="text-xs text-zinc-200">{watchedValues.passing_score || 60}%</p></div>
                     </div>
                   </div>
 
                   {/* Learning Objectives */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-ink/50 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
                       <Target className="w-3 h-3" /> Learning Objectives
                     </div>
                     <div className="bg-ink/5 rounded-lg p-3 space-y-1.5">
-                      <div><span className="text-[10px] text-ink/40">Understand</span><p className="text-xs text-ink/60">{watchedValues.understand || '—'}</p></div>
-                      <div><span className="text-[10px] text-ink/40">Able to Do</span><p className="text-xs text-ink/60">{watchedValues.able_to_do || '—'}</p></div>
-                      <div><span className="text-[10px] text-ink/40">Competencies</span><p className="text-xs text-ink/60">{watchedValues.competencies_built || '—'}</p></div>
+                      <div><span className="text-[10px] text-zinc-200/40">Understand</span><p className="text-xs text-zinc-200/60">{watchedValues.understand || '—'}</p></div>
+                      <div><span className="text-[10px] text-zinc-200/40">Able to Do</span><p className="text-xs text-zinc-200/60">{watchedValues.able_to_do || '—'}</p></div>
+                      <div><span className="text-[10px] text-zinc-200/40">Competencies</span><p className="text-xs text-zinc-200/60">{watchedValues.competencies_built || '—'}</p></div>
                     </div>
                   </div>
 
                   {/* Skills */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-ink/50 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
                       <Target className="w-3 h-3" /> Skills
                     </div>
                     <div className="bg-ink/5 rounded-lg p-3">
@@ -1009,37 +1009,37 @@ export function CourseCreatePage() {
                         <div className="flex flex-wrap gap-1">
                           {selectedSkills.map(id => {
                             const skill = skills.find(s => s.id === id)
-                            return skill ? <span key={id} className="px-2 py-0.5 rounded-full text-[10px] bg-ink/10 text-ink">{skill.name}</span> : null
+                            return skill ? <span key={id} className="px-2 py-0.5 rounded-full text-[10px] bg-ink/10 text-zinc-200">{skill.name}</span> : null
                           })}
                         </div>
-                      ) : <p className="text-xs text-ink/40">No skills selected</p>}
+                      ) : <p className="text-xs text-zinc-200/40">No skills selected</p>}
                     </div>
                   </div>
 
                   {/* Materials */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-ink/50 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
                       <FileText className="w-3 h-3" /> Materials ({pendingMaterials.length})
                     </div>
                     <div className="bg-ink/5 rounded-lg p-3">
                       {pendingMaterials.length > 0 ? (
                         <div className="space-y-1">
                           {pendingMaterials.slice(0, 5).map(mat => (
-                            <div key={mat.id} className="flex items-center gap-2 text-xs text-ink/60">
+                            <div key={mat.id} className="flex items-center gap-2 text-xs text-zinc-200/60">
                               <File className="w-3 h-3 shrink-0" />
                               <span className="truncate">{mat.fileName}</span>
                             </div>
                           ))}
-                          {pendingMaterials.length > 5 && <p className="text-[10px] text-ink/40">+{pendingMaterials.length - 5} more</p>}
+                          {pendingMaterials.length > 5 && <p className="text-[10px] text-zinc-200/40">+{pendingMaterials.length - 5} more</p>}
                         </div>
-                      ) : <p className="text-xs text-ink/40">No materials added</p>}
+                      ) : <p className="text-xs text-zinc-200/40">No materials added</p>}
                     </div>
                   </div>
 
                   {/* Thumbnail */}
                   {thumbnailPreview && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[10px] font-medium text-ink/50 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
                         <Upload className="w-3 h-3" /> Thumbnail
                       </div>
                       <div className="bg-ink/5 rounded-lg p-3">
@@ -1064,7 +1064,7 @@ export function CourseCreatePage() {
 
         {/* Navigation */}
         <motion.div variants={fadeUp} className="flex items-center justify-between pt-2">
-          <Button variant="outline" onClick={handleBack} disabled={step === 1} className="border-ink/20 text-ink">
+          <Button variant="outline" onClick={handleBack} disabled={step === 1} className="border-cyan-500/30 text-zinc-200">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
           <div className="flex items-center gap-3">
@@ -1074,7 +1074,7 @@ export function CourseCreatePage() {
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleSubmit('draft')} disabled={saving} className="border-ink/20 text-ink">
+                <Button variant="outline" onClick={() => handleSubmit('draft')} disabled={saving} className="border-cyan-500/30 text-zinc-200">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Save as Draft
                 </Button>
                 <Button onClick={() => handleSubmit('pending_review')} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream">

@@ -40,6 +40,8 @@ export function TraineeAssessmentTest() {
   const roomScanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   const [randomizedQuestions, setRandomizedQuestions] = useState<any[]>([])
+  const [adaptiveHistory, setAdaptiveHistory] = useState<string[]>([])
+  const [currentDifficulty, setCurrentDifficulty] = useState<'easy'|'medium'|'hard'>('medium')
   const [isScanningRoom, setIsScanningRoom] = useState(false)
   const [roomScanProgress, setRoomScanProgress] = useState(0)
 
@@ -49,7 +51,7 @@ export function TraineeAssessmentTest() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessments')
-        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, created_by, course_id, instructions, created_at, results_publish_date')
+        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, created_by, course_id, instructions, created_at, results_publish_date, is_adaptive, is_simulation, simulation_dataset_url')
         .eq('id', assessmentId!)
         .single()
       if (error) { console.error('Assessment fetch error:', error); return null; }
@@ -363,6 +365,13 @@ export function TraineeAssessmentTest() {
 
     setRandomizedQuestions(randomizedQs)
 
+    if (assessment?.is_adaptive) {
+       const firstQIndex = randomizedQs.findIndex((q: any) => q.difficulty === 'medium')
+       if (firstQIndex !== -1) {
+           setCurrentQuestionIndex(firstQIndex)
+       }
+    }
+
     if (assessment?.duration_minutes) {
       setTimeLeft(assessment.duration_minutes * 60)
     } else {
@@ -484,21 +493,21 @@ export function TraineeAssessmentTest() {
     return (
       <DashboardShell title={displayTitle} icon={Target} navLinks={[]}>
         <div className="max-w-4xl mx-auto space-y-6">
-          <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-midnight/60 hover:text-purple-700 transition-colors mb-2 font-semibold">
+          <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-zinc-200/60 hover:text-cyan-400 transition-colors mb-2 font-semibold">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
-          <div className="bg-white border border-purple-500/10 rounded-3xl p-8 shadow-sm text-center">
+          <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-8 shadow-sm text-center">
             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h2 className="text-2xl font-bold text-midnight mb-2">Assessment Completed</h2>
+            <h2 className="text-2xl font-bold text-zinc-200 mb-2">Assessment Completed</h2>
             {areResultsHidden ? (
-                <p className="text-midnight/60 mb-6 bg-purple-50 p-3 rounded-lg border border-purple-100 max-w-sm mx-auto">
+                <p className="text-zinc-200/60 mb-6 bg-cyan-950/30 p-3 rounded-lg border border-cyan-500/30 max-w-sm mx-auto">
                    Your results are currently hidden and will be published on <br/>
-                   <span className="font-bold text-purple-700">{assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a later date'}</span>.
+                   <span className="font-bold text-cyan-400">{assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a later date'}</span>.
                 </p>
             ) : (
-                <p className="text-midnight/60 mb-6">You scored <span className="font-bold text-purple-600">{attemptData.score}%</span>.</p>
+                <p className="text-zinc-200/60 mb-6">You scored <span className="font-bold text-purple-600">{attemptData.score}%</span>.</p>
             )}
             <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl">Return to Course</Button>
           </div>
@@ -535,22 +544,22 @@ export function TraineeAssessmentTest() {
     return (
       <DashboardShell title={displayTitle} icon={Target} navLinks={[]}>
         <div className="max-w-4xl mx-auto">
-          <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-midnight/60 hover:text-purple-700 transition-colors mb-6 font-semibold">
+          <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-zinc-200/60 hover:text-cyan-400 transition-colors mb-6 font-semibold">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
-          <div className="bg-white border border-purple-500/10 rounded-3xl p-10 shadow-lg text-center max-w-2xl mx-auto">
+          <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-10 shadow-lg text-center max-w-2xl mx-auto">
             <Target className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-midnight mb-4">{displayTitle}</h1>
-            <p className="text-midnight/60 mb-8 max-w-lg mx-auto">{assessment.instructions || 'Please read each question carefully before answering. Good luck!'}</p>
+            <h1 className="text-3xl font-bold text-zinc-200 mb-4">{displayTitle}</h1>
+            <p className="text-zinc-200/60 mb-8 max-w-lg mx-auto">{assessment.instructions || 'Please read each question carefully before answering. Good luck!'}</p>
             
             <div className="flex justify-center gap-8 mb-10">
               <div className="text-center">
-                <p className="text-[10px] uppercase font-bold text-midnight/40 mb-1">Duration</p>
-                <p className="font-bold text-midnight flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-500" /> {assessment.duration_minutes || 30} mins</p>
+                <p className="text-[10px] uppercase font-bold text-zinc-200/40 mb-1">Duration</p>
+                <p className="font-bold text-zinc-200 flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-500" /> {assessment.duration_minutes || 30} mins</p>
               </div>
               <div className="text-center">
-                <p className="text-[10px] uppercase font-bold text-midnight/40 mb-1">Questions</p>
-                <p className="font-bold text-midnight flex items-center gap-1.5"><Target className="w-4 h-4 text-blue-500" /> {questions.length}</p>
+                <p className="text-[10px] uppercase font-bold text-zinc-200/40 mb-1">Questions</p>
+                <p className="font-bold text-zinc-200 flex items-center gap-1.5"><Target className="w-4 h-4 text-blue-500" /> {questions.length}</p>
               </div>
             </div>
 
@@ -575,7 +584,7 @@ export function TraineeAssessmentTest() {
                 <p className="font-bold">{gating.message}</p>
               </div>
             ) : (
-              <Button onClick={startTest} className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl px-10 py-6 text-lg w-full sm:w-auto shadow-lg shadow-purple-500/30 transition-all hover:scale-105 active:scale-95">
+              <Button onClick={startTest} className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl px-10 py-6 text-lg w-full sm:w-auto shadow-lg shadow-cyan-950/50 transition-all hover:scale-105 active:scale-95">
                 Start Assessment
               </Button>
             )}
@@ -597,8 +606,8 @@ export function TraineeAssessmentTest() {
           >
             <Brain className="w-12 h-12 text-white" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-midnight mb-2">AI is evaluating your answers...</h2>
-          <p className="text-midnight/50">Analyzing responses and generating feedback</p>
+          <h2 className="text-2xl font-bold text-zinc-200 mb-2">AI is evaluating your answers...</h2>
+          <p className="text-zinc-200/50">Analyzing responses and generating feedback</p>
         </div>
       </DashboardShell>
     )
@@ -616,8 +625,8 @@ export function TraineeAssessmentTest() {
         <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
             <div className="max-w-4xl mx-auto space-y-6 text-center py-20">
               <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold text-midnight mb-2">Submitted Successfully!</h2>
-              <p className="text-midnight/60 mb-8 max-w-md mx-auto">
+              <h2 className="text-3xl font-bold text-zinc-200 mb-2">Submitted Successfully!</h2>
+              <p className="text-zinc-200/60 mb-8 max-w-md mx-auto">
                  {isPendingManual 
                    ? "Your assessment contains open-ended questions that require manual grading. Please check back later."
                    : `Your assessment has been submitted. The results are hidden by your trainer until ${assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a future date'}.`
@@ -633,7 +642,7 @@ export function TraineeAssessmentTest() {
       <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-midnight">Assessment Results</h2>
+            <h2 className="text-2xl font-bold text-zinc-200">Assessment Results</h2>
             <div className="px-4 py-2 bg-purple-100 text-purple-800 rounded-xl font-bold">
               Score: {(submitMutation.data as any)?.score}%
             </div>
@@ -651,12 +660,12 @@ export function TraineeAssessmentTest() {
                       {isCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <XCircle className="w-6 h-6 text-rose-500" />}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-midnight mb-4"><span className="opacity-50 mr-2">{idx + 1}.</span>{q.question_text}</p>
+                      <p className="font-bold text-zinc-200 mb-4"><span className="opacity-50 mr-2">{idx + 1}.</span>{q.question_text}</p>
                       <div className="grid sm:grid-cols-2 gap-3 mb-4">
                         {Object.entries(q.options as Record<string, string>).map(([key, opt]) => {
                           const isSelected = answers[q.id] === key
                           const isActuallyCorrect = q.correct_answer === key
-                          let style = 'bg-white border-slate-200 opacity-60'
+                          let style = 'bg-[#070E20]/90 border-slate-200 opacity-60'
                           if (isActuallyCorrect) style = 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold shadow-sm'
                           else if (isSelected && !isActuallyCorrect) style = 'bg-rose-100 border-rose-300 text-rose-900 font-bold'
 
@@ -671,12 +680,12 @@ export function TraineeAssessmentTest() {
                       </div>
                       
                       {/* AI Explanation Box */}
-                      <div className="bg-white/80 rounded-2xl p-4 border border-purple-100 shadow-sm">
+                      <div className="bg-[#070E20]/90/80 rounded-2xl p-4 border border-cyan-500/30 shadow-sm">
                         <div className="flex items-center gap-2 mb-2">
                           <Brain className="w-4 h-4 text-purple-600" />
-                          <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wide">AI Feedback</h4>
+                          <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wide">AI Feedback</h4>
                         </div>
-                        <p className="text-sm text-midnight/80 leading-relaxed">
+                        <p className="text-sm text-zinc-200/80 leading-relaxed">
                           {q.explanation || 'No explanation provided.'}
                         </p>
                       </div>
@@ -698,7 +707,9 @@ export function TraineeAssessmentTest() {
   // Active Test State
   const activeQuestions = randomizedQuestions.length > 0 ? randomizedQuestions : (questions || [])
   const currentQ = activeQuestions[currentQuestionIndex]
-  const progressPercent = ((currentQuestionIndex) / questions.length) * 100
+  const progressPercent = assessment.is_adaptive
+    ? (Math.min(adaptiveHistory.length + 1, questions.length) / questions.length) * 100
+    : ((currentQuestionIndex) / questions.length) * 100
 
   return (
     <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
@@ -731,24 +742,29 @@ export function TraineeAssessmentTest() {
 
         {isScanningRoom && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/90 backdrop-blur-sm">
-            <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl text-center">
+            <div className="bg-[#070E20]/90 p-8 rounded-3xl max-w-md w-full shadow-2xl text-center">
               <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <ShieldAlert className="w-8 h-8" />
               </div>
-              <h2 className="text-2xl font-bold text-midnight mb-2">Random Room Scan</h2>
-              <p className="text-sm text-midnight/70 mb-6">
+              <h2 className="text-2xl font-bold text-zinc-200 mb-2">Random Room Scan</h2>
+              <p className="text-sm text-zinc-200/70 mb-6">
                 Please pick up your webcam or laptop and slowly pan 360 degrees to show your entire workspace. The test timer is paused.
               </p>
               <Progress value={roomScanProgress} className="h-3 mb-4" />
-              <p className="text-xs font-bold text-ink/50 uppercase tracking-widest animate-pulse">Scanning Environment...</p>
+              <p className="text-xs font-bold text-zinc-200/50 uppercase tracking-widest animate-pulse">Scanning Environment...</p>
             </div>
           </div>
         )}
 
         {/* Header Bar */}
-        <div className={`flex items-center justify-between mb-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-100 sticky top-4 z-10 ${isScanningRoom ? 'opacity-20 pointer-events-none' : ''}`}>
+        <div className={`flex items-center justify-between mb-8 bg-[#070E20]/90 p-4 rounded-2xl shadow-sm border border-slate-100 sticky top-4 z-10 ${isScanningRoom ? 'opacity-20 pointer-events-none' : ''}`}>
           <div className="flex items-center gap-4 w-1/2">
-            <span className="text-sm font-bold text-midnight">Question {currentQuestionIndex + 1} of {questions.length}</span>
+            <span className="text-sm font-bold text-zinc-200">
+              {assessment.is_adaptive 
+                 ? `Adaptive Question ${adaptiveHistory.length + 1} / ${questions.length}`
+                 : `Question ${currentQuestionIndex + 1} of ${questions.length}`
+              }
+            </span>
             <Progress value={progressPercent} className="h-2 flex-1" />
           </div>
           <div className={`flex items-center gap-2 font-mono font-bold text-lg px-4 py-2 rounded-xl ${timeLeft && timeLeft < 300 ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-slate-100 text-slate-700'}`}>
@@ -756,6 +772,27 @@ export function TraineeAssessmentTest() {
             {timeLeft !== null ? formatTime(timeLeft) : '00:00'}
           </div>
         </div>
+
+        <div className={assessment.is_simulation ? 'flex flex-col md:flex-row gap-6' : ''}>
+          {assessment.is_simulation && assessment.simulation_dataset_url && (
+            <div className="md:w-1/2 bg-[#070E20]/90 rounded-3xl p-6 shadow-sm border border-slate-100 mb-8 flex flex-col">
+              <h3 className="font-bold text-zinc-200 mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-emerald-600"/> 
+                Reference Material
+              </h3>
+              <div className="flex-1 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center min-h-[300px]">
+                <img 
+                  src={assessment.simulation_dataset_url} 
+                  alt="Simulation Dataset" 
+                  className="max-w-full max-h-[600px] object-contain rounded-lg"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                />
+              </div>
+            </div>
+          )}
+          
+          <div className={assessment.is_simulation ? 'md:w-1/2 w-full' : 'w-full'}>
+
 
         {/* Question Card */}
         <AnimatePresence mode="wait">
@@ -766,9 +803,9 @@ export function TraineeAssessmentTest() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 mb-8"
+            className="bg-[#070E20]/90 rounded-3xl p-8 shadow-sm border border-slate-100 mb-8"
           >
-            <h2 className="text-xl font-bold text-midnight mb-8 leading-snug">{currentQ?.question_text}</h2>
+            <h2 className="text-xl font-bold text-zinc-200 mb-8 leading-snug">{currentQ?.question_text}</h2>
             
             <div className="space-y-3">
               {(currentQ as any)?.question_type === 'open_ended' ? (
@@ -776,7 +813,7 @@ export function TraineeAssessmentTest() {
                   value={answers[currentQ.id] || ''}
                   onChange={(e) => setAnswers(prev => ({ ...prev, [currentQ.id]: e.target.value }))}
                   placeholder="Type your answer here..."
-                  className="w-full min-h-[150px] p-4 rounded-2xl border-2 border-slate-200 focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 transition-all outline-none text-midnight resize-y"
+                  className="w-full min-h-[150px] p-4 rounded-2xl border-2 border-slate-200 focus:border-cyan-500/30 focus:ring-4 focus:ring-purple-600/10 transition-all outline-none text-zinc-200 resize-y"
                 />
               ) : (
                 Object.entries((currentQ?.options as Record<string, string>) || {}).map(([key, opt]) => {
@@ -787,12 +824,12 @@ export function TraineeAssessmentTest() {
                       onClick={() => setAnswers(prev => ({ ...prev, [currentQ.id]: key }))}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between ${
                         isSelected 
-                          ? 'border-purple-600 bg-purple-50' 
-                          : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50'
+                          ? 'border-cyan-500/30 bg-cyan-950/30' 
+                          : 'border-slate-100 hover:border-cyan-500/30 hover:bg-slate-50'
                       }`}
                     >
-                      <span className={`font-medium ${isSelected ? 'text-purple-900' : 'text-midnight/70'}`}><span className="font-bold mr-1">{key}.</span>{opt}</span>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-purple-600' : 'border-slate-300'}`}>
+                      <span className={`font-medium ${isSelected ? 'text-cyan-300' : 'text-zinc-200/70'}`}><span className="font-bold mr-1">{key}.</span>{opt}</span>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-cyan-500/30' : 'border-slate-300'}`}>
                         {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-purple-600" />}
                       </div>
                     </button>
@@ -805,7 +842,7 @@ export function TraineeAssessmentTest() {
 
         {/* Footer Actions */}
         <div className="flex justify-between items-center pb-20">
-          {!assessment.requires_sea ? (
+          {!assessment.requires_sea && !assessment.is_adaptive ? (
             <Button 
               variant="outline" 
               onClick={() => setCurrentQuestionIndex(p => Math.max(0, p - 1))}
@@ -816,7 +853,7 @@ export function TraineeAssessmentTest() {
             </Button>
           ) : <div />}
           
-          {currentQuestionIndex === questions.length - 1 ? (
+          {(!assessment.is_adaptive && currentQuestionIndex === questions.length - 1) || (assessment.is_adaptive && adaptiveHistory.length + 1 >= questions.length) ? (
             <Button 
               onClick={handleSubmit} 
               className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold px-8"
@@ -825,14 +862,46 @@ export function TraineeAssessmentTest() {
             </Button>
           ) : (
             <Button 
-              onClick={() => setCurrentQuestionIndex(p => Math.min(questions.length - 1, p + 1))}
+              onClick={() => {
+                if (assessment.is_adaptive) {
+                  const isCorrect = answers[currentQ.id] === currentQ.correct_answer;
+                  const nextDiff = isCorrect 
+                    ? (currentDifficulty === 'easy' ? 'medium' : 'hard')
+                    : (currentDifficulty === 'hard' ? 'medium' : 'easy');
+                  
+                  setCurrentDifficulty(nextDiff);
+                  setAdaptiveHistory(prev => [...prev, currentQ.id]);
+
+                  // Find next question of this difficulty that hasn't been answered/shown
+                  let nextQIndex = randomizedQuestions.findIndex((q: any, idx: number) => 
+                    q.difficulty === nextDiff && !answers[q.id] && idx !== currentQuestionIndex && !adaptiveHistory.includes(q.id)
+                  );
+
+                  if (nextQIndex === -1) {
+                    // fallback to any unanswered
+                    nextQIndex = randomizedQuestions.findIndex((q: any, idx: number) => 
+                      !answers[q.id] && idx !== currentQuestionIndex && !adaptiveHistory.includes(q.id)
+                    );
+                  }
+
+                  if (nextQIndex !== -1) {
+                    setCurrentQuestionIndex(nextQIndex);
+                  } else {
+                    handleSubmit();
+                  }
+                } else {
+                  setCurrentQuestionIndex(p => Math.min(questions.length - 1, p + 1));
+                }
+              }}
               className="bg-midnight hover:bg-midnight/90 text-white rounded-xl font-bold"
             >
               Next Question
             </Button>
           )}
         </div>
+        </div>
       </div>
+    </div>
     </DashboardShell>
   )
 }

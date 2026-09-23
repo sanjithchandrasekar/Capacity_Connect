@@ -14,7 +14,7 @@ const buttonVariants = cva(
         primary:
           "bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/25 hover:opacity-95 transition-all",
         purple:
-          "bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-600/25 transition-all",
+          "bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-cyan-950/50 transition-all",
         pink:
           "bg-pink-500 hover:bg-pink-600 text-white shadow-md shadow-pink-500/25 transition-all",
         orange:
@@ -24,10 +24,10 @@ const buttonVariants = cva(
         destructive:
           "bg-red-600 text-white shadow-sm hover:bg-red-700 transition-all",
         outline:
-          "border border-purple-500/20 bg-white/90 shadow-sm hover:bg-purple-50 hover:border-purple-500/40 text-midnight transition-all",
+          "border border-cyan-500/30 bg-[#070E20]/90/90 shadow-sm hover:bg-cyan-950/30 hover:border-cyan-500/30 text-zinc-200 transition-all",
         secondary:
-          "bg-purple-500/10 text-purple-700 hover:bg-purple-500/15 border border-purple-500/20 transition-all",
-        ghost: "hover:bg-purple-50 hover:text-purple-600 text-midnight/80 transition-all",
+          "bg-purple-500/10 text-cyan-400 hover:bg-purple-500/15 border border-cyan-500/30 transition-all",
+        ghost: "hover:bg-cyan-950/30 hover:text-purple-600 text-zinc-200/80 transition-all",
         link: "text-pink-600 underline-offset-4 hover:underline",
       },
       size: {

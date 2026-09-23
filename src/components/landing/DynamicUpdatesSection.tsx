@@ -59,7 +59,7 @@ export function DynamicUpdatesSection() {
               
               <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }} className="space-y-4">
                 {announcements.map(ann => (
-                  <motion.div key={ann.id} variants={fadeUp} className="group relative p-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/[0.07] hover:border-cyan-500/30 transition-all overflow-hidden">
+                  <motion.div key={ann.id} variants={fadeUp} className="group relative p-6 rounded-2xl bg-[#070E20]/90/5 border border-white/10 hover:bg-[#070E20]/90/[0.07] hover:border-cyan-500/30 transition-all overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-cyan-400 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="flex items-center gap-3 mb-3">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-400 border border-cyan-500/30`}>

@@ -13,7 +13,7 @@ const badgeVariants = cva(
         gradient:
           "border-transparent bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-sm",
         purple:
-          "border-purple-200 bg-purple-50 text-purple-700",
+          "border-cyan-500/30 bg-cyan-950/30 text-cyan-400",
         pink:
           "border-pink-200 bg-pink-50 text-pink-700",
         orange:
@@ -24,7 +24,7 @@ const badgeVariants = cva(
           "border-transparent bg-purple-100 text-purple-800 hover:bg-purple-200",
         destructive:
           "border-transparent bg-red-600 text-white shadow hover:bg-red-700",
-        outline: "border-purple-200 text-midnight",
+        outline: "border-cyan-500/30 text-zinc-200",
       },
     },
     defaultVariants: {

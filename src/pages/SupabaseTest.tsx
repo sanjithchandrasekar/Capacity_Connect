@@ -97,7 +97,7 @@ export function SupabaseTest() {
   const stillLoading = results.some(r => r.status === 'loading')
 
   return (
-    <div className="min-h-screen bg-cream p-4 md:p-8">
+    <div className="min-h-screen bg-[#040814] p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Header */}
@@ -107,23 +107,23 @@ export function SupabaseTest() {
               <img src="/logo.png" alt="Capacity Connect" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-ink">Capacity Connect — Health Dashboard</h1>
-              <p className="text-xs text-ink/50">DB connectivity check + full app page map</p>
+              <h1 className="text-xl font-bold text-zinc-200">Capacity Connect — Health Dashboard</h1>
+              <p className="text-xs text-zinc-200/50">DB connectivity check + full app page map</p>
             </div>
           </div>
         </motion.div>
 
         {/* DB Tests */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
-          className="bg-white border border-ink/10 rounded-2xl overflow-hidden shadow-sm"
+          className="bg-[#070E20]/90 border border-cyan-500/30 rounded-2xl overflow-hidden shadow-sm"
         >
-          <div className="px-6 py-4 border-b border-ink/10 flex items-center gap-2">
-            <Database className="w-4 h-4 text-ink/60" />
-            <h2 className="text-sm font-semibold text-ink">Supabase Connection Tests</h2>
+          <div className="px-6 py-4 border-b border-cyan-500/30 flex items-center gap-2">
+            <Database className="w-4 h-4 text-zinc-200/60" />
+            <h2 className="text-sm font-semibold text-zinc-200">Supabase Connection Tests</h2>
             <button
               onClick={resetAndRefresh}
               disabled={stillLoading}
-              className="ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-ink/20 text-ink/60 hover:text-ink hover:bg-ink/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-cyan-500/30 text-zinc-200/60 hover:text-zinc-200 hover:bg-ink/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <RefreshCw className={`w-3 h-3 ${stillLoading ? 'animate-spin' : ''}`} />
               {stillLoading ? 'Checking...' : 'Refresh'}
@@ -135,10 +135,10 @@ export function SupabaseTest() {
                 r.status === 'ok' ? 'bg-green-50 border-green-200' :
                 r.status === 'error' ? 'bg-red-50 border-red-200' :
                 r.status === 'warn' ? 'bg-yellow-50 border-yellow-200' :
-                'bg-ink/5 border-ink/10'
+                'bg-ink/5 border-cyan-500/30'
               }`}>
                 <div className="mt-0.5 shrink-0">
-                  {r.status === 'loading' && <Loader2 className="w-4 h-4 text-ink/50 animate-spin" />}
+                  {r.status === 'loading' && <Loader2 className="w-4 h-4 text-zinc-200/50 animate-spin" />}
                   {r.status === 'ok' && <CheckCircle className="w-4 h-4 text-green-600" />}
                   {r.status === 'warn' && <ShieldCheck className="w-4 h-4 text-yellow-600" />}
                   {r.status === 'error' && <XCircle className="w-4 h-4 text-red-600" />}
@@ -148,9 +148,9 @@ export function SupabaseTest() {
                     r.status === 'ok' ? 'text-green-700' :
                     r.status === 'error' ? 'text-red-700' :
                     r.status === 'warn' ? 'text-yellow-700' :
-                    'text-ink/60'
+                    'text-zinc-200/60'
                   }`}>{r.label}</p>
-                  {r.detail && <p className="text-xs text-ink/50 mt-0.5 break-all">{r.detail}</p>}
+                  {r.detail && <p className="text-xs text-zinc-200/50 mt-0.5 break-all">{r.detail}</p>}
                 </div>
               </div>
             ))}
@@ -166,7 +166,7 @@ export function SupabaseTest() {
               {hasError && (
                 <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-center">
                   <p className="text-red-700 font-semibold text-sm">❌ Connection issue detected</p>
-                  <p className="text-xs text-ink/50 mt-1">Check your <code className="text-ink/60">.env.local</code> file and Vercel environment variables.</p>
+                  <p className="text-xs text-zinc-200/50 mt-1">Check your <code className="text-zinc-200/60">.env.local</code> file and Vercel environment variables.</p>
                 </div>
               )}
             </div>
@@ -175,32 +175,32 @@ export function SupabaseTest() {
 
         {/* App Pages Map */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }}
-          className="bg-white border border-ink/10 rounded-2xl overflow-hidden shadow-sm"
+          className="bg-[#070E20]/90 border border-cyan-500/30 rounded-2xl overflow-hidden shadow-sm"
         >
-          <div className="px-6 py-4 border-b border-ink/10 flex items-center gap-2">
-            <Globe className="w-4 h-4 text-ink/60" />
-            <h2 className="text-sm font-semibold text-ink">App Pages — Full Sitemap</h2>
-            <span className="ml-auto text-xs text-ink/40">{appPages.length} pages total</span>
+          <div className="px-6 py-4 border-b border-cyan-500/30 flex items-center gap-2">
+            <Globe className="w-4 h-4 text-zinc-200/60" />
+            <h2 className="text-sm font-semibold text-zinc-200">App Pages — Full Sitemap</h2>
+            <span className="ml-auto text-xs text-zinc-200/40">{appPages.length} pages total</span>
           </div>
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {appPages.map((page) => (
               <Link
                 key={page.path}
                 to={page.path}
-                className="flex items-center gap-3 p-3 rounded-xl border border-ink/10 hover:border-ink/30 hover:bg-ink/5 transition-all group"
+                className="flex items-center gap-3 p-3 rounded-xl border border-cyan-500/30 hover:border-cyan-500/30 hover:bg-ink/5 transition-all group"
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${page.public ? 'bg-ink/10' : 'bg-ink/5'}`}>
-                  <page.icon className="w-4 h-4 text-ink/60" />
+                  <page.icon className="w-4 h-4 text-zinc-200/60" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-ink group-hover:text-ink truncate">{page.label}</p>
-                  <p className="text-xs text-ink/50 truncate">{page.desc}</p>
+                  <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-200 truncate">{page.label}</p>
+                  <p className="text-xs text-zinc-200/50 truncate">{page.desc}</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${page.public ? 'bg-green-50 text-green-700 border-green-200' : 'bg-ink/5 text-ink/50 border-ink/10'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${page.public ? 'bg-green-50 text-green-700 border-green-200' : 'bg-ink/5 text-zinc-200/50 border-cyan-500/30'}`}>
                     {page.public ? 'Public' : 'Auth'}
                   </span>
-                  <ExternalLink className="w-3 h-3 text-ink/30 group-hover:text-ink/60 transition-colors" />
+                  <ExternalLink className="w-3 h-3 text-zinc-200/30 group-hover:text-zinc-200/60 transition-colors" />
                 </div>
               </Link>
             ))}
@@ -214,10 +214,10 @@ export function SupabaseTest() {
           <Link to="/login" className="p-4 bg-ink text-cream rounded-xl text-center text-sm font-semibold hover:bg-ink/90 transition-all">
             Go to Login →
           </Link>
-          <Link to="/register" className="p-4 bg-white border border-ink/20 text-ink rounded-xl text-center text-sm font-semibold hover:bg-ink/5 transition-all">
+          <Link to="/register" className="p-4 bg-[#070E20]/90 border border-cyan-500/30 text-zinc-200 rounded-xl text-center text-sm font-semibold hover:bg-ink/5 transition-all">
             Register New User →
           </Link>
-          <Link to="/" className="p-4 bg-white border border-ink/20 text-ink rounded-xl text-center text-sm font-semibold hover:bg-ink/5 transition-all">
+          <Link to="/" className="p-4 bg-[#070E20]/90 border border-cyan-500/30 text-zinc-200 rounded-xl text-center text-sm font-semibold hover:bg-ink/5 transition-all">
             Back to Landing Page →
           </Link>
         </motion.div>

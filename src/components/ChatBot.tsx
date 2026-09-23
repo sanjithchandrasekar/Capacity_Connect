@@ -157,7 +157,7 @@ export function ChatBot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute bottom-16 right-0 w-[calc(100vw-2.5rem)] sm:w-[410px] bg-white/98 backdrop-blur-2xl border border-cyan-500/25 shadow-2xl shadow-cyan-950/30 rounded-2xl overflow-hidden flex flex-col h-[550px] max-h-[82vh]"
+            className="absolute bottom-16 right-0 w-[calc(100vw-2.5rem)] sm:w-[410px] bg-[#070E20]/90/98 backdrop-blur-2xl border border-cyan-500/25 shadow-2xl shadow-cyan-950/30 rounded-2xl overflow-hidden flex flex-col h-[550px] max-h-[82vh]"
           >
             {/* Header: Cosmic Navy to Deep Space Cyan matching Homepage Header */}
             <div className="px-4 py-3.5 bg-gradient-to-r from-[#040814] via-[#07132a] to-[#0a1e3f] border-b border-cyan-500/25 flex justify-between items-center text-white shadow-sm">
@@ -182,7 +182,7 @@ export function ChatBot() {
                   onClick={handleResetChat}
                   title="Reset conversation"
                   aria-label="Reset conversation"
-                  className="p-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-slate-300 hover:text-white hover:bg-[#070E20]/90/10 rounded-lg transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-4 h-4" />
                 </button>
@@ -191,7 +191,7 @@ export function ChatBot() {
                   onClick={() => setIsOpen(false)}
                   title="Close chat"
                   aria-label="Close chat"
-                  className="p-1.5 text-slate-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-slate-300 hover:text-white hover:bg-[#070E20]/90/10 rounded-lg transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -219,7 +219,7 @@ export function ChatBot() {
                     className={`p-3.5 rounded-2xl max-w-[82%] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
                       msg.role === 'user'
                         ? 'bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white rounded-tr-xs shadow-md shadow-cyan-600/15 font-medium'
-                        : 'bg-white border border-slate-200/90 text-slate-800 rounded-tl-xs shadow-xs'
+                        : 'bg-[#070E20]/90 border border-slate-200/90 text-slate-800 rounded-tl-xs shadow-xs'
                     }`}
                   >
                     {msg.role === 'bot' ? <BotMessage content={msg.content} /> : msg.content}
@@ -230,7 +230,7 @@ export function ChatBot() {
               {isLoading && (
                 <div className="flex gap-2.5 items-center">
                   <ChatBotLogo variant="badge" size={28} />
-                  <div className="p-3 rounded-2xl bg-white border border-slate-200 text-slate-600 rounded-tl-xs shadow-xs flex items-center gap-1.5">
+                  <div className="p-3 rounded-2xl bg-[#070E20]/90 border border-slate-200 text-slate-600 rounded-tl-xs shadow-xs flex items-center gap-1.5">
                     <span
                       className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-bounce"
                       style={{ animationDelay: '0ms' }}
@@ -257,7 +257,7 @@ export function ChatBot() {
                         key={idx}
                         type="button"
                         onClick={() => sendMessage(prompt)}
-                        className="text-xs px-2.5 py-1.5 rounded-lg bg-white hover:bg-cyan-50 text-slate-700 hover:text-cyan-800 border border-slate-200/90 hover:border-cyan-300 transition-all text-left shadow-2xs cursor-pointer"
+                        className="text-xs px-2.5 py-1.5 rounded-lg bg-[#070E20]/90 hover:bg-cyan-50 text-slate-700 hover:text-cyan-800 border border-slate-200/90 hover:border-cyan-300 transition-all text-left shadow-2xs cursor-pointer"
                       >
                         {prompt}
                       </button>
@@ -270,7 +270,7 @@ export function ChatBot() {
             {/* Input Bar */}
             <form
               onSubmit={handleSend}
-              className="p-3 bg-white border-t border-slate-200/80 flex gap-2 items-center"
+              className="p-3 bg-[#070E20]/90 border-t border-slate-200/80 flex gap-2 items-center"
             >
               <Input
                 ref={inputRef}

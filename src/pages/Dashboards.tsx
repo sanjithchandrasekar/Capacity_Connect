@@ -84,10 +84,10 @@ export function DashboardShell({
   }
 
   const roleColor: Record<string, string> = {
-    admin: 'bg-purple-50 text-purple-700 border-purple-200',
+    admin: 'bg-cyan-950/30 text-cyan-400 border-cyan-500/30',
     super_admin: 'bg-pink-50 text-pink-700 border-pink-200',
     trainer: 'bg-orange-50 text-orange-700 border-orange-200',
-    trainee: 'bg-purple-50 text-purple-600 border-purple-200',
+    trainee: 'bg-cyan-950/30 text-purple-600 border-cyan-500/30',
   }
   const statusColor: Record<string, string> = {
     approved: 'bg-green-50 text-green-700 border-green-200',
@@ -99,7 +99,7 @@ export function DashboardShell({
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="h-16 flex items-center px-5 border-b border-purple-500/10">
+      <div className="h-16 flex items-center px-5 border-b border-cyan-500/30">
         <Link to="/" className="flex items-center gap-2.5">
           <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain shrink-0" />
           {(!sidebarCollapsed || mobileOpen) && (
@@ -108,7 +108,7 @@ export function DashboardShell({
               animate={{ opacity: 1, x: 0 }}
               className="text-sm font-bold whitespace-nowrap"
             >
-              <span className="text-purple-900">Capacity</span>
+              <span className="text-cyan-300">Capacity</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500"> Connect</span>
             </motion.span>
           )}
@@ -129,7 +129,7 @@ export function DashboardShell({
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm group ${
               isActive
                 ? 'bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/20'
-                : 'text-midnight/70 hover:text-midnight hover:bg-purple-50 border border-transparent'
+                : 'text-zinc-200/70 hover:text-zinc-200 hover:bg-cyan-950/30 border border-transparent'
             }`}>
               <link.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'group-hover:text-purple-600'} transition-colors`} />
               {(!sidebarCollapsed || mobileOpen) && (
@@ -160,28 +160,28 @@ export function DashboardShell({
 
       {/* Quick Search shortcut */}
       {(!sidebarCollapsed || mobileOpen) && (
-        <div className="p-3 mx-3 mb-2 rounded-xl bg-purple-50/70 border border-purple-500/15">
-          <div className="flex items-center gap-2 text-xs text-midnight/60">
+        <div className="p-3 mx-3 mb-2 rounded-xl bg-cyan-950/30/70 border border-cyan-500/30">
+          <div className="flex items-center gap-2 text-xs text-zinc-200/60">
             <Search className="w-3.5 h-3.5 text-purple-600" />
             <span>
-              Press <kbd className="px-1 py-0.5 bg-white border border-purple-200 rounded text-[10px] font-medium">⌘K</kbd> for search
+              Press <kbd className="px-1 py-0.5 bg-[#070E20]/90 border border-cyan-500/30 rounded text-[10px] font-medium">⌘K</kbd> for search
             </span>
           </div>
         </div>
       )}
 
       {/* Profile summary & logout */}
-      <div className="p-3 border-t border-purple-500/10 space-y-2">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-purple-50 transition-all cursor-pointer group">
+      <div className="p-3 border-t border-cyan-500/30 space-y-2">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-cyan-950/30 transition-all cursor-pointer group">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0 ring-2 ring-purple-500/20">
             {profile?.full_name?.[0]?.toUpperCase() ?? 'U'}
           </div>
           {(!sidebarCollapsed || mobileOpen) && (
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-midnight truncate group-hover:text-purple-700 transition-colors">
+              <p className="text-xs font-semibold text-zinc-200 truncate group-hover:text-cyan-400 transition-colors">
                 {profile?.full_name ?? 'User'}
               </p>
-              <p className="text-[11px] text-midnight/50 truncate">
+              <p className="text-[11px] text-zinc-200/50 truncate">
                 {profile?.email}
               </p>
             </div>
@@ -189,17 +189,17 @@ export function DashboardShell({
         </div>
         {(!sidebarCollapsed || mobileOpen) && (
           <div className="flex items-center gap-1.5 px-3">
-            <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${roleColor[profile?.role ?? ''] ?? 'bg-purple-50 text-purple-700'}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${roleColor[profile?.role ?? ''] ?? 'bg-cyan-950/30 text-cyan-400'}`}>
               {profile?.role?.replace('_', ' ')}
             </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${statusColor[profile?.approval_status ?? ''] ?? 'bg-purple-50 text-purple-700'}`}>
+            <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${statusColor[profile?.approval_status ?? ''] ?? 'bg-cyan-950/30 text-cyan-400'}`}>
               {profile?.approval_status}
             </span>
           </div>
         )}
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-midnight/60 hover:text-red-600 hover:bg-red-500/10 transition-all text-sm"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-200/60 hover:text-red-600 hover:bg-red-500/10 transition-all text-sm"
         >
           <LogOut className="w-4 h-4 shrink-0" />
           {(!sidebarCollapsed || mobileOpen) && <span>Sign Out</span>}
@@ -209,7 +209,7 @@ export function DashboardShell({
   )
 
   return (
-    <div className="min-h-screen bg-white text-midnight flex">
+    <div className="min-h-screen bg-[#070E20]/90 text-zinc-200 flex">
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-transparent blur-[120px]" />
@@ -222,9 +222,9 @@ export function DashboardShell({
       )}
 
       {/* Mobile sidebar drawer */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-purple-500/10 bg-white/95 backdrop-blur-2xl flex flex-col transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-cyan-500/30 bg-[#070E20]/90/95 backdrop-blur-2xl flex flex-col transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="absolute top-4 right-4 z-10">
-          <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all">
+          <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-cyan-950/30 text-zinc-200/70 hover:text-zinc-200 transition-all">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -232,14 +232,14 @@ export function DashboardShell({
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className={`relative z-20 hidden md:flex ${sidebarCollapsed ? 'w-[72px]' : 'w-64'} border-r border-purple-500/10 bg-white/80 backdrop-blur-2xl flex-col shrink-0 h-screen sticky top-0 transition-all duration-300`}>
+      <aside className={`relative z-20 hidden md:flex ${sidebarCollapsed ? 'w-[72px]' : 'w-64'} border-r border-cyan-500/30 bg-[#070E20]/90/80 backdrop-blur-2xl flex-col shrink-0 h-screen sticky top-0 transition-all duration-300`}>
         {sidebarContent}
       </aside>
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
         {/* Topbar */}
-        <header className="h-14 md:h-16 border-b border-purple-500/10 bg-white/80 backdrop-blur-2xl sticky top-0 z-10 flex items-center px-4 md:px-6 gap-3">
+        <header className="h-14 md:h-16 border-b border-cyan-500/30 bg-[#070E20]/90/80 backdrop-blur-2xl sticky top-0 z-10 flex items-center px-4 md:px-6 gap-3">
           <button
             onClick={() => {
               if (window.innerWidth < 768) {
@@ -248,19 +248,19 @@ export function DashboardShell({
                 setSidebarCollapsed(!sidebarCollapsed)
               }
             }}
-            className="p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all"
+            className="p-2 rounded-lg hover:bg-cyan-950/30 text-zinc-200/70 hover:text-zinc-200 transition-all"
           >
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
             <Icon className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
-            <h1 className="text-sm md:text-base font-semibold text-midnight truncate">{title}</h1>
+            <h1 className="text-sm md:text-base font-semibold text-zinc-200 truncate">{title}</h1>
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-1 md:gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all group">
+                <button className="relative p-2 rounded-lg hover:bg-cyan-950/30 text-zinc-200/70 hover:text-zinc-200 transition-all group">
                   <Bell className="w-4 h-4 group-hover:text-purple-600" />
                   {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-pink-500 rounded-full animate-pulse" />}
                 </button>
@@ -270,7 +270,7 @@ export function DashboardShell({
                   <DropdownMenuLabel className="pb-0">Notifications</DropdownMenuLabel>
                   <div className="flex items-center gap-1 pr-2">
                     {unreadCount > 0 && (
-                      <button onClick={(e) => { e.preventDefault(); markAllAsRead() }} className="text-[10px] font-bold text-purple-600 hover:text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                      <button onClick={(e) => { e.preventDefault(); markAllAsRead() }} className="text-[10px] font-bold text-purple-600 hover:text-cyan-400 bg-cyan-950/30 px-2 py-1 rounded">
                         Mark read
                       </button>
                     )}
@@ -284,14 +284,14 @@ export function DashboardShell({
                 <DropdownMenuSeparator />
                 
                 {notifsLoading ? (
-                  <div className="p-4 text-center text-xs text-midnight/50">Loading...</div>
+                  <div className="p-4 text-center text-xs text-zinc-200/50">Loading...</div>
                 ) : notifications.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-midnight/50">No new notifications</div>
+                  <div className="p-4 text-center text-xs text-zinc-200/50">No new notifications</div>
                 ) : (
                   notifications.map((notif) => (
                     <React.Fragment key={notif.id}>
                       <DropdownMenuItem 
-                        className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notif.read_at ? 'bg-purple-50/50' : ''}`}
+                        className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notif.read_at ? 'bg-cyan-950/40' : ''}`}
                         onClick={() => {
                           if (!notif.read_at) markAsRead(notif.id);
                           navigate(getNotificationRedirectUrl(notif.type, profile?.role));
@@ -300,7 +300,7 @@ export function DashboardShell({
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2">
                             {!notif.read_at && <div className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0" />}
-                            <span className="text-sm font-semibold text-midnight truncate max-w-[160px]">{notif.title}</span>
+                            <span className="text-sm font-semibold text-zinc-200 truncate max-w-[160px]">{notif.title}</span>
                           </div>
                           <button
                             onClick={(e) => {
@@ -314,8 +314,8 @@ export function DashboardShell({
                             <X className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <span className="text-xs text-midnight/60">{notif.message}</span>
-                        <span className="text-[10px] text-midnight/40 mt-1">
+                        <span className="text-xs text-zinc-200/60">{notif.message}</span>
+                        <span className="text-[10px] text-zinc-200/40 mt-1">
                           {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
                         </span>
                       </DropdownMenuItem>
@@ -330,7 +330,7 @@ export function DashboardShell({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Link to={`/${profile?.role}/settings`} className="p-2 rounded-lg hover:bg-purple-50 text-midnight/70 hover:text-midnight transition-all">
+            <Link to={`/${profile?.role}/settings`} className="p-2 rounded-lg hover:bg-cyan-950/30 text-zinc-200/70 hover:text-zinc-200 transition-all">
               <Settings className="w-4 h-4" />
             </Link>
           </div>
@@ -351,7 +351,7 @@ function StatusBadge({ status }: { status: string }) {
     rejected: { color: 'bg-red-50 text-red-600 border border-red-200', icon: XCircle },
     suspended: { color: 'bg-red-50 text-red-600 border border-red-200', icon: Ban },
   }
-  const c = config[status] ?? { color: 'bg-ink/70 text-ink/70', icon: Clock }
+  const c = config[status] ?? { color: 'bg-ink/70 text-zinc-200/70', icon: Clock }
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border capitalize font-medium ${c.color}`}>
       <c.icon className="w-3 h-3" />
@@ -379,7 +379,7 @@ function StatCard({
   return (
     <motion.div 
       variants={fadeUp} 
-      className="group relative p-5 md:p-6 rounded-3xl bg-white border border-purple-500/15 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-300 cursor-default overflow-hidden"
+      className="group relative p-5 md:p-6 rounded-3xl bg-[#070E20]/90 border border-cyan-500/30 shadow-sm hover:shadow-xl hover:shadow-cyan-950/50 hover:-translate-y-1 transition-all duration-300 cursor-default overflow-hidden"
     >
       {/* Subtle background ambient corner glow */}
       <div className={`absolute -right-8 -bottom-8 w-24 h-24 rounded-full opacity-10 group-hover:opacity-20 blur-xl transition-opacity bg-gradient-to-br ${gradient}`} />
@@ -389,15 +389,15 @@ function StatCard({
           <Icon className="w-5 h-5" />
         </div>
         {badgeText && (
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/70">
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-cyan-950/30 text-cyan-400 border border-cyan-500/30">
             {badgeText}
           </span>
         )}
       </div>
 
       <div className="relative">
-        <div className="text-3xl font-extrabold text-midnight tracking-tight mb-1">{value}</div>
-        <div className="text-xs font-semibold text-midnight/60">{label}</div>
+        <div className="text-3xl font-extrabold text-zinc-200 tracking-tight mb-1">{value}</div>
+        <div className="text-xs font-semibold text-zinc-200/60">{label}</div>
         {subtext && <div className="text-[11px] text-purple-600/80 font-medium mt-1">{subtext}</div>}
       </div>
     </motion.div>
@@ -419,15 +419,15 @@ function ActivityItem({
   iconBg: string
 }) {
   return (
-    <div className="flex items-start gap-3.5 p-3.5 rounded-2xl hover:bg-purple-50/50 transition-colors group">
+    <div className="flex items-start gap-3.5 p-3.5 rounded-2xl hover:bg-cyan-950/40 transition-colors group">
       <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform`}>
         <Icon className="w-4 h-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs md:text-sm text-midnight font-semibold truncate group-hover:text-purple-700 transition-colors">{title}</p>
-        <p className="text-xs text-midnight/55 mt-0.5 truncate">{desc}</p>
+        <p className="text-xs md:text-sm text-zinc-200 font-semibold truncate group-hover:text-cyan-400 transition-colors">{title}</p>
+        <p className="text-xs text-zinc-200/55 mt-0.5 truncate">{desc}</p>
       </div>
-      <span className="text-[11px] text-midnight/40 font-medium whitespace-nowrap bg-purple-50/70 px-2 py-0.5 rounded-full">{time}</span>
+      <span className="text-[11px] text-zinc-200/40 font-medium whitespace-nowrap bg-cyan-950/30/70 px-2 py-0.5 rounded-full">{time}</span>
     </div>
   )
 }
@@ -606,7 +606,7 @@ export function TraineeDashboard() {
         iconBg: n.type === 'certificate_issued' ? 'bg-orange-100 text-orange-600'
           : n.type === 'enrollment' ? 'bg-pink-100 text-pink-600'
           : n.type === 'assessment_result' ? 'bg-emerald-100 text-emerald-600'
-          : 'bg-purple-100 text-purple-700',
+          : 'bg-purple-100 text-cyan-400',
       }))
     : enrollments.slice(0, 4).map((e: any) => ({
         icon: e.status === 'completed' ? CheckCircle : BookOpen,
@@ -632,7 +632,7 @@ export function TraineeDashboard() {
         {/* Welcome Hero Banner */}
         <motion.div 
           variants={fadeUp} 
-          className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-900 via-purple-800 to-midnight text-white overflow-hidden shadow-xl shadow-purple-900/20 border border-purple-500/20"
+          className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-900 via-purple-800 to-midnight text-white overflow-hidden shadow-xl shadow-cyan-950/50 border border-cyan-500/30"
         >
           {/* Glowing background orbs */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-pink-500/20 to-orange-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -640,7 +640,7 @@ export function TraineeDashboard() {
           
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
             <div className="max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-orange-300 text-xs font-semibold mb-3 border border-white/15">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#070E20]/90/10 backdrop-blur-md text-orange-300 text-xs font-semibold mb-3 border border-white/15">
                 <Star className="w-3.5 h-3.5 fill-orange-300" />
                 <span>Keep up the momentum!</span>
               </div>
@@ -657,7 +657,7 @@ export function TraineeDashboard() {
               </p>
             </div>
             <Link to="/trainee/courses" className="shrink-0">
-              <Button className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-bold px-6 py-3 rounded-2xl shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 hover:scale-105 active:scale-95 transition-all">
+              <Button className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white font-bold px-6 py-3 rounded-2xl shadow-lg shadow-pink-500/30 hover:shadow-cyan-500/10 hover:scale-105 active:scale-95 transition-all">
                 <Compass className="w-4 h-4 mr-2" />
                 Browse Catalog
               </Button>
@@ -672,14 +672,14 @@ export function TraineeDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Course Progress */}
-          <motion.div variants={fadeUp} className="lg:col-span-2 bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden flex flex-col justify-between">
+          <motion.div variants={fadeUp} className="lg:col-span-2 bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden flex flex-col justify-between">
             <div>
-              <div className="pb-4 border-b border-purple-500/10 flex items-center justify-between">
+              <div className="pb-4 border-b border-cyan-500/30 flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-midnight">In-Progress Courses</h3>
-                  <p className="text-xs text-midnight/50">Your active learning roadmap</p>
+                  <h3 className="text-base font-bold text-zinc-200">In-Progress Courses</h3>
+                  <p className="text-xs text-zinc-200/50">Your active learning roadmap</p>
                 </div>
-                <Link to="/trainee/my-learning" className="text-xs font-bold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200/60">
+                <Link to="/trainee/my-learning" className="text-xs font-bold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1 bg-cyan-950/30 px-3 py-1.5 rounded-full border border-cyan-500/30">
                   View All <ArrowUpRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -692,20 +692,20 @@ export function TraineeDashboard() {
                 ) : recentCourses.length === 0 ? (
                   <div className="text-center py-8">
                     <BookOpen className="w-8 h-8 text-purple-200 mx-auto mb-2" />
-                    <p className="text-sm text-midnight/40">No courses yet. Browse the catalog to get started!</p>
+                    <p className="text-sm text-zinc-200/40">No courses yet. Browse the catalog to get started!</p>
                   </div>
                 ) : (
                   recentCourses.map((course: any) => (
-                    <div key={course.id ?? course.title} className="p-4 rounded-2xl bg-purple-50/40 hover:bg-purple-50/80 border border-purple-500/10 hover:border-pink-500/20 transition-all duration-200 group">
+                    <div key={course.id ?? course.title} className="p-4 rounded-2xl bg-cyan-950/30/40 hover:bg-cyan-950/30/80 border border-cyan-500/30 hover:border-cyan-400/50 transition-all duration-200 group">
                       <div className="flex items-center justify-between mb-2.5">
                         <div className="min-w-0 pr-3">
-                          <p className="text-sm font-bold text-midnight truncate group-hover:text-purple-700 transition-colors">{course.title}</p>
-                          <p className="text-xs text-midnight/50">{course.instructor} • {course.duration}</p>
+                          <p className="text-sm font-bold text-zinc-200 truncate group-hover:text-cyan-400 transition-colors">{course.title}</p>
+                          <p className="text-xs text-zinc-200/50">{course.instructor} • {course.duration}</p>
                         </div>
                         <span className={`text-xs px-2.5 py-1 rounded-full font-bold shrink-0 ${
                           course.status === 'Completed'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200'
+                            : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-cyan-500/30'
                         }`}>
                           {course.status}
                         </span>
@@ -715,7 +715,7 @@ export function TraineeDashboard() {
                           value={course.progress}
                           color={course.progress === 100 ? 'from-emerald-400 to-emerald-600' : 'from-purple-600 via-pink-500 to-orange-500'}
                         />
-                        <span className="text-xs font-bold text-midnight/70 w-10 text-right">{course.progress}%</span>
+                        <span className="text-xs font-bold text-zinc-200/70 w-10 text-right">{course.progress}%</span>
                       </div>
                     </div>
                   ))
@@ -723,7 +723,7 @@ export function TraineeDashboard() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-purple-500/10 flex items-center justify-between text-xs text-midnight/60">
+            <div className="pt-3 border-t border-cyan-500/30 flex items-center justify-between text-xs text-zinc-200/60">
               <span>{enrolledCount > 0 ? `${enrolledCount} course${enrolledCount > 1 ? 's' : ''} enrolled` : 'No enrollments yet'}</span>
               <span className="font-semibold text-purple-600">
                 {completionRate >= 75 ? 'Excellent 🚀' : completionRate >= 50 ? 'On Track 📈' : completionRate > 0 ? 'Keep Going 💪' : 'Get Started!'}
@@ -732,13 +732,13 @@ export function TraineeDashboard() {
           </motion.div>
 
           {/* Recent Activity */}
-          <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm flex flex-col">
-            <div className="pb-4 border-b border-purple-500/10 flex items-center justify-between">
+          <motion.div variants={fadeUp} className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm flex flex-col">
+            <div className="pb-4 border-b border-cyan-500/30 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-midnight">Recent Activity</h3>
-                <p className="text-xs text-midnight/50">Your recent updates & badges</p>
+                <h3 className="text-base font-bold text-zinc-200">Recent Activity</h3>
+                <p className="text-xs text-zinc-200/50">Your recent updates & badges</p>
               </div>
-              <button className="p-1.5 rounded-xl hover:bg-purple-50 text-purple-600 transition-colors">
+              <button className="p-1.5 rounded-xl hover:bg-cyan-950/30 text-purple-600 transition-colors">
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
@@ -750,7 +750,7 @@ export function TraineeDashboard() {
               ) : activities.length === 0 ? (
                 <div className="text-center py-8">
                   <Star className="w-7 h-7 text-purple-200 mx-auto mb-2" />
-                  <p className="text-xs text-midnight/40">No activity yet. Enroll in a course to get started!</p>
+                  <p className="text-xs text-zinc-200/40">No activity yet. Enroll in a course to get started!</p>
                 </div>
               ) : (
                 activities.map((act: any, i: number) => (
@@ -762,23 +762,23 @@ export function TraineeDashboard() {
         </div>
 
         {/* Trainee Digital Twin */}
-        <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden relative">
+        <motion.div variants={fadeUp} className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden relative">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col lg:flex-row gap-8 items-center">
             <div className="lg:w-1/3 space-y-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60 text-xs font-bold mb-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/30 text-cyan-400 border border-cyan-500/30 text-xs font-bold mb-1">
                 <Target className="w-3.5 h-3.5" />
                 <span>AI Competency Mapping</span>
               </div>
-              <h3 className="text-xl font-bold text-midnight leading-tight">Your Digital Twin</h3>
-              <p className="text-sm text-midnight/60 leading-relaxed">
+              <h3 className="text-xl font-bold text-zinc-200 leading-tight">Your Digital Twin</h3>
+              <p className="text-sm text-zinc-200/60 leading-relaxed">
                 Compare your current meteorological skills against the required competencies for your role. Focus your learning on <strong>Marine Met</strong> and <strong>Radar Ops</strong> to close the gap.
               </p>
               <div className="space-y-2 mt-2">
-                <div className="flex items-center gap-2 text-xs font-medium text-midnight/70">
+                <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/70">
                   <div className="w-3 h-3 rounded-full bg-purple-500 opacity-70" /> Your Current Skill Level
                 </div>
-                <div className="flex items-center gap-2 text-xs font-medium text-midnight/70">
+                <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/70">
                   <div className="w-3 h-3 rounded-full bg-orange-400 opacity-40" /> Role Requirement
                 </div>
               </div>
@@ -806,27 +806,27 @@ export function TraineeDashboard() {
             { icon: Award, title: 'Earned Certificates', desc: 'View, download, and share badges', to: '/trainee/my-learning', gradient: 'from-orange-400 to-orange-600', btn: 'View All' },
           ].map(action => (
             <Link key={action.title} to={action.to}>
-              <div className="p-5 rounded-3xl bg-white border border-purple-500/15 hover:border-pink-500/30 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex items-center justify-between">
+              <div className="p-5 rounded-3xl bg-[#070E20]/90 border border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-xl hover:shadow-cyan-950/50 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.gradient} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
                     <action.icon className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-midnight group-hover:text-purple-700 transition-colors">{action.title}</h4>
-                    <p className="text-xs text-midnight/55">{action.desc}</p>
+                    <h4 className="text-sm font-bold text-zinc-200 group-hover:text-cyan-400 transition-colors">{action.title}</h4>
+                    <p className="text-xs text-zinc-200/55">{action.desc}</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-midnight/30 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                <ChevronRight className="w-5 h-5 text-zinc-200/30 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
               </div>
             </Link>
           ))}
         </motion.div>
 
         {/* Profile Card */}
-        <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm">
+        <motion.div variants={fadeUp} className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-bold text-purple-900/60 uppercase tracking-wider">Account Overview</h3>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+            <h3 className="text-xs font-bold text-cyan-300/60 uppercase tracking-wider">Account Overview</h3>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-cyan-950/30 text-cyan-400 border border-cyan-500/30">
               Trainee Profile
             </span>
           </div>
@@ -837,26 +837,26 @@ export function TraineeDashboard() {
               { label: 'Department', value: profile?.department ?? '—' },
               { label: 'Designation', value: profile?.designation ?? '—' },
             ].map(item => (
-              <div key={item.label} className="p-3 bg-purple-50/40 rounded-2xl border border-purple-500/10">
-                <p className="text-[11px] font-semibold text-midnight/50 mb-0.5">{item.label}</p>
-                <p className="text-sm font-bold text-midnight truncate">{item.value || 'Not provided'}</p>
+              <div key={item.label} className="p-3 bg-cyan-950/30/40 rounded-2xl border border-cyan-500/30">
+                <p className="text-[11px] font-semibold text-zinc-200/50 mb-0.5">{item.label}</p>
+                <p className="text-sm font-bold text-zinc-200 truncate">{item.value || 'Not provided'}</p>
               </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-purple-500/10 flex items-center justify-between">
+          <div className="mt-4 pt-4 border-t border-cyan-500/30 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-midnight/60">Verification Status:</span>
+              <span className="text-xs text-zinc-200/60">Verification Status:</span>
               <StatusBadge status={profile?.approval_status ?? 'pending'} />
             </div>
             <div className="flex items-center gap-4">
               <button 
                 onClick={handleResetPassword}
-                className="text-xs font-semibold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-purple-200/60"
+                className="text-xs font-semibold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1.5 bg-cyan-950/30 hover:bg-purple-100 px-3 py-1.5 rounded-lg border border-cyan-500/30"
               >
                 <Shield className="w-3.5 h-3.5" />
                 Reset Password
               </button>
-              <span className="text-xs text-midnight/50">MoES Capacity Connect</span>
+              <span className="text-xs text-zinc-200/50">MoES Capacity Connect</span>
             </div>
           </div>
         </motion.div>
@@ -893,7 +893,7 @@ export function TrainerDashboard() {
     { icon: FileText, title: 'New Submission', desc: 'Amit Kumar — Module 6 Quiz (94%)', time: '1h ago', iconBg: 'bg-emerald-100 text-emerald-600' },
     { icon: Users, title: '5 New Enrollments', desc: 'Data Science Fundamentals', time: '3h ago', iconBg: 'bg-pink-100 text-pink-600' },
     { icon: MessageSquare, title: 'New Question', desc: 'Python for Analytics — Forum Post', time: '6h ago', iconBg: 'bg-orange-100 text-orange-600' },
-    { icon: Star, title: '5-Star Review', desc: 'Cloud Computing Basics — Rating', time: '1d ago', iconBg: 'bg-purple-100 text-purple-700' },
+    { icon: Star, title: '5-Star Review', desc: 'Cloud Computing Basics — Rating', time: '1d ago', iconBg: 'bg-purple-100 text-cyan-400' },
   ]
 
   return (
@@ -909,12 +909,12 @@ export function TrainerDashboard() {
         {/* Welcome Banner */}
         <motion.div 
           variants={fadeUp} 
-          className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-900 via-purple-800 to-midnight text-white overflow-hidden shadow-xl shadow-purple-900/20 border border-purple-500/20"
+          className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-900 via-purple-800 to-midnight text-white overflow-hidden shadow-xl shadow-cyan-950/50 border border-cyan-500/30"
         >
           <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-pink-500/20 to-orange-500/20 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-orange-300 text-xs font-semibold mb-3 border border-white/15">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#070E20]/90/10 backdrop-blur-md text-orange-300 text-xs font-semibold mb-3 border border-white/15">
                 <span>Trainer Command Center</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-2">
@@ -941,21 +941,21 @@ export function TrainerDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Top Courses */}
-          <motion.div variants={fadeUp} className="lg:col-span-2 bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden">
-            <div className="pb-4 border-b border-purple-500/10 flex items-center justify-between">
+          <motion.div variants={fadeUp} className="lg:col-span-2 bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden">
+            <div className="pb-4 border-b border-cyan-500/30 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-midnight">Top Performing Courses</h3>
-                <p className="text-xs text-midnight/50">Engagement and completion breakdown</p>
+                <h3 className="text-base font-bold text-zinc-200">Top Performing Courses</h3>
+                <p className="text-xs text-zinc-200/50">Engagement and completion breakdown</p>
               </div>
-              <Link to="/trainer/courses" className="text-xs font-bold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200/60">
+              <Link to="/trainer/courses" className="text-xs font-bold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1 bg-cyan-950/30 px-3 py-1.5 rounded-full border border-cyan-500/30">
                 View All <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
             <div className="py-4 space-y-3.5">
               {topCourses.map(course => (
-                <div key={course.title} className="p-4 rounded-2xl bg-purple-50/40 hover:bg-purple-50/80 border border-purple-500/10 transition-all">
+                <div key={course.title} className="p-4 rounded-2xl bg-cyan-950/30/40 hover:bg-cyan-950/30/80 border border-cyan-500/30 transition-all">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-bold text-midnight">{course.title}</p>
+                    <p className="text-sm font-bold text-zinc-200">{course.title}</p>
                     <div className="flex items-center gap-1 text-orange-500 font-bold text-xs bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200/60">
                       <Star className="w-3.5 h-3.5 fill-orange-400 text-orange-400" />
                       <span>{course.rating}</span>
@@ -963,12 +963,12 @@ export function TrainerDashboard() {
                   </div>
                   <div className="grid grid-cols-3 gap-4 items-center">
                     <div>
-                      <p className="text-base font-extrabold text-midnight">{course.trainees}</p>
-                      <p className="text-[11px] font-semibold text-midnight/50">Trainees</p>
+                      <p className="text-base font-extrabold text-zinc-200">{course.trainees}</p>
+                      <p className="text-[11px] font-semibold text-zinc-200/50">Trainees</p>
                     </div>
                     <div>
-                      <p className="text-base font-extrabold text-midnight">{course.completion}%</p>
-                      <p className="text-[11px] font-semibold text-midnight/50">Completion</p>
+                      <p className="text-base font-extrabold text-zinc-200">{course.completion}%</p>
+                      <p className="text-[11px] font-semibold text-zinc-200/50">Completion</p>
                     </div>
                     <div>
                       <ProgressBar value={course.completion} />
@@ -980,10 +980,10 @@ export function TrainerDashboard() {
           </motion.div>
 
           {/* Recent Activity */}
-          <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm flex flex-col">
-            <div className="pb-4 border-b border-purple-500/10">
-              <h3 className="text-base font-bold text-midnight">Recent Activity</h3>
-              <p className="text-xs text-midnight/50">Live trainee actions</p>
+          <motion.div variants={fadeUp} className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm flex flex-col">
+            <div className="pb-4 border-b border-cyan-500/30">
+              <h3 className="text-base font-bold text-zinc-200">Recent Activity</h3>
+              <p className="text-xs text-zinc-200/50">Live trainee actions</p>
             </div>
             <div className="py-2 space-y-1 flex-1">
               {activities.map((act, i) => (
@@ -994,20 +994,20 @@ export function TrainerDashboard() {
         </div>
 
         {/* Recent Submissions */}
-        <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden">
-          <div className="pb-4 border-b border-purple-500/10 flex items-center justify-between">
+        <motion.div variants={fadeUp} className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden">
+          <div className="pb-4 border-b border-cyan-500/30 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-midnight">Recent Trainee Submissions</h3>
-              <p className="text-xs text-midnight/50">Assessments and assignments pending review</p>
+              <h3 className="text-base font-bold text-zinc-200">Recent Trainee Submissions</h3>
+              <p className="text-xs text-zinc-200/50">Assessments and assignments pending review</p>
             </div>
-            <button className="text-xs font-bold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200/60">
+            <button className="text-xs font-bold text-purple-600 hover:text-pink-600 transition-colors flex items-center gap-1 bg-cyan-950/30 px-3 py-1.5 rounded-full border border-cyan-500/30">
               View All <ArrowUpRight className="w-3.5 h-3.5" />
             </button>
           </div>
           <div className="overflow-x-auto mt-2">
             <table className="w-full min-w-[500px]">
               <thead>
-                <tr className="border-b border-purple-500/10 text-left text-xs text-midnight/60 font-semibold">
+                <tr className="border-b border-cyan-500/30 text-left text-xs text-zinc-200/60 font-semibold">
                   <th className="px-4 py-3">Trainee</th>
                   <th className="px-4 py-3">Course</th>
                   <th className="px-4 py-3">Module</th>
@@ -1016,18 +1016,18 @@ export function TrainerDashboard() {
               </thead>
               <tbody className="divide-y divide-purple-500/5">
                 {recentSubmissions.map((s, i) => (
-                  <tr key={i} className="hover:bg-purple-50/40 transition-colors">
+                  <tr key={i} className="hover:bg-cyan-950/30/40 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                           {s.name.charAt(0)}
                         </div>
-                        <span className="text-xs sm:text-sm font-bold text-midnight truncate">{s.name}</span>
+                        <span className="text-xs sm:text-sm font-bold text-zinc-200 truncate">{s.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs sm:text-sm text-midnight/70 truncate">{s.course}</td>
-                    <td className="px-4 py-3 text-xs sm:text-sm text-midnight/70">{s.module}</td>
-                    <td className="px-4 py-3 text-xs text-midnight/50 text-right">{s.time}</td>
+                    <td className="px-4 py-3 text-xs sm:text-sm text-zinc-200/70 truncate">{s.course}</td>
+                    <td className="px-4 py-3 text-xs sm:text-sm text-zinc-200/70">{s.module}</td>
+                    <td className="px-4 py-3 text-xs text-zinc-200/50 text-right">{s.time}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1267,7 +1267,7 @@ export function AdminDashboard() {
     { icon: Users, title: 'New Registration', desc: 'user@example.com registered as Trainee', time: '30m ago', iconBg: 'bg-pink-100 text-pink-600' },
     { icon: CheckCircle, title: 'User Approved', desc: 'Amit Kumar — Trainer role', time: '2h ago', iconBg: 'bg-emerald-100 text-emerald-600' },
     { icon: Ban, title: 'User Suspended', desc: 'Inactive account — 90 days', time: '5h ago', iconBg: 'bg-red-100 text-red-600' },
-    { icon: Shield, title: 'Role Updated', desc: 'Priya Singh — Trainee → Trainer', time: '1d ago', iconBg: 'bg-purple-100 text-purple-700' },
+    { icon: Shield, title: 'Role Updated', desc: 'Priya Singh — Trainee → Trainer', time: '1d ago', iconBg: 'bg-purple-100 text-cyan-400' },
   ]
 
   return (
@@ -1291,12 +1291,12 @@ export function AdminDashboard() {
         {/* Welcome Banner */}
         <motion.div 
           variants={fadeUp} 
-          className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-900 via-purple-800 to-midnight text-white overflow-hidden shadow-xl shadow-purple-900/20 border border-purple-500/20"
+          className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-purple-900 via-purple-800 to-midnight text-white overflow-hidden shadow-xl shadow-cyan-950/50 border border-cyan-500/30"
         >
           <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-pink-500/20 to-orange-500/20 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-orange-300 text-xs font-semibold mb-3 border border-white/15">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#070E20]/90/10 backdrop-blur-md text-orange-300 text-xs font-semibold mb-3 border border-white/15">
                 <Shield className="w-3.5 h-3.5" />
                 <span>Administration & Governance</span>
               </div>
@@ -1322,7 +1322,7 @@ export function AdminDashboard() {
               <Button 
                 onClick={cleanupOrphanedFiles}
                 disabled={isCleaningFiles}
-                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-6 py-3 rounded-2xl transition-all"
+                className="w-full sm:w-auto bg-[#070E20]/90/10 hover:bg-[#070E20]/90/20 text-white border border-white/20 font-bold px-6 py-3 rounded-2xl transition-all"
               >
                 {isCleaningFiles ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                 Cleanup Orphaned Files
@@ -1371,7 +1371,7 @@ export function AdminDashboard() {
                         <p className="text-xs text-white/70">Manage user accounts</p>
                       </div>
                       {pendingCount > 0 && (
-                        <div className="absolute top-4 right-4 bg-white/20 px-2 py-1 rounded-lg text-xs font-bold backdrop-blur-sm">
+                        <div className="absolute top-4 right-4 bg-[#070E20]/90/20 px-2 py-1 rounded-lg text-xs font-bold backdrop-blur-sm">
                           {pendingCount} Pending
                         </div>
                       )}
@@ -1388,10 +1388,10 @@ export function AdminDashboard() {
                     </div>
                   </div>
 
-                  <div className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden">
-                    <div className="pb-4 border-b border-purple-500/10 mb-4">
-                      <h3 className="text-base font-bold text-midnight">Recent Activity</h3>
-                      <p className="text-xs text-midnight/50 mt-0.5">Latest actions across the platform.</p>
+                  <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden">
+                    <div className="pb-4 border-b border-cyan-500/30 mb-4">
+                      <h3 className="text-base font-bold text-zinc-200">Recent Activity</h3>
+                      <p className="text-xs text-zinc-200/50 mt-0.5">Latest actions across the platform.</p>
                     </div>
                     <div className="space-y-4">
                       {activities.map((act, i) => (
@@ -1400,10 +1400,10 @@ export function AdminDashboard() {
                             <act.icon className="w-5 h-5" />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-bold text-midnight">{act.title}</p>
-                            <p className="text-xs text-midnight/60">{act.desc}</p>
+                            <p className="text-sm font-bold text-zinc-200">{act.title}</p>
+                            <p className="text-xs text-zinc-200/60">{act.desc}</p>
                           </div>
-                          <span className="text-xs text-midnight/40">{act.time}</span>
+                          <span className="text-xs text-zinc-200/40">{act.time}</span>
                         </div>
                       ))}
                     </div>
@@ -1421,13 +1421,13 @@ export function AdminDashboard() {
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden"
+                  className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden"
                 >
-                  <div className="pb-4 border-b border-purple-500/10 space-y-4">
+                  <div className="pb-4 border-b border-cyan-500/30 space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
-                        <h3 className="text-base font-bold text-midnight capitalize">Trainees Management</h3>
-                        <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, promote, or suspend trainee accounts.</p>
+                        <h3 className="text-base font-bold text-zinc-200 capitalize">Trainees Management</h3>
+                        <p className="text-xs text-zinc-200/50 mt-0.5">Approve, reject, promote, or suspend trainee accounts.</p>
                       </div>
                       <div className="relative w-full sm:w-64 shrink-0">
                         <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1436,17 +1436,17 @@ export function AdminDashboard() {
                           placeholder="Search trainees..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
+                          className="w-full pl-9 pr-4 py-2 text-sm bg-cyan-950/40 border border-cyan-500/30 rounded-xl text-zinc-200 placeholder:text-zinc-200/40 focus:outline-none focus:border-pink-500 focus:bg-[#070E20]/90 transition-all shadow-sm"
                         />
                       </div>
                     </div>
-                    <div className="flex bg-purple-50/50 p-1 rounded-xl border border-purple-100 w-full sm:w-fit overflow-x-auto hide-scrollbar">
+                    <div className="flex bg-cyan-950/40 p-1 rounded-xl border border-cyan-500/30 w-full sm:w-fit overflow-x-auto hide-scrollbar">
                       {(['all', 'pending', 'approved', 'suspended', 'rejected'] as const).map(f => (
                         <button
                           key={f}
                           onClick={() => setStatusFilter(f)}
                           className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize whitespace-nowrap ${
-                            statusFilter === f ? 'bg-white text-purple-700 shadow-sm' : 'text-midnight/60 hover:text-midnight hover:bg-purple-100/50'
+                            statusFilter === f ? 'bg-[#070E20]/90 text-cyan-400 shadow-sm' : 'text-zinc-200/60 hover:text-zinc-200 hover:bg-purple-100/50'
                           }`}
                         >
                           {f}
@@ -1456,12 +1456,12 @@ export function AdminDashboard() {
                   </div>
 
                   {loading ? (
-                    <div className="p-8 text-center text-midnight/50 text-sm">Loading trainees...</div>
+                    <div className="p-8 text-center text-zinc-200/50 text-sm">Loading trainees...</div>
                   ) : (
                     <div className="overflow-x-auto mt-2">
                       <table className="w-full min-w-[620px]">
                         <thead>
-                          <tr className="border-b border-purple-500/10 text-left text-xs text-midnight/60 font-semibold">
+                          <tr className="border-b border-cyan-500/30 text-left text-xs text-zinc-200/60 font-semibold">
                             <th className="px-3 py-3">Name</th>
                             <th className="px-3 py-3">Email</th>
                             <th className="px-3 py-3">Department</th>
@@ -1473,35 +1473,35 @@ export function AdminDashboard() {
                         <tbody className="divide-y divide-purple-500/5">
                           {filteredUsers.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="text-center py-8 text-midnight/50 text-sm">
+                              <td colSpan={6} className="text-center py-8 text-zinc-200/50 text-sm">
                                 {searchQuery ? 'No trainees match your search.' : 'No trainees found.'}
                               </td>
                             </tr>
                           ) : filteredUsers.map(u => (
-                            <tr key={u.id} className="hover:bg-purple-50/40 transition-colors">
+                            <tr key={u.id} className="hover:bg-cyan-950/30/40 transition-colors">
                               <td className="px-3 py-3">
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                                     {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
                                   </div>
-                                  <span className="text-xs sm:text-sm font-bold text-midnight truncate max-w-[130px]">{u.full_name}</span>
+                                  <span className="text-xs sm:text-sm font-bold text-zinc-200 truncate max-w-[130px]">{u.full_name}</span>
                                 </div>
                               </td>
-                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[150px]">{u.email}</td>
-                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[90px]">{u.department ?? '—'}</td>
+                              <td className="px-3 py-3 text-xs text-zinc-200/70 truncate max-w-[150px]">{u.email}</td>
+                              <td className="px-3 py-3 text-xs text-zinc-200/70 truncate max-w-[90px]">{u.department ?? '—'}</td>
                               <td className="px-3 py-3">
                                 {u.proof_path ? (
                                   <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center gap-1 text-[10px] text-midnight/60 bg-purple-50/50 px-1.5 py-0.5 rounded border border-purple-500/10 w-fit" title="Securely stored in MoES Cloud">
+                                    <div className="flex items-center gap-1 text-[10px] text-zinc-200/60 bg-cyan-950/40 px-1.5 py-0.5 rounded border border-cyan-500/30 w-fit" title="Securely stored in MoES Cloud">
                                       <Shield className="w-3 h-3 text-emerald-600" />
                                       <span className="truncate max-w-[100px]">{u.proof_path.split('/').pop()}</span>
                                     </div>
-                                    <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-bold transition-all w-fit">
+                                    <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-950/30 text-cyan-400 border border-cyan-500/30 hover:bg-purple-100 font-bold transition-all w-fit">
                                       View Document
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-midnight/40">—</span>
+                                  <span className="text-xs text-zinc-200/40">—</span>
                                 )}
                               </td>
                               <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
@@ -1515,7 +1515,7 @@ export function AdminDashboard() {
                                   )}
                                   {u.approval_status === 'approved' && (
                                     <>
-                                      <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-bold transition-all">→ Trainer</button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-cyan-950/30 text-cyan-400 border border-cyan-500/30 hover:bg-purple-100 font-bold transition-all">→ Trainer</button>
                                       <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold transition-all">Suspend</button>
                                     </>
                                   )}
@@ -1540,13 +1540,13 @@ export function AdminDashboard() {
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden"
+                  className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden"
                 >
-                  <div className="pb-4 border-b border-purple-500/10 space-y-4">
+                  <div className="pb-4 border-b border-cyan-500/30 space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
-                        <h3 className="text-base font-bold text-midnight capitalize">Trainers Management</h3>
-                        <p className="text-xs text-midnight/50 mt-0.5">Approve, reject, suspend or promote trainers.</p>
+                        <h3 className="text-base font-bold text-zinc-200 capitalize">Trainers Management</h3>
+                        <p className="text-xs text-zinc-200/50 mt-0.5">Approve, reject, suspend or promote trainers.</p>
                       </div>
                       <div className="relative w-full sm:w-64 shrink-0">
                         <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1555,17 +1555,17 @@ export function AdminDashboard() {
                           placeholder="Search trainers..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
+                          className="w-full pl-9 pr-4 py-2 text-sm bg-cyan-950/40 border border-cyan-500/30 rounded-xl text-zinc-200 placeholder:text-zinc-200/40 focus:outline-none focus:border-pink-500 focus:bg-[#070E20]/90 transition-all shadow-sm"
                         />
                       </div>
                     </div>
-                    <div className="flex bg-purple-50/50 p-1 rounded-xl border border-purple-100 w-full sm:w-fit overflow-x-auto hide-scrollbar">
+                    <div className="flex bg-cyan-950/40 p-1 rounded-xl border border-cyan-500/30 w-full sm:w-fit overflow-x-auto hide-scrollbar">
                       {(['all', 'pending', 'approved', 'suspended', 'rejected'] as const).map(f => (
                         <button
                           key={f}
                           onClick={() => setStatusFilter(f)}
                           className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize whitespace-nowrap ${
-                            statusFilter === f ? 'bg-white text-purple-700 shadow-sm' : 'text-midnight/60 hover:text-midnight hover:bg-purple-100/50'
+                            statusFilter === f ? 'bg-[#070E20]/90 text-cyan-400 shadow-sm' : 'text-zinc-200/60 hover:text-zinc-200 hover:bg-purple-100/50'
                           }`}
                         >
                           {f}
@@ -1575,12 +1575,12 @@ export function AdminDashboard() {
                   </div>
 
                   {loading ? (
-                    <div className="p-8 text-center text-midnight/50 text-sm">Loading trainers...</div>
+                    <div className="p-8 text-center text-zinc-200/50 text-sm">Loading trainers...</div>
                   ) : (
                     <div className="overflow-x-auto mt-2">
                       <table className="w-full min-w-[620px]">
                         <thead>
-                          <tr className="border-b border-purple-500/10 text-left text-xs text-midnight/60 font-semibold">
+                          <tr className="border-b border-cyan-500/30 text-left text-xs text-zinc-200/60 font-semibold">
                             <th className="px-3 py-3">Name</th>
                             <th className="px-3 py-3">Email</th>
                             <th className="px-3 py-3">Qualifications</th>
@@ -1593,36 +1593,36 @@ export function AdminDashboard() {
                         <tbody className="divide-y divide-purple-500/5">
                           {filteredUsers.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="text-center py-8 text-midnight/50 text-sm">
+                              <td colSpan={6} className="text-center py-8 text-zinc-200/50 text-sm">
                                 {searchQuery ? 'No trainers match your search.' : 'No trainers found.'}
                               </td>
                             </tr>
                           ) : filteredUsers.map(u => (
-                            <tr key={u.id} className="hover:bg-purple-50/40 transition-colors">
+                            <tr key={u.id} className="hover:bg-cyan-950/30/40 transition-colors">
                               <td className="px-3 py-3">
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                                     {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
                                   </div>
-                                  <span className="text-xs sm:text-sm font-bold text-midnight truncate max-w-[130px]">{u.full_name}</span>
+                                  <span className="text-xs sm:text-sm font-bold text-zinc-200 truncate max-w-[130px]">{u.full_name}</span>
                                 </div>
                               </td>
-                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[150px]">{u.email}</td>
-                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[120px]">{(u as any).qualifications ?? '—'}</td>
-                              <td className="px-3 py-3 text-xs text-midnight/70">{(u as any).years_of_experience ? `${(u as any).years_of_experience} yrs` : '—'}</td>
+                              <td className="px-3 py-3 text-xs text-zinc-200/70 truncate max-w-[150px]">{u.email}</td>
+                              <td className="px-3 py-3 text-xs text-zinc-200/70 truncate max-w-[120px]">{(u as any).qualifications ?? '—'}</td>
+                              <td className="px-3 py-3 text-xs text-zinc-200/70">{(u as any).years_of_experience ? `${(u as any).years_of_experience} yrs` : '—'}</td>
                               <td className="px-3 py-3">
                                 {u.proof_path ? (
                                   <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center gap-1 text-[10px] text-midnight/60 bg-purple-50/50 px-1.5 py-0.5 rounded border border-purple-500/10 w-fit" title="Securely stored in MoES Cloud">
+                                    <div className="flex items-center gap-1 text-[10px] text-zinc-200/60 bg-cyan-950/40 px-1.5 py-0.5 rounded border border-cyan-500/30 w-fit" title="Securely stored in MoES Cloud">
                                       <Shield className="w-3 h-3 text-emerald-600" />
                                       <span className="truncate max-w-[100px]">{u.proof_path.split('/').pop()}</span>
                                     </div>
-                                    <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-bold transition-all w-fit">
+                                    <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-950/30 text-cyan-400 border border-cyan-500/30 hover:bg-purple-100 font-bold transition-all w-fit">
                                       View Document
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-midnight/40">—</span>
+                                  <span className="text-xs text-zinc-200/40">—</span>
                                 )}
                               </td>
                               <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
@@ -1661,12 +1661,12 @@ export function AdminDashboard() {
                   initial="hidden"
                   animate="visible"
                   exit="hidden"
-                  className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden"
+                  className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden"
                 >
-                  <div className="pb-4 border-b border-purple-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="pb-4 border-b border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-base font-bold text-midnight capitalize">Admins Management</h3>
-                      <p className="text-xs text-midnight/50 mt-0.5">Manage administrative access to the platform.</p>
+                      <h3 className="text-base font-bold text-zinc-200 capitalize">Admins Management</h3>
+                      <p className="text-xs text-zinc-200/50 mt-0.5">Manage administrative access to the platform.</p>
                     </div>
                     <div className="relative w-full sm:w-64 shrink-0">
                       <Search className="w-4 h-4 text-purple-600/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1675,18 +1675,18 @@ export function AdminDashboard() {
                         placeholder="Search admins..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm bg-purple-50/50 border border-purple-200 rounded-xl text-midnight placeholder:text-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-white transition-all shadow-sm"
+                        className="w-full pl-9 pr-4 py-2 text-sm bg-cyan-950/40 border border-cyan-500/30 rounded-xl text-zinc-200 placeholder:text-zinc-200/40 focus:outline-none focus:border-pink-500 focus:bg-[#070E20]/90 transition-all shadow-sm"
                       />
                     </div>
                   </div>
 
                   {loading ? (
-                    <div className="p-8 text-center text-midnight/50 text-sm">Loading admins...</div>
+                    <div className="p-8 text-center text-zinc-200/50 text-sm">Loading admins...</div>
                   ) : (
                     <div className="overflow-x-auto mt-2">
                       <table className="w-full min-w-[620px]">
                         <thead>
-                          <tr className="border-b border-purple-500/10 text-left text-xs text-midnight/60 font-semibold">
+                          <tr className="border-b border-cyan-500/30 text-left text-xs text-zinc-200/60 font-semibold">
                             <th className="px-3 py-3">Name</th>
                             <th className="px-3 py-3">Email</th>
                             <th className="px-3 py-3">Role</th>
@@ -1697,23 +1697,23 @@ export function AdminDashboard() {
                         <tbody className="divide-y divide-purple-500/5">
                           {filteredUsers.length === 0 ? (
                             <tr>
-                              <td colSpan={5} className="text-center py-8 text-midnight/50 text-sm">
+                              <td colSpan={5} className="text-center py-8 text-zinc-200/50 text-sm">
                                 {searchQuery ? 'No admins match your search.' : 'No admins found.'}
                               </td>
                             </tr>
                           ) : filteredUsers.map(u => (
-                            <tr key={u.id} className="hover:bg-purple-50/40 transition-colors">
+                            <tr key={u.id} className="hover:bg-cyan-950/30/40 transition-colors">
                               <td className="px-3 py-3">
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                                     {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
                                   </div>
-                                  <span className="text-xs sm:text-sm font-bold text-midnight truncate max-w-[130px]">{u.full_name}</span>
+                                  <span className="text-xs sm:text-sm font-bold text-zinc-200 truncate max-w-[130px]">{u.full_name}</span>
                                 </div>
                               </td>
-                              <td className="px-3 py-3 text-xs text-midnight/70 truncate max-w-[150px]">{u.email}</td>
+                              <td className="px-3 py-3 text-xs text-zinc-200/70 truncate max-w-[150px]">{u.email}</td>
                               <td className="px-3 py-3">
-                                <span className="text-[11px] font-semibold capitalize text-purple-800 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                                <span className="text-[11px] font-semibold capitalize text-purple-800 bg-cyan-950/30 border border-cyan-500/30 px-2 py-0.5 rounded-md">
                                   {u.role.replace('_', ' ')}
                                 </span>
                               </td>
@@ -1753,18 +1753,18 @@ export function AdminDashboard() {
 
               {/* Tab: Audit Logs */}
               {activeTab === 'logs' && (
-                <motion.div key="logs" variants={scaleIn} initial="hidden" animate="visible" exit="hidden" className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden">
-                  <div className="pb-4 border-b border-purple-500/10">
-                    <h3 className="text-base font-bold text-midnight">Audit Logs</h3>
-                    <p className="text-xs text-midnight/50 mt-0.5">Complete platform activity and compliance record.</p>
+                <motion.div key="logs" variants={scaleIn} initial="hidden" animate="visible" exit="hidden" className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm overflow-hidden">
+                  <div className="pb-4 border-b border-cyan-500/30">
+                    <h3 className="text-base font-bold text-zinc-200">Audit Logs</h3>
+                    <p className="text-xs text-zinc-200/50 mt-0.5">Complete platform activity and compliance record.</p>
                   </div>
                   {loading ? (
-                    <div className="p-8 text-center text-midnight/50 text-sm">Loading logs...</div>
+                    <div className="p-8 text-center text-zinc-200/50 text-sm">Loading logs...</div>
                   ) : (
                     <div className="overflow-x-auto mt-2">
                       <table className="w-full min-w-[500px]">
                         <thead>
-                          <tr className="border-b border-purple-500/10 text-left text-xs text-midnight/60 font-semibold">
+                          <tr className="border-b border-cyan-500/30 text-left text-xs text-zinc-200/60 font-semibold">
                             <th className="px-4 py-3">Time</th>
                             <th className="px-4 py-3">Actor</th>
                             <th className="px-4 py-3">Action</th>
@@ -1774,14 +1774,14 @@ export function AdminDashboard() {
                         </thead>
                         <tbody className="divide-y divide-purple-500/5">
                           {logs.length === 0 ? (
-                            <tr><td colSpan={5} className="text-center py-8 text-midnight/50 text-sm">No audit logs found.</td></tr>
+                            <tr><td colSpan={5} className="text-center py-8 text-zinc-200/50 text-sm">No audit logs found.</td></tr>
                           ) : logs.map(log => (
-                            <tr key={log.id} className="hover:bg-purple-50/40 transition-colors">
-                              <td className="px-4 py-3 text-xs text-midnight/60 whitespace-nowrap">{new Date(log.created_at || '').toLocaleString()}</td>
-                              <td className="px-4 py-3 text-xs font-mono text-purple-700">{log.actor_id?.slice(0, 8)}…</td>
-                              <td className="px-4 py-3 text-xs text-midnight font-bold">{log.action}</td>
-                              <td className="px-4 py-3 text-xs text-midnight/70">{log.entity_type}</td>
-                              <td className="px-4 py-3 text-xs font-mono text-midnight/60 max-w-xs truncate">{JSON.stringify(log.metadata)}</td>
+                            <tr key={log.id} className="hover:bg-cyan-950/30/40 transition-colors">
+                              <td className="px-4 py-3 text-xs text-zinc-200/60 whitespace-nowrap">{new Date(log.created_at || '').toLocaleString()}</td>
+                              <td className="px-4 py-3 text-xs font-mono text-cyan-400">{log.actor_id?.slice(0, 8)}…</td>
+                              <td className="px-4 py-3 text-xs text-zinc-200 font-bold">{log.action}</td>
+                              <td className="px-4 py-3 text-xs text-zinc-200/70">{log.entity_type}</td>
+                              <td className="px-4 py-3 text-xs font-mono text-zinc-200/60 max-w-xs truncate">{JSON.stringify(log.metadata)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1795,10 +1795,10 @@ export function AdminDashboard() {
 
           {/* Recent Activity Sidebar */}
           {activeTab === 'overview' && (
-            <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm flex flex-col">
-              <div className="pb-4 border-b border-purple-500/10">
-              <h3 className="text-base font-bold text-midnight">System Activity</h3>
-              <p className="text-xs text-midnight/50">Live audit events</p>
+            <motion.div variants={fadeUp} className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm flex flex-col">
+              <div className="pb-4 border-b border-cyan-500/30">
+              <h3 className="text-base font-bold text-zinc-200">System Activity</h3>
+              <p className="text-xs text-zinc-200/50">Live audit events</p>
             </div>
             <div className="py-2 space-y-1 flex-1">
               {activities.map((act, i) => (
@@ -1817,17 +1817,17 @@ export function AdminDashboard() {
             { icon: BarChart3, title: 'Platform Analytics', desc: 'Usage metrics, completions & trends', to: '/admin', gradient: 'from-orange-400 to-orange-600' },
           ].map(action => (
             <Link key={action.title} to={action.to}>
-              <div className="p-5 rounded-3xl bg-white border border-purple-500/15 hover:border-pink-500/30 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex items-center justify-between">
+              <div className="p-5 rounded-3xl bg-[#070E20]/90 border border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-xl hover:shadow-cyan-950/50 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.gradient} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
                     <action.icon className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-midnight group-hover:text-purple-700 transition-colors">{action.title}</h4>
-                    <p className="text-xs text-midnight/55">{action.desc}</p>
+                    <h4 className="text-sm font-bold text-zinc-200 group-hover:text-cyan-400 transition-colors">{action.title}</h4>
+                    <p className="text-xs text-zinc-200/55">{action.desc}</p>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-midnight/30 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                <ChevronRight className="w-5 h-5 text-zinc-200/30 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
               </div>
             </Link>
           ))}

@@ -34,7 +34,7 @@ function getMaterialIcon(type: string) {
 function getMaterialBg(type: string) {
   if (type === 'video') return 'bg-blue-50 border-blue-100'
   if (type === 'link') return 'bg-emerald-50 border-emerald-100'
-  return 'bg-purple-50 border-purple-100'
+  return 'bg-cyan-950/30 border-cyan-500/30'
 }
 
 /**
@@ -225,7 +225,7 @@ export function TraineeCourseDetails() {
       if (course?.trainer_id) {
         await supabase.from('notifications').insert({
           user_id: course.trainer_id,
-          type: 'enrollment_request',
+          type: `enrollment_request:${courseId}`,
           title: newStatus === 'waitlisted' ? 'New Waitlist Request' : 'New Enrollment Request',
           message: `${profile?.full_name || 'A trainee'} wants to enroll in ${course.title}${newStatus === 'waitlisted' ? ' (Waitlisted)' : ''}.`,
         })
@@ -442,7 +442,7 @@ export function TraineeCourseDetails() {
       <div className="max-w-6xl">
         <Link
           to="/trainee/courses"
-          className="inline-flex items-center gap-2 text-sm text-midnight/60 hover:text-purple-700 transition-colors mb-6 font-semibold"
+          className="inline-flex items-center gap-2 text-sm text-zinc-200/60 hover:text-cyan-400 transition-colors mb-6 font-semibold"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Course Catalog
         </Link>
@@ -452,22 +452,22 @@ export function TraineeCourseDetails() {
             <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
           </div>
         ) : !course ? (
-          <div className="text-center p-12 bg-white border border-purple-500/15 rounded-3xl shadow-sm">
-            <h3 className="text-xl font-bold text-midnight">Course Not Found</h3>
-            <p className="text-midnight/50 mt-2 text-sm">This course does not exist or has been removed.</p>
+          <div className="text-center p-12 bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl shadow-sm">
+            <h3 className="text-xl font-bold text-zinc-200">Course Not Found</h3>
+            <p className="text-zinc-200/50 mt-2 text-sm">This course does not exist or has been removed.</p>
           </div>
         ) : (
           <motion.div variants={fadeUp} initial="hidden" animate="visible" className="space-y-6">
 
             {/* ── Hero Header ───────────────────────────────────── */}
-            <div className="bg-gradient-to-br from-purple-900 via-purple-800 to-midnight text-white rounded-3xl overflow-hidden shadow-2xl shadow-purple-900/30 border border-purple-500/20 relative">
+            <div className="bg-gradient-to-br from-purple-900 via-purple-800 to-midnight text-white rounded-3xl overflow-hidden shadow-2xl shadow-cyan-950/50 border border-cyan-500/30 relative">
               <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-pink-500/25 to-orange-500/15 rounded-full blur-3xl pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-600/20 rounded-full blur-2xl pointer-events-none" />
 
               <div className="relative z-10 p-8 md:p-10">
                 {/* Badges */}
                 <div className="flex flex-wrap items-center gap-2 mb-5">
-                  <span className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-orange-300 uppercase tracking-wider border border-white/15 capitalize">
+                  <span className="bg-[#070E20]/90/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-orange-300 uppercase tracking-wider border border-white/15 capitalize">
                     {course.course_type} Program
                   </span>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
@@ -549,7 +549,7 @@ export function TraineeCourseDetails() {
                       <span>Your Progress</span>
                       <span className="text-white font-bold">{enrollment.progress_percent ?? 0}%</span>
                     </div>
-                    <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2.5 w-full bg-[#070E20]/90/10 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${enrollment.progress_percent ?? 0}%` }}
@@ -583,7 +583,7 @@ export function TraineeCourseDetails() {
                           onClick={() => handleInitiateOtp('drop')}
                           disabled={!canDrop || dropMutation.isPending}
                           variant="outline"
-                          className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                          className="border-white/20 text-white hover:bg-[#070E20]/90/10 font-bold rounded-2xl px-6 py-3"
                         >
                           {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
                           Drop Course
@@ -610,7 +610,7 @@ export function TraineeCourseDetails() {
                         onClick={() => handleInitiateOtp('drop')}
                         disabled={dropMutation.isPending}
                         variant="outline"
-                        className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                        className="border-white/20 text-white hover:bg-[#070E20]/90/10 font-bold rounded-2xl px-6 py-3"
                       >
                         {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
                         Quit Waitlist
@@ -618,7 +618,7 @@ export function TraineeCourseDetails() {
                     </div>
                   ) : isFull ? (
                     <div className="space-y-1">
-                      <Button disabled className="bg-white/10 text-white/50 border border-white/20 font-bold rounded-2xl px-6 py-3 cursor-not-allowed">
+                      <Button disabled className="bg-[#070E20]/90/10 text-white/50 border border-white/20 font-bold rounded-2xl px-6 py-3 cursor-not-allowed">
                         Course & Waitlist Full
                       </Button>
                       <p className="text-xs text-rose-300 font-medium">Capacity limit of {seatLimit + waitlistLimit} reached.</p>
@@ -670,26 +670,26 @@ export function TraineeCourseDetails() {
 
                 {/* About */}
                 {course.description && (
-                  <div className="bg-white border border-purple-500/10 rounded-3xl p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-midnight mb-3 flex items-center gap-2">
+                  <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm">
+                    <h2 className="text-sm font-bold text-zinc-200 mb-3 flex items-center gap-2">
                       <BookOpen className="w-4 h-4 text-purple-600" /> About This Course
                     </h2>
-                    <p className="text-midnight/70 text-sm leading-relaxed whitespace-pre-wrap">{course.description}</p>
+                    <p className="text-zinc-200/70 text-sm leading-relaxed whitespace-pre-wrap">{course.description}</p>
                   </div>
                 )}
 
                 {/* Announcements & Assessments */}
                 {enrollment && enrollment.status === 'enrolled' && course.assessments?.length > 0 && (
-                  <div className="bg-white border border-purple-500/10 rounded-3xl p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-midnight mb-4 flex items-center gap-2">
+                  <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm">
+                    <h2 className="text-sm font-bold text-zinc-200 mb-4 flex items-center gap-2">
                       <Target className="w-4 h-4 text-rose-500" /> Announcements & Assessments
                     </h2>
                     <div className="space-y-3">
                       {course.assessments.map((assessment: any) => (
-                        <div key={assessment.id} className="p-4 rounded-2xl border border-purple-100 bg-purple-50/50 flex items-center justify-between gap-4 hover:border-purple-300 transition-colors">
+                        <div key={assessment.id} className="p-4 rounded-2xl border border-cyan-500/30 bg-cyan-950/40 flex items-center justify-between gap-4 hover:border-cyan-500/30 transition-colors">
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <h3 className="font-bold text-midnight text-sm truncate max-w-xs">{assessment.title}</h3>
+                              <h3 className="font-bold text-zinc-200 text-sm truncate max-w-xs">{assessment.title}</h3>
                               <span className={`shrink-0 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
                                 assessment.assessment_type === 'daily_test' ? 'bg-blue-100 text-blue-700' :
                                 assessment.assessment_type === 'mock_test' ? 'bg-orange-100 text-orange-700' :
@@ -698,13 +698,13 @@ export function TraineeCourseDetails() {
                                 {assessment.assessment_type?.replace('_', ' ') || 'Assessment'}
                               </span>
                             </div>
-                            <p className="text-xs text-midnight/60">
+                            <p className="text-xs text-zinc-200/60">
                               {assessment.assessment_type === 'daily_test'
                                 ? 'Optional practice test. Take at any time.'
                                 : `Strictly timed: ${assessment.duration_minutes || 30} mins. Contributes to internal marks.`}
                             </p>
                             {assessment.scheduled_date && (
-                              <p className="text-xs text-purple-700 mt-1 font-medium flex items-center gap-1">
+                              <p className="text-xs text-cyan-400 mt-1 font-medium flex items-center gap-1">
                                 <Calendar className="w-3.5 h-3.5" /> Scheduled for {new Date(assessment.scheduled_date).toLocaleDateString()}
                               </p>
                             )}
@@ -723,15 +723,15 @@ export function TraineeCourseDetails() {
 
                 {/* Learning Objectives */}
                 {objectives.length > 0 && (
-                  <div className="bg-white border border-purple-500/10 rounded-3xl p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-midnight mb-4 flex items-center gap-2">
+                  <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm">
+                    <h2 className="text-sm font-bold text-zinc-200 mb-4 flex items-center gap-2">
                       <Target className="w-4 h-4 text-orange-500" /> What You'll Learn
                     </h2>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {objectives.map((obj: string, i: number) => (
                         <li key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100">
                           <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                          <span className="text-xs text-midnight/75 leading-snug font-medium">{obj}</span>
+                          <span className="text-xs text-zinc-200/75 leading-snug font-medium">{obj}</span>
                         </li>
                       ))}
                     </ul>
@@ -740,9 +740,9 @@ export function TraineeCourseDetails() {
 
                 {/* Session Flow — structured timeline OR raw text */}
                 {course.session_flow_text && (
-                  <div className="bg-white border border-purple-500/10 rounded-3xl p-6 shadow-sm">
+                  <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-5">
-                      <h2 className="text-sm font-bold text-midnight flex items-center gap-2">
+                      <h2 className="text-sm font-bold text-zinc-200 flex items-center gap-2">
                         <ListOrdered className="w-4 h-4 text-purple-600" /> Session Flow
                       </h2>
                       {course.session_flow_document_path && (
@@ -750,7 +750,7 @@ export function TraineeCourseDetails() {
                           variant="outline"
                           size="sm"
                           disabled={docLoading}
-                          className="h-8 rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-semibold gap-1.5"
+                          className="h-8 rounded-xl border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/30 text-xs font-semibold gap-1.5"
                           onClick={handleOpenSessionDoc}
                         >
                           {docLoading
@@ -774,9 +774,9 @@ export function TraineeCourseDetails() {
                                 {step.number || i + 1}
                               </div>
                               <div className="group">
-                                <p className="text-sm font-bold text-midnight leading-snug">{step.title}</p>
+                                <p className="text-sm font-bold text-zinc-200 leading-snug">{step.title}</p>
                                 {step.description && (
-                                  <p className="text-xs text-midnight/55 mt-0.5 leading-relaxed">{step.description}</p>
+                                  <p className="text-xs text-zinc-200/55 mt-0.5 leading-relaxed">{step.description}</p>
                                 )}
                               </div>
                             </li>
@@ -785,23 +785,23 @@ export function TraineeCourseDetails() {
                       </div>
                     ) : (
                       /* Fallback: plain text */
-                      <p className="text-sm text-midnight/70 leading-relaxed whitespace-pre-wrap">{course.session_flow_text}</p>
+                      <p className="text-sm text-zinc-200/70 leading-relaxed whitespace-pre-wrap">{course.session_flow_text}</p>
                     )}
                   </div>
                 )}
 
                 {/* Course Sessions — Accordion */}
                 {course.sessions?.length > 0 && (
-                  <div className="bg-white border border-purple-500/10 rounded-3xl p-6 shadow-sm">
+                  <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-5">
-                      <h2 className="text-sm font-bold text-midnight flex items-center gap-2">
+                      <h2 className="text-sm font-bold text-zinc-200 flex items-center gap-2">
                         <BookCheck className="w-4 h-4 text-purple-600" /> Course Sessions
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-cyan-400">
                           {course.sessions.length}
                         </span>
                       </h2>
                       {!enrollment && (
-                        <div className="flex items-center gap-1.5 text-xs text-midnight/50 font-medium">
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-200/50 font-medium">
                           <Lock className="w-3.5 h-3.5" /> Enroll to access materials
                         </div>
                       )}
@@ -817,24 +817,24 @@ export function TraineeCourseDetails() {
                           <div
                             key={session.id}
                             className={`border rounded-2xl overflow-hidden transition-all duration-200 ${
-                              isOpen ? 'border-purple-300/60 shadow-md shadow-purple-500/8' : 'border-purple-500/10'
+                              isOpen ? 'border-cyan-500/30 shadow-md shadow-cyan-950/50' : 'border-cyan-500/30'
                             }`}
                           >
                             {/* Session header */}
                             <button
                               onClick={() => toggleSession(session.id)}
-                              className="w-full flex items-center gap-4 p-4 bg-purple-50/40 hover:bg-purple-50/80 transition-colors text-left"
+                              className="w-full flex items-center gap-4 p-4 bg-cyan-950/30/40 hover:bg-cyan-950/30/80 transition-colors text-left"
                             >
                               {/* Number chip */}
                               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-all ${
-                                isOpen ? 'bg-gradient-to-br from-purple-600 to-pink-500 text-white shadow-md shadow-pink-500/25' : 'bg-white border border-purple-200 text-purple-700'
+                                isOpen ? 'bg-gradient-to-br from-purple-600 to-pink-500 text-white shadow-md shadow-pink-500/25' : 'bg-[#070E20]/90 border border-cyan-500/30 text-cyan-400'
                               }`}>
                                 {index + 1}
                               </div>
 
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                                  <p className="text-sm font-bold text-midnight">{session.title}</p>
+                                  <p className="text-sm font-bold text-zinc-200">{session.title}</p>
                                   {session.session_type && (
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${typeColor}`}>
                                       {session.session_type === 'recorded' ? 'Video' : session.session_type}
@@ -842,7 +842,7 @@ export function TraineeCourseDetails() {
                                   )}
                                 </div>
                                 {session.start_time && (
-                                  <p className="text-xs text-midnight/50 flex items-center gap-1">
+                                  <p className="text-xs text-zinc-200/50 flex items-center gap-1">
                                     <Calendar className="w-3 h-3 text-purple-400" />
                                     {new Date(session.start_time).toLocaleString(undefined, {
                                       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
@@ -853,7 +853,7 @@ export function TraineeCourseDetails() {
 
                               <div className="flex items-center gap-2 shrink-0">
                                 {sessionMaterials.length > 0 && (
-                                  <span className="text-[11px] text-midnight/50 font-semibold bg-white border border-purple-100 px-2 py-0.5 rounded-full">
+                                  <span className="text-[11px] text-zinc-200/50 font-semibold bg-[#070E20]/90 border border-cyan-500/30 px-2 py-0.5 rounded-full">
                                     {sessionMaterials.length} file{sessionMaterials.length !== 1 ? 's' : ''}
                                   </span>
                                 )}
@@ -875,7 +875,7 @@ export function TraineeCourseDetails() {
                                 )}
                                 {isOpen
                                   ? <ChevronUp className="w-4 h-4 text-purple-500 shrink-0" />
-                                  : <ChevronDown className="w-4 h-4 text-midnight/35 shrink-0" />}
+                                  : <ChevronDown className="w-4 h-4 text-zinc-200/35 shrink-0" />}
                               </div>
                             </button>
 
@@ -890,15 +890,15 @@ export function TraineeCourseDetails() {
                                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                                   style={{ overflow: 'hidden' }}
                                 >
-                                  <div className="px-4 pb-4 pt-3 bg-white border-t border-purple-500/10">
+                                  <div className="px-4 pb-4 pt-3 bg-[#070E20]/90 border-t border-cyan-500/30">
                                     {session.description && (
-                                      <p className="text-xs text-midnight/60 mb-3 leading-relaxed">{session.description}</p>
+                                      <p className="text-xs text-zinc-200/60 mb-3 leading-relaxed">{session.description}</p>
                                     )}
 
                                     {sessionMaterials.length === 0 ? (
                                       <div className="flex items-center gap-2 py-3 px-3 rounded-xl bg-slate-50 border border-slate-100">
-                                        <FileText className="w-4 h-4 text-midnight/20 shrink-0" />
-                                        <p className="text-xs text-midnight/35 italic">No materials uploaded for this session yet.</p>
+                                        <FileText className="w-4 h-4 text-zinc-200/20 shrink-0" />
+                                        <p className="text-xs text-zinc-200/35 italic">No materials uploaded for this session yet.</p>
                                       </div>
                                     ) : (
                                       <ul className="space-y-2">
@@ -916,17 +916,17 @@ export function TraineeCourseDetails() {
                                               {getMaterialIcon(m.material_type)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                              <p className="text-xs font-semibold text-midnight truncate">{m.file_name}</p>
-                                              <p className="text-[10px] text-midnight/45 capitalize">{m.material_type}</p>
+                                              <p className="text-xs font-semibold text-zinc-200 truncate">{m.file_name}</p>
+                                              <p className="text-[10px] text-zinc-200/45 capitalize">{m.material_type}</p>
                                             </div>
                                             {enrollment ? (
                                               m.material_type === 'link'
-                                                ? <ExternalLink className="w-3.5 h-3.5 text-midnight/30 shrink-0" />
+                                                ? <ExternalLink className="w-3.5 h-3.5 text-zinc-200/30 shrink-0" />
                                                 : downloadingId === m.id
                                                   ? <Loader2 className="w-3.5 h-3.5 text-purple-500 animate-spin shrink-0" />
-                                                  : <Download className="w-3.5 h-3.5 text-midnight/30 shrink-0" />
+                                                  : <Download className="w-3.5 h-3.5 text-zinc-200/30 shrink-0" />
                                             ) : (
-                                              <Lock className="w-3.5 h-3.5 text-midnight/25 shrink-0" />
+                                              <Lock className="w-3.5 h-3.5 text-zinc-200/25 shrink-0" />
                                             )}
                                           </li>
                                         ))}
@@ -948,8 +948,8 @@ export function TraineeCourseDetails() {
               <div className="space-y-4">
 
                 {/* Quick Stats */}
-                <div className="bg-white border border-purple-500/10 rounded-3xl p-5 shadow-sm">
-                  <h3 className="text-[11px] font-bold text-purple-900/60 uppercase tracking-wider mb-4">Course Stats</h3>
+                <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-5 shadow-sm">
+                  <h3 className="text-[11px] font-bold text-cyan-300/60 uppercase tracking-wider mb-4">Course Stats</h3>
                   <div className="space-y-3">
                     {[
                       {
@@ -971,32 +971,32 @@ export function TraineeCourseDetails() {
                         <div className="w-7 h-7 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
                           {item.icon}
                         </div>
-                        <span className="text-xs text-midnight/50 font-medium flex-1">{item.label}</span>
-                        <span className="text-xs font-bold text-midnight">{item.value}</span>
+                        <span className="text-xs text-zinc-200/50 font-medium flex-1">{item.label}</span>
+                        <span className="text-xs font-bold text-zinc-200">{item.value}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Instructor */}
-                <div className="bg-white border border-purple-500/10 rounded-3xl p-5 shadow-sm">
-                  <h3 className="text-[11px] font-bold text-purple-900/60 uppercase tracking-wider mb-4">Instructor</h3>
+                <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-5 shadow-sm">
+                  <h3 className="text-[11px] font-bold text-cyan-300/60 uppercase tracking-wider mb-4">Instructor</h3>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-black text-base shadow-md shadow-pink-500/20 shrink-0">
                       {course.trainer?.full_name?.charAt(0) || 'T'}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-midnight">{course.trainer?.full_name || 'Assigned Instructor'}</p>
+                      <p className="text-sm font-bold text-zinc-200">{course.trainer?.full_name || 'Assigned Instructor'}</p>
                       {course.trainer?.years_of_experience && (
-                        <p className="text-xs text-midnight/50">{course.trainer.years_of_experience} yrs experience</p>
+                        <p className="text-xs text-zinc-200/50">{course.trainer.years_of_experience} yrs experience</p>
                       )}
                     </div>
                   </div>
                   {course.trainer?.bio && (
-                    <p className="text-xs text-midnight/60 leading-relaxed line-clamp-4 mb-3">{course.trainer.bio}</p>
+                    <p className="text-xs text-zinc-200/60 leading-relaxed line-clamp-4 mb-3">{course.trainer.bio}</p>
                   )}
                   {course.trainer?.qualifications && (
-                    <div className="mb-3 p-2.5 bg-purple-50 rounded-xl border border-purple-100">
+                    <div className="mb-3 p-2.5 bg-cyan-950/30 rounded-xl border border-cyan-500/30">
                       <p className="text-[11px] font-semibold text-purple-800">
                         <Award className="w-3 h-3 inline mr-1 text-orange-500" />
                         {course.trainer.qualifications}
@@ -1013,7 +1013,7 @@ export function TraineeCourseDetails() {
                   )}
                   {course.trainer?.expertise_areas && course.trainer.expertise_areas.length > 0 && (
                     <div className="mb-4">
-                      <p className="text-[10px] font-bold text-midnight/40 uppercase tracking-wide mb-1.5">Expertise</p>
+                      <p className="text-[10px] font-bold text-zinc-200/40 uppercase tracking-wide mb-1.5">Expertise</p>
                       <div className="flex flex-wrap gap-1.5">
                         {course.trainer.expertise_areas.map((skill: string, idx: number) => (
                           <span key={idx} className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-semibold text-emerald-700">
@@ -1027,14 +1027,14 @@ export function TraineeCourseDetails() {
                   {course.trainer?.email && (
                     <a
                       href={`mailto:${course.trainer.email}?subject=Regarding: ${encodeURIComponent(course.title)}`}
-                      className="flex items-center gap-2.5 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 hover:border-pink-200 hover:shadow-sm transition-all group"
+                      className="flex items-center gap-2.5 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-cyan-500/30 hover:border-pink-200 hover:shadow-sm transition-all group"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-white border border-purple-200 flex items-center justify-center shrink-0 group-hover:bg-purple-50 transition-colors">
+                      <div className="w-7 h-7 rounded-lg bg-[#070E20]/90 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:bg-cyan-950/30 transition-colors">
                         <Mail className="w-3.5 h-3.5 text-purple-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-purple-700 uppercase tracking-wide">Contact</p>
-                        <p className="text-xs text-midnight font-semibold truncate">{course.trainer.email}</p>
+                        <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-wide">Contact</p>
+                        <p className="text-xs text-zinc-200 font-semibold truncate">{course.trainer.email}</p>
                       </div>
                       <Send className="w-3.5 h-3.5 text-purple-400 group-hover:text-pink-500 transition-colors shrink-0" />
                     </a>
@@ -1044,15 +1044,15 @@ export function TraineeCourseDetails() {
                 {/* Schedule */}
                 {(course.start_date || course.end_date || course.live_class_timing ||
                   course.mock_test_timing || course.final_exam_timing || course.final_test_date) && (
-                  <div className="bg-white border border-purple-500/10 rounded-3xl p-5 shadow-sm">
-                    <h3 className="text-[11px] font-bold text-purple-900/60 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                  <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-5 shadow-sm">
+                    <h3 className="text-[11px] font-bold text-cyan-300/60 uppercase tracking-wider mb-4 flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-purple-500" /> Schedule
                     </h3>
                     <div className="space-y-2.5">
                       {(course.start_date || course.end_date) && (
-                        <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-100">
-                          <p className="text-[10px] font-bold text-purple-700 uppercase tracking-wide mb-0.5">Course Period</p>
-                          <p className="text-xs font-semibold text-midnight">
+                        <div className="p-3 rounded-xl bg-cyan-950/30/70 border border-cyan-500/30">
+                          <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-wide mb-0.5">Course Period</p>
+                          <p className="text-xs font-semibold text-zinc-200">
                             {course.start_date && new Date(course.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             {course.start_date && course.end_date && ' – '}
                             {course.end_date && new Date(course.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -1062,13 +1062,13 @@ export function TraineeCourseDetails() {
                       {course.live_class_timing && (
                         <div className="p-3 rounded-xl bg-orange-50/70 border border-orange-100">
                           <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wide mb-0.5">Live Classes</p>
-                          <p className="text-xs font-semibold text-midnight">{course.live_class_timing}</p>
+                          <p className="text-xs font-semibold text-zinc-200">{course.live_class_timing}</p>
                         </div>
                       )}
                       {course.mock_test_timing && (
                         <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100">
                           <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-0.5">Mock Test</p>
-                          <p className="text-xs font-semibold text-midnight">
+                          <p className="text-xs font-semibold text-zinc-200">
                             {new Date(course.mock_test_timing).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                           </p>
                         </div>
@@ -1076,7 +1076,7 @@ export function TraineeCourseDetails() {
                       {course.final_exam_timing && (
                         <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-100">
                           <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wide mb-0.5">Final Exam</p>
-                          <p className="text-xs font-semibold text-midnight">
+                          <p className="text-xs font-semibold text-zinc-200">
                             {new Date(course.final_exam_timing).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                           </p>
                         </div>
@@ -1084,7 +1084,7 @@ export function TraineeCourseDetails() {
                       {course.final_test_date && (
                         <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-100">
                           <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide mb-0.5">Final Test</p>
-                          <p className="text-xs font-semibold text-midnight">
+                          <p className="text-xs font-semibold text-zinc-200">
                             {new Date(course.final_test_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             {course.final_test_start_time && ` at ${course.final_test_start_time}`}
                             {course.final_test_end_time && ` – ${course.final_test_end_time}`}
@@ -1125,12 +1125,12 @@ export function TraineeCourseDetails() {
       />
 
       <Dialog open={otpDialogType !== null} onOpenChange={(open) => !open && handleCloseOtpDialog()}>
-        <DialogContent className="max-w-sm rounded-3xl p-6 bg-white border-none shadow-2xl">
+        <DialogContent className="max-w-sm rounded-3xl p-6 bg-[#070E20]/90 border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-midnight text-center mb-1">
+            <DialogTitle className="text-xl font-bold text-zinc-200 text-center mb-1">
               {otpDialogType === 'enroll' ? 'Confirm Enrollment' : 'Confirm Drop Course'}
             </DialogTitle>
-            <DialogDescription className="text-center text-midnight/60 text-sm">
+            <DialogDescription className="text-center text-zinc-200/60 text-sm">
               {otpSent 
                 ? <>We've sent a 6-digit code to <strong>{profile?.email}</strong>. Enter it below to confirm.</>
                 : <>Are you sure you want to {otpDialogType === 'enroll' ? 'enroll in' : 'drop'} this course? We will send a verification code to <strong>{profile?.email}</strong>.</>}
@@ -1144,7 +1144,7 @@ export function TraineeCourseDetails() {
                 disabled={isSendingOtp}
                 className={`w-full font-bold h-11 rounded-xl text-white ${
                   otpDialogType === 'enroll' 
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-purple-500/20' 
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-cyan-950/50' 
                     : 'bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-rose-500/20'
                 } shadow-lg transition-all`}
               >
@@ -1154,7 +1154,7 @@ export function TraineeCourseDetails() {
                 variant="ghost"
                 onClick={handleCloseOtpDialog}
                 disabled={isSendingOtp}
-                className="w-full text-midnight/60 hover:text-midnight h-11 rounded-xl"
+                className="w-full text-zinc-200/60 hover:text-zinc-200 h-11 rounded-xl"
               >
                 Cancel
               </Button>
@@ -1167,7 +1167,7 @@ export function TraineeCourseDetails() {
                     placeholder="Enter 6-digit OTP"
                     value={otpInput}
                     onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                    className="text-center text-lg tracking-[0.25em] font-bold h-12 rounded-xl border-purple-200 focus-visible:ring-purple-500"
+                    className="text-center text-lg tracking-[0.25em] font-bold h-12 rounded-xl border-cyan-500/30 focus-visible:ring-purple-500"
                     maxLength={6}
                   />
                 </div>
@@ -1189,7 +1189,7 @@ export function TraineeCourseDetails() {
                   variant="ghost"
                   onClick={handleCloseOtpDialog}
                   disabled={isVerifyingOtp}
-                  className="w-full text-midnight/60 hover:text-midnight h-11 rounded-xl"
+                  className="w-full text-zinc-200/60 hover:text-zinc-200 h-11 rounded-xl"
                 >
                   Cancel
                 </Button>

@@ -84,7 +84,7 @@ export function TrainerProfile() {
   if (loading) {
     return (
       <TrainerLayout>
-        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-zinc-200" /></div>
       </TrainerLayout>
     )
   }
@@ -93,47 +93,47 @@ export function TrainerProfile() {
     <TrainerLayout>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-2xl mx-auto space-y-6">
         <motion.div variants={fadeUp}>
-          <h2 className="text-2xl font-bold tracking-tight text-ink">Profile</h2>
-          <p className="text-ink/60 text-sm mt-1">Manage your trainer profile</p>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Profile</h2>
+          <p className="text-zinc-200/60 text-sm mt-1">Manage your trainer profile</p>
         </motion.div>
 
         <motion.div variants={fadeUp}>
-          <Card className="bg-white border-ink/10">
-            <CardHeader className="border-b border-ink/10">
+          <Card className="bg-[#070E20]/90 border-cyan-500/30">
+            <CardHeader className="border-b border-cyan-500/30">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-ink to-ink/80 flex items-center justify-center text-cream text-lg font-bold">
                   {form.full_name.charAt(0) || <User className="w-5 h-5" />}
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-ink">{form.full_name || 'Trainer'}</p>
-                  <p className="text-xs text-ink/50">{form.email || user?.email}</p>
+                  <p className="text-lg font-semibold text-zinc-200">{form.full_name || 'Trainer'}</p>
+                  <p className="text-xs text-zinc-200/50">{form.email || user?.email}</p>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Full Name</Label>
-                  <Input value={form.full_name} onChange={e => update('full_name', e.target.value)} className="bg-ink/5 border-ink/20 text-ink h-10" />
+                  <Label className="text-zinc-200/80 text-xs">Full Name</Label>
+                  <Input value={form.full_name} onChange={e => update('full_name', e.target.value)} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Email</Label>
-                  <Input value={form.email} disabled className="bg-ink/5 border-ink/20 text-ink/50 h-10" />
+                  <Label className="text-zinc-200/80 text-xs">Email</Label>
+                  <Input value={form.email} disabled className="bg-ink/5 border-cyan-500/30 text-zinc-200/50 h-10" />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-ink/80 text-xs">Biography</Label>
-                <Textarea value={form.bio} onChange={e => update('bio', e.target.value)} rows={3} placeholder="Tell us about your expertise and background..." className="bg-ink/5 border-ink/20 text-ink" />
+                <Label className="text-zinc-200/80 text-xs">Biography</Label>
+                <Textarea value={form.bio} onChange={e => update('bio', e.target.value)} rows={3} placeholder="Tell us about your expertise and background..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Years of Experience</Label>
-                  <Input type="number" value={form.years_of_experience} onChange={e => update('years_of_experience', e.target.value)} placeholder="e.g. 10" className="bg-ink/5 border-ink/20 text-ink h-10" />
+                  <Label className="text-zinc-200/80 text-xs">Years of Experience</Label>
+                  <Input type="number" value={form.years_of_experience} onChange={e => update('years_of_experience', e.target.value)} placeholder="e.g. 10" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 text-xs">Availability</Label>
+                  <Label className="text-zinc-200/80 text-xs">Availability</Label>
                   <Select value={form.availability} onValueChange={v => update('availability', v)}>
-                    <SelectTrigger className="bg-ink/5 border-ink/20 text-ink h-10"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="available">Available</SelectItem>
                       <SelectItem value="busy">Busy</SelectItem>
@@ -143,8 +143,8 @@ export function TrainerProfile() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-ink/80 text-xs">Qualifications</Label>
-                <Textarea value={form.qualifications} onChange={e => update('qualifications', e.target.value)} rows={2} placeholder="Degrees, certifications, specializations..." className="bg-ink/5 border-ink/20 text-ink" />
+                <Label className="text-zinc-200/80 text-xs">Qualifications</Label>
+                <Textarea value={form.qualifications} onChange={e => update('qualifications', e.target.value)} rows={2} placeholder="Degrees, certifications, specializations..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
               </div>
               <Button onClick={handleSave} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream w-full">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}

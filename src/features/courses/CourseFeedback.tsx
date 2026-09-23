@@ -72,7 +72,7 @@ export function CourseFeedback({ courseId }: { courseId: string }) {
   }
 
   return (
-    <Card className="bg-white border-slate-200 overflow-hidden shadow-sm">
+    <Card className="bg-[#070E20]/90 border-slate-200 overflow-hidden shadow-sm">
       <CardContent className="p-6 md:p-8 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">

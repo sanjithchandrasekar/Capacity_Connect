@@ -38,10 +38,11 @@ interface QuestionForm {
   option_d: string
   correct_answer: string
   explanation: string
+  difficulty: 'easy' | 'medium' | 'hard'
 }
 
 const emptyQuestion: QuestionForm = {
-  question_type: 'mcq', question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_answer: 'A', explanation: '',
+  question_type: 'mcq', question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_answer: 'A', explanation: '', difficulty: 'medium'
 }
 
 export function AssessmentsPage() {
@@ -71,6 +72,9 @@ export function AssessmentsPage() {
     title: '',
     assessment_type: 'final' as 'daily' | 'mock' | 'final' | 'assessment',
     requires_sea: true,
+    is_adaptive: false,
+    is_simulation: false,
+    simulation_dataset_url: '',
     scheduled_date: '',
     start_time: '',
     end_time: '',
@@ -180,6 +184,9 @@ export function AssessmentsPage() {
         assessment_type: assessmentForm.assessment_type,
         status: 'draft' as const,
         requires_sea: assessmentForm.requires_sea,
+        is_adaptive: assessmentForm.is_adaptive,
+        is_simulation: assessmentForm.is_simulation,
+        simulation_dataset_url: assessmentForm.simulation_dataset_url || null,
         scheduled_date: assessmentForm.scheduled_date || null,
         start_time: assessmentForm.start_time ? new Date(assessmentForm.start_time).toISOString() : null,
         end_time: assessmentForm.end_time ? new Date(assessmentForm.end_time).toISOString() : null,
@@ -231,6 +238,7 @@ export function AssessmentsPage() {
         options: editingQuestion.question_type === 'mcq' ? { A: editingQuestion.option_a, B: editingQuestion.option_b, C: editingQuestion.option_c, D: editingQuestion.option_d } : {},
         correct_answer: editingQuestion.correct_answer,
         explanation: editingQuestion.explanation || null,
+        difficulty: editingQuestion.difficulty,
         position: editingQuestionId ? undefined : questions.length + 1,
         approved: false,
       }
@@ -359,6 +367,7 @@ export function AssessmentsPage() {
       - "options" (object with keys "A", "B", "C", "D" mapped to string answers)
       - "correct_answer" (string: "A", "B", "C", or "D")
       - "explanation" (string: brief explanation of why the answer is correct)
+      - "difficulty" (string: exactly "easy", "medium", or "hard")
       Only return the raw JSON array. Do not include markdown code blocks.`;
 
       const parts: any[] = [{ text: prompt }];
@@ -477,6 +486,7 @@ export function AssessmentsPage() {
         options: q.options,
         correct_answer: q.correct_answer,
         explanation: q.explanation,
+        difficulty: q.difficulty && ['easy', 'medium', 'hard'].includes(q.difficulty.toLowerCase()) ? q.difficulty.toLowerCase() : 'medium',
         position: i + 1,
         approved: false
       }));
@@ -503,6 +513,7 @@ export function AssessmentsPage() {
       question_text: q.question_text,
       option_a: opts.A || '', option_b: opts.B || '', option_c: opts.C || '', option_d: opts.D || '',
       correct_answer: q.correct_answer, explanation: q.explanation ?? '',
+      difficulty: ((q as any).difficulty as 'easy'|'medium'|'hard') || 'medium',
     })
     setEditingQuestionId(q.id)
     setQuestionDialogOpen(true)
@@ -511,7 +522,8 @@ export function AssessmentsPage() {
   const openNewAssessmentDialog = () => {
     setEditingAssessmentId(null)
     setAssessmentForm({
-      title: '', assessment_type: 'final', requires_sea: true, scheduled_date: '', start_time: '', end_time: '', results_publish_date: ''
+      title: '', assessment_type: 'final', requires_sea: true, scheduled_date: '', start_time: '', end_time: '', results_publish_date: '',
+      is_adaptive: false, is_simulation: false, simulation_dataset_url: ''
     })
     setAssessmentDialogOpen(true)
   }
@@ -525,7 +537,10 @@ export function AssessmentsPage() {
       scheduled_date: a.scheduled_date ? new Date(a.scheduled_date).toISOString().slice(0, 10) : '',
       start_time: a.start_time || '',
       end_time: a.end_time || '',
-      results_publish_date: (a as any).results_publish_date ? new Date((a as any).results_publish_date).toISOString().slice(0, 10) : ''
+      results_publish_date: (a as any).results_publish_date ? new Date((a as any).results_publish_date).toISOString().slice(0, 10) : '',
+      is_adaptive: (a as any).is_adaptive || false,
+      is_simulation: (a as any).is_simulation || false,
+      simulation_dataset_url: (a as any).simulation_dataset_url || ''
     })
     setAssessmentDialogOpen(true)
   }
@@ -533,7 +548,7 @@ export function AssessmentsPage() {
   if (loading && !assessments.length) {
     return (
       <TrainerLayout>
-        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-zinc-200" /></div>
       </TrainerLayout>
     )
   }
@@ -547,14 +562,14 @@ export function AssessmentsPage() {
           <>
             <motion.div variants={fadeUp} className="flex items-center justify-between">
               <div>
-                <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+                <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
                   <ArrowLeft className="w-4 h-4" /> Back to Course
                 </Link>
-                <h2 className="text-2xl font-bold tracking-tight text-ink">Tests & Assessments</h2>
-                <p className="text-ink/60 text-sm mt-1">{course?.title}</p>
+                <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Tests & Assessments</h2>
+                <p className="text-zinc-200/60 text-sm mt-1">{course?.title}</p>
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => setAiGenDialogOpen(true)} variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 font-bold">
+                <Button onClick={() => setAiGenDialogOpen(true)} variant="outline" className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/30 hover:text-purple-800 font-bold">
                   <Brain className="w-4 h-4 mr-2" /> Auto-Generate with AI
                 </Button>
                 <Button onClick={openNewAssessmentDialog} className="bg-ink hover:bg-ink/90 text-cream">
@@ -567,16 +582,16 @@ export function AssessmentsPage() {
               <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                 {/* Premium AI Generation Card */}
                 <motion.div whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Card className="relative overflow-hidden group border border-purple-100 hover:border-purple-300 shadow-sm hover:shadow-xl h-full cursor-pointer bg-gradient-to-br from-white to-purple-50/50" onClick={() => setAiGenDialogOpen(true)}>
+                  <Card className="relative overflow-hidden group border border-cyan-500/30 hover:border-cyan-500/30 shadow-sm hover:shadow-xl h-full cursor-pointer bg-gradient-to-br from-white to-purple-50/50" onClick={() => setAiGenDialogOpen(true)}>
                     <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse" />
                     
                     <CardContent className="p-8 relative z-10 h-full flex flex-col justify-between rounded-xl">
                       <div>
-                        <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-purple-200 shadow-sm group-hover:shadow-md transition-all">
+                        <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-cyan-500/30 shadow-sm group-hover:shadow-md transition-all">
                           <Brain className="w-7 h-7 text-purple-600" />
                         </div>
-                        <h3 className="text-2xl font-extrabold text-ink mb-3 tracking-tight">Auto-Generate with AI</h3>
-                        <p className="text-sm text-ink/70 mb-8 leading-relaxed font-medium">
+                        <h3 className="text-2xl font-extrabold text-zinc-200 mb-3 tracking-tight">Auto-Generate with AI</h3>
+                        <p className="text-sm text-zinc-200/70 mb-8 leading-relaxed font-medium">
                           Instantly generate a complete, high-quality assessment tailored perfectly to your course content, objectives, and desired difficulty level.
                         </p>
                       </div>
@@ -589,18 +604,18 @@ export function AssessmentsPage() {
 
                 {/* Neo-Brutalist Manual Creation Card */}
                 <motion.div whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Card className="relative overflow-hidden group border-2 border-ink shadow-[8px_8px_0px_0px_#1E1E24] hover:shadow-[12px_12px_0px_0px_#1E1E24] hover:-translate-x-1 hover:-translate-y-1 transition-all h-full cursor-pointer bg-white" onClick={openNewAssessmentDialog}>
+                  <Card className="relative overflow-hidden group border-2 border-ink shadow-[8px_8px_0px_0px_#1E1E24] hover:shadow-[12px_12px_0px_0px_#1E1E24] hover:-translate-x-1 hover:-translate-y-1 transition-all h-full cursor-pointer bg-[#070E20]/90" onClick={openNewAssessmentDialog}>
                     <CardContent className="p-8 relative z-10 h-full flex flex-col justify-between">
                       <div>
                         <div className="w-14 h-14 bg-ink text-white rounded-2xl flex items-center justify-center mb-6 transform group-hover:rotate-12 transition-transform duration-300">
                           <Plus className="w-7 h-7" />
                         </div>
-                        <h3 className="text-2xl font-black text-ink mb-3 tracking-tight">Create Manually</h3>
-                        <p className="text-sm text-ink/70 mb-8 leading-relaxed font-medium">
+                        <h3 className="text-2xl font-black text-zinc-200 mb-3 tracking-tight">Create Manually</h3>
+                        <p className="text-sm text-zinc-200/70 mb-8 leading-relaxed font-medium">
                           Build your assessment from scratch. Define your own questions, options, and passing criteria with absolute precision and control.
                         </p>
                       </div>
-                      <Button variant="outline" className="w-full border-2 border-ink text-ink hover:bg-ink hover:text-white font-bold text-sm h-12 rounded-xl transition-colors">
+                      <Button variant="outline" className="w-full border-2 border-ink text-zinc-200 hover:bg-ink hover:text-white font-bold text-sm h-12 rounded-xl transition-colors">
                         Create Blank Test
                       </Button>
                     </CardContent>
@@ -610,16 +625,16 @@ export function AssessmentsPage() {
             ) : (
               <motion.div variants={fadeUp} className="space-y-4">
                 {assessments.map((a) => (
-                  <Card key={a.id} className="bg-white border-ink/10 hover:border-ink/20 transition-all overflow-hidden group">
-                    <CardHeader className="bg-ink/5 border-b border-ink/5 pb-4">
+                  <Card key={a.id} className="bg-[#070E20]/90 border-cyan-500/30 hover:border-cyan-500/30 transition-all overflow-hidden group">
+                    <CardHeader className="bg-ink/5 border-b border-cyan-500/30 pb-4">
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline" className="capitalize text-[10px]">{a.assessment_type} Test</Badge>
                             {a.requires_sea && <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none text-[10px]">SEA Enabled</Badge>}
-                            <CardTitle className="text-lg text-ink">{cleanTitle(a.title)}</CardTitle>
+                            <CardTitle className="text-lg text-zinc-200">{cleanTitle(a.title)}</CardTitle>
                           </div>
-                          <div className="flex flex-wrap gap-4 mt-3 text-xs text-ink/70">
+                          <div className="flex flex-wrap gap-4 mt-3 text-xs text-zinc-200/70">
                             {a.scheduled_date && (
                               <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {new Date(a.scheduled_date).toLocaleDateString()}</span>
                             )}
@@ -636,9 +651,9 @@ export function AssessmentsPage() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-4 bg-white flex justify-between items-center">
+                    <CardContent className="p-4 bg-[#070E20]/90 flex justify-between items-center">
                       <div>
-                        <p className="text-sm font-medium text-ink">Status: <span className="capitalize">{a.status.replace('_', ' ')}</span></p>
+                        <p className="text-sm font-medium text-zinc-200">Status: <span className="capitalize">{a.status.replace('_', ' ')}</span></p>
                       </div>
                       <Button onClick={() => setSelectedAssessmentId(a.id)} className="bg-ink text-cream hover:bg-ink/90">
                         Manage Questions
@@ -653,24 +668,24 @@ export function AssessmentsPage() {
           /* DETAIL VIEW (Question Builder) */
           <>
             <motion.div variants={fadeUp}>
-              <button onClick={() => setSelectedAssessmentId(null)} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+              <button onClick={() => setSelectedAssessmentId(null)} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
                 <ArrowLeft className="w-4 h-4" /> Back to Assessments
               </button>
               
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-bold tracking-tight text-ink">{cleanTitle(selectedAssessment?.title)}</h2>
+                    <h2 className="text-2xl font-bold tracking-tight text-zinc-200">{cleanTitle(selectedAssessment?.title)}</h2>
                     <Badge variant="outline" className="capitalize text-[10px] py-0">{selectedAssessment?.assessment_type}</Badge>
                   </div>
-                  <p className="text-xs text-ink/50 mt-1">{questions.length} questions | Passing: {selectedAssessment?.passing_score}%</p>
+                  <p className="text-xs text-zinc-200/50 mt-1">{questions.length} questions | Passing: {selectedAssessment?.passing_score}%</p>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => { setEditingQuestion(emptyQuestion); setEditingQuestionId(null); setQuestionDialogOpen(true) }}
                     className="bg-ink hover:bg-ink/90 text-cream">
                     <Plus className="w-4 h-4 mr-2" /> Add Question
                   </Button>
-                  <Button onClick={handleSubmitForReview} disabled={saving || questions.length === 0} variant="outline" className="border-ink/20 text-ink">
+                  <Button onClick={handleSubmitForReview} disabled={saving || questions.length === 0} variant="outline" className="border-cyan-500/30 text-zinc-200">
                     <Send className="w-4 h-4 mr-2" /> {selectedAssessment?.assessment_type === 'final' ? 'Submit for Admin Review' : 'Approve & Publish'}
                   </Button>
                 </div>
@@ -679,16 +694,16 @@ export function AssessmentsPage() {
               {/* Analytics Dashboard */}
               {attemptsStats && (
                 <div className="grid grid-cols-3 gap-4 mb-8">
-                  <div className="bg-white p-4 rounded-xl border border-ink/10 flex flex-col justify-center items-center">
-                    <p className="text-xs text-ink/60 uppercase font-bold tracking-wider mb-1">Total Attempts</p>
-                    <p className="text-2xl font-black text-ink">{attemptsStats.total}</p>
+                  <div className="bg-[#070E20]/90 p-4 rounded-xl border border-cyan-500/30 flex flex-col justify-center items-center">
+                    <p className="text-xs text-zinc-200/60 uppercase font-bold tracking-wider mb-1">Total Attempts</p>
+                    <p className="text-2xl font-black text-zinc-200">{attemptsStats.total}</p>
                   </div>
-                  <div className="bg-white p-4 rounded-xl border border-ink/10 flex flex-col justify-center items-center">
-                    <p className="text-xs text-ink/60 uppercase font-bold tracking-wider mb-1">Average Score</p>
+                  <div className="bg-[#070E20]/90 p-4 rounded-xl border border-cyan-500/30 flex flex-col justify-center items-center">
+                    <p className="text-xs text-zinc-200/60 uppercase font-bold tracking-wider mb-1">Average Score</p>
                     <p className="text-2xl font-black text-blue-600">{attemptsStats.avgScore}%</p>
                   </div>
-                  <div className="bg-white p-4 rounded-xl border border-ink/10 flex flex-col justify-center items-center">
-                    <p className="text-xs text-ink/60 uppercase font-bold tracking-wider mb-1">Pass Ratio</p>
+                  <div className="bg-[#070E20]/90 p-4 rounded-xl border border-cyan-500/30 flex flex-col justify-center items-center">
+                    <p className="text-xs text-zinc-200/60 uppercase font-bold tracking-wider mb-1">Pass Ratio</p>
                     <p className={`text-2xl font-black ${attemptsStats.passRatio >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{attemptsStats.passRatio}%</p>
                   </div>
                 </div>
@@ -696,16 +711,16 @@ export function AssessmentsPage() {
             </motion.div>
 
               {/* Tabs */}
-              <div className="flex border-b border-ink/10 mb-6">
+              <div className="flex border-b border-cyan-500/30 mb-6">
                 <button 
                   onClick={() => setActiveTab('questions')}
-                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'questions' ? 'border-purple-600 text-purple-600' : 'border-transparent text-ink/50 hover:text-ink/80'}`}
+                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'questions' ? 'border-cyan-500/30 text-purple-600' : 'border-transparent text-zinc-200/50 hover:text-zinc-200/80'}`}
                 >
                   Questions
                 </button>
                 <button 
                   onClick={() => setActiveTab('grading')}
-                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'grading' ? 'border-purple-600 text-purple-600' : 'border-transparent text-ink/50 hover:text-ink/80'}`}
+                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'grading' ? 'border-cyan-500/30 text-purple-600' : 'border-transparent text-zinc-200/50 hover:text-zinc-200/80'}`}
                 >
                   Grading Queue
                   {attempts.filter(a => a.grade_status === 'pending_manual').length > 0 && (
@@ -719,9 +734,9 @@ export function AssessmentsPage() {
             {activeTab === 'questions' ? (
               questions.length === 0 ? (
               <motion.div variants={fadeUp}>
-                <Card className="bg-white border-ink/10">
+                <Card className="bg-[#070E20]/90 border-cyan-500/30">
                   <CardContent className="py-12 text-center">
-                    <p className="text-ink/60">No questions yet. Add your first question.</p>
+                    <p className="text-zinc-200/60">No questions yet. Add your first question.</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -730,7 +745,7 @@ export function AssessmentsPage() {
                 {questions.map((q, i) => {
                   const opts = q.options as Record<string, string>
                   return (
-                    <div key={q.id} className="p-4 rounded-xl bg-white border border-ink/10 hover:border-ink/20 transition-all">
+                    <div key={q.id} className="p-4 rounded-xl bg-[#070E20]/90 border border-cyan-500/30 hover:border-cyan-500/30 transition-all">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <h4 className="font-semibold text-slate-800">Q{q.position}. {q.question_text}</h4>
@@ -739,15 +754,15 @@ export function AssessmentsPage() {
                           </span>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             {(q as any).question_type === 'open_ended' ? (
-                               <div className="col-span-2 px-3 py-2 rounded-lg bg-ink/5 border border-ink/10 text-ink/80 italic">
+                               <div className="col-span-2 px-3 py-2 rounded-lg bg-ink/5 border border-cyan-500/30 text-zinc-200/80 italic">
                                  Open-Ended Question. Reference Answer: {q.correct_answer}
                                </div>
                             ) : (
                                ['A', 'B', 'C', 'D'].map(opt => (
                                 <div key={opt} className={`px-3 py-2 rounded-lg border ${
                                   q.correct_answer === opt
-                                    ? 'bg-ink/10 border-ink/30 text-ink'
-                                    : 'bg-ink/5 border-ink/10 text-ink/60'
+                                    ? 'bg-ink/10 border-cyan-500/30 text-zinc-200'
+                                    : 'bg-ink/5 border-cyan-500/30 text-zinc-200/60'
                                 }`}>
                                   <span className="font-medium mr-1">{opt}.</span> {opts[opt]}
                                 </div>
@@ -755,14 +770,14 @@ export function AssessmentsPage() {
                             )}
                           </div>
                           {q.explanation && (
-                            <p className="text-xs text-ink/50 mt-2 italic">Explanation: {q.explanation}</p>
+                            <p className="text-xs text-zinc-200/50 mt-2 italic">Explanation: {q.explanation}</p>
                           )}
                         </div>
                         <div className="flex gap-1 shrink-0">
-                          <button onClick={() => openEditQuestion(q)} className="p-1.5 rounded-lg hover:bg-ink/5 text-ink/60 hover:text-ink transition-all">
+                          <button onClick={() => openEditQuestion(q)} className="p-1.5 rounded-lg hover:bg-ink/5 text-zinc-200/60 hover:text-zinc-200 transition-all">
                             <FileText className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-ink/60 hover:text-red-600 transition-all">
+                          <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-200/60 hover:text-red-600 transition-all">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -774,19 +789,19 @@ export function AssessmentsPage() {
             )) : (
               <motion.div variants={fadeUp} className="space-y-4">
                 {attempts.length === 0 ? (
-                  <Card className="bg-white border-ink/10">
+                  <Card className="bg-[#070E20]/90 border-cyan-500/30">
                     <CardContent className="py-12 text-center">
-                      <p className="text-ink/60">No attempts submitted yet.</p>
+                      <p className="text-zinc-200/60">No attempts submitted yet.</p>
                     </CardContent>
                   </Card>
                 ) : (
                   attempts.map((att) => (
-                    <Card key={att.id} className="bg-white border-ink/10">
-                      <CardHeader className="bg-ink/5 border-b border-ink/5 py-3 px-4">
+                    <Card key={att.id} className="bg-[#070E20]/90 border-cyan-500/30">
+                      <CardHeader className="bg-ink/5 border-b border-cyan-500/30 py-3 px-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-ink">{att.profiles?.first_name} {att.profiles?.last_name}</span>
-                            <span className="text-xs text-ink/50">{new Date(att.submitted_at).toLocaleString()}</span>
+                            <span className="font-bold text-zinc-200">{att.profiles?.first_name} {att.profiles?.last_name}</span>
+                            <span className="text-xs text-zinc-200/50">{new Date(att.submitted_at).toLocaleString()}</span>
                           </div>
                           <Badge className={att.grade_status === 'pending_manual' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100'}>
                             {att.grade_status === 'pending_manual' ? 'Needs Grading' : `Graded: ${att.score}%`}
@@ -797,9 +812,9 @@ export function AssessmentsPage() {
                         {questions.filter(q => (q as any).question_type === 'open_ended').map((q, i) => {
                           const traineeAnswer = att.answers?.[q.id] || 'No answer provided.';
                           return (
-                            <div key={q.id} className="space-y-2 border-b border-ink/5 pb-4 last:border-0">
-                              <p className="text-sm font-medium text-ink"><span className="text-ink/50 mr-1">Q.</span>{q.question_text}</p>
-                              <div className="bg-ink/5 p-3 rounded-lg text-sm text-ink/80 font-mono whitespace-pre-wrap">
+                            <div key={q.id} className="space-y-2 border-b border-cyan-500/30 pb-4 last:border-0">
+                              <p className="text-sm font-medium text-zinc-200"><span className="text-zinc-200/50 mr-1">Q.</span>{q.question_text}</p>
+                              <div className="bg-ink/5 p-3 rounded-lg text-sm text-zinc-200/80 font-mono whitespace-pre-wrap">
                                 {traineeAnswer}
                               </div>
                               <div className="bg-emerald-50 p-3 rounded-lg text-xs text-emerald-900 italic border border-emerald-100">
@@ -810,12 +825,12 @@ export function AssessmentsPage() {
                           )
                         })}
                         {att.grade_status === 'pending_manual' && (
-                          <div className="flex items-center gap-3 pt-4 border-t border-ink/10">
-                            <Label className="font-bold text-ink whitespace-nowrap">Final Score (0-100):</Label>
+                          <div className="flex items-center gap-3 pt-4 border-t border-cyan-500/30">
+                            <Label className="font-bold text-zinc-200 whitespace-nowrap">Final Score (0-100):</Label>
                             <Input 
                               type="number" 
                               min="0" max="100" 
-                              className="w-24 bg-white border-ink/20"
+                              className="w-24 bg-[#070E20]/90 border-cyan-500/30"
                               placeholder={att.score?.toString()}
                               value={gradingAttemptId === att.id ? gradingScore : att.score}
                               onChange={(e) => {
@@ -844,15 +859,15 @@ export function AssessmentsPage() {
 
         {/* Question Dialog */}
         <Dialog open={questionDialogOpen} onOpenChange={(o) => { if (!o) { setQuestionDialogOpen(false); setEditingQuestionId(null) } }}>
-          <DialogContent className="max-w-lg bg-white border-ink/20">
+          <DialogContent className="max-w-lg bg-[#070E20]/90 border-cyan-500/30">
             <DialogHeader>
-              <DialogTitle className="text-ink">{editingQuestionId ? 'Edit Question' : 'Add Question'}</DialogTitle>
+              <DialogTitle className="text-zinc-200">{editingQuestionId ? 'Edit Question' : 'Add Question'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Question Type</Label>
+                <Label className="text-zinc-200/80">Question Type</Label>
                 <Select value={editingQuestion.question_type} onValueChange={(v: 'mcq' | 'open_ended') => setEditingQuestion(p => ({ ...p, question_type: v }))}>
-                  <SelectTrigger className="bg-ink/5 border-ink/20 text-ink"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="mcq">Multiple Choice</SelectItem>
                     <SelectItem value="open_ended">Open-Ended (Text)</SelectItem>
@@ -860,51 +875,62 @@ export function AssessmentsPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Question *</Label>
-                <Textarea value={editingQuestion.question_text} onChange={e => setEditingQuestion(p => ({ ...p, question_text: e.target.value }))} rows={3} className="bg-ink/5 border-ink/20 text-ink" />
+                <Label className="text-zinc-200/80">Difficulty</Label>
+                <Select value={editingQuestion.difficulty} onValueChange={(v: 'easy' | 'medium' | 'hard') => setEditingQuestion(p => ({ ...p, difficulty: v }))}>
+                  <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="easy">Easy</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="hard">Hard</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-zinc-200/80">Question *</Label>
+                <Textarea value={editingQuestion.question_text} onChange={e => setEditingQuestion(p => ({ ...p, question_text: e.target.value }))} rows={3} className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
               </div>
 
               {editingQuestion.question_type === 'mcq' ? (
                 <>
                   {['A', 'B', 'C', 'D'].map(opt => (
                     <div key={opt} className="space-y-1.5">
-                      <Label className="text-ink/80">Option {opt} *</Label>
+                      <Label className="text-zinc-200/80">Option {opt} *</Label>
                       <Input value={editingQuestion[`option_${opt.toLowerCase()}` as keyof QuestionForm] as string}
                         onChange={e => setEditingQuestion(p => ({ ...p, [`option_${opt.toLowerCase()}`]: e.target.value }))}
-                        className="bg-ink/5 border-ink/20 text-ink" />
+                        className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
                     </div>
                   ))}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-ink/80">Correct Answer</Label>
+                      <Label className="text-zinc-200/80">Correct Answer</Label>
                       <select value={editingQuestion.correct_answer}
                         onChange={e => setEditingQuestion(p => ({ ...p, correct_answer: e.target.value }))}
-                        className="w-full h-10 px-3 rounded-lg bg-ink/5 border border-ink/20 text-ink text-sm appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ink/30">
-                        <option value="A" className="bg-white text-ink">A</option>
-                        <option value="B" className="bg-white text-ink">B</option>
-                        <option value="C" className="bg-white text-ink">C</option>
-                        <option value="D" className="bg-white text-ink">D</option>
+                        className="w-full h-10 px-3 rounded-lg bg-ink/5 border border-cyan-500/30 text-zinc-200 text-sm appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ink/30">
+                        <option value="A" className="bg-[#070E20]/90 text-zinc-200">A</option>
+                        <option value="B" className="bg-[#070E20]/90 text-zinc-200">B</option>
+                        <option value="C" className="bg-[#070E20]/90 text-zinc-200">C</option>
+                        <option value="D" className="bg-[#070E20]/90 text-zinc-200">D</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-ink/80">Explanation</Label>
-                      <Input value={editingQuestion.explanation} onChange={e => setEditingQuestion(p => ({ ...p, explanation: e.target.value }))} className="bg-ink/5 border-ink/20 text-ink" placeholder="Optional" />
+                      <Label className="text-zinc-200/80">Explanation</Label>
+                      <Input value={editingQuestion.explanation} onChange={e => setEditingQuestion(p => ({ ...p, explanation: e.target.value }))} className="bg-ink/5 border-cyan-500/30 text-zinc-200" placeholder="Optional" />
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80">Reference Answer / Grading Rubric</Label>
+                    <Label className="text-zinc-200/80">Reference Answer / Grading Rubric</Label>
                     <Textarea value={editingQuestion.correct_answer}
                       onChange={e => setEditingQuestion(p => ({ ...p, correct_answer: e.target.value }))}
-                      className="bg-ink/5 border-ink/20 text-ink" rows={3} placeholder="What should a good answer contain?" />
+                      className="bg-ink/5 border-cyan-500/30 text-zinc-200" rows={3} placeholder="What should a good answer contain?" />
                   </div>
                 </div>
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setQuestionDialogOpen(false); setEditingQuestionId(null) }} className="border-ink/20 text-ink">Cancel</Button>
+              <Button variant="outline" onClick={() => { setQuestionDialogOpen(false); setEditingQuestionId(null) }} className="border-cyan-500/30 text-zinc-200">Cancel</Button>
               <Button onClick={handleSaveQuestion} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 {editingQuestionId ? 'Update' : 'Add'} Question
@@ -915,19 +941,19 @@ export function AssessmentsPage() {
 
         {/* Assessment Settings Dialog */}
         <Dialog open={assessmentDialogOpen} onOpenChange={setAssessmentDialogOpen}>
-          <DialogContent className="sm:max-w-[425px] bg-white border-ink/10">
+          <DialogContent className="sm:max-w-[425px] bg-[#070E20]/90 border-cyan-500/30">
             <DialogHeader>
-              <DialogTitle className="text-ink">{editingAssessmentId ? 'Edit Test Details' : 'New Test / Assessment'}</DialogTitle>
+              <DialogTitle className="text-zinc-200">{editingAssessmentId ? 'Edit Test Details' : 'New Test / Assessment'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Title</Label>
-                <Input value={assessmentForm.title} onChange={e => setAssessmentForm({...assessmentForm, title: e.target.value})} placeholder="e.g. Midterm Mock Test" className="bg-ink/5 border-ink/20 text-ink h-9" />
+                <Label className="text-zinc-200/80">Title</Label>
+                <Input value={assessmentForm.title} onChange={e => setAssessmentForm({...assessmentForm, title: e.target.value})} placeholder="e.g. Midterm Mock Test" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Assessment Type</Label>
+                <Label className="text-zinc-200/80">Assessment Type</Label>
                 <Select value={assessmentForm.assessment_type} onValueChange={(v) => setAssessmentForm({ ...assessmentForm, assessment_type: v as any })}>
-                  <SelectTrigger className="bg-ink/5 border-ink/20 text-ink"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Daily Assessment</SelectItem>
                     <SelectItem value="mock">Mock Test</SelectItem>
@@ -937,31 +963,66 @@ export function AssessmentsPage() {
               </div>
               
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Scheduled Date</Label>
-                <Input type="date" value={assessmentForm.scheduled_date} onChange={e => setAssessmentForm({...assessmentForm, scheduled_date: e.target.value})} className="bg-ink/5 border-ink/20 text-ink h-9" />
-                {course && <p className="text-[10px] text-ink/50">Must be between {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'start'} and {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'end'} of course.</p>}
+                <Label className="text-zinc-200/80">Scheduled Date</Label>
+                <Input type="date" value={assessmentForm.scheduled_date} onChange={e => setAssessmentForm({...assessmentForm, scheduled_date: e.target.value})} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
+                {course && <p className="text-[10px] text-zinc-200/50">Must be between {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'start'} and {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'end'} of course.</p>}
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Results Publish Date</Label>
-                <Input type="date" value={assessmentForm.results_publish_date} onChange={e => setAssessmentForm({...assessmentForm, results_publish_date: e.target.value})} className="bg-ink/5 border-ink/20 text-ink h-9" />
-                <p className="text-[10px] text-ink/50">If set, trainee marks are hidden until this date.</p>
+                <Label className="text-zinc-200/80">Results Publish Date</Label>
+                <Input type="date" value={assessmentForm.results_publish_date} onChange={e => setAssessmentForm({...assessmentForm, results_publish_date: e.target.value})} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
+                <p className="text-[10px] text-zinc-200/50">If set, trainee marks are hidden until this date.</p>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2 border border-brand/20 p-3 rounded-lg bg-brand/5 mt-2 transition-all">
+                  <input 
+                    type="checkbox" 
+                    id="is_adaptive" 
+                    className="w-4 h-4 rounded text-brand border-brand/30"
+                    checked={assessmentForm.is_adaptive}
+                    onChange={(e) => setAssessmentForm({ ...assessmentForm, is_adaptive: e.target.checked })}
+                  />
+                  <Label htmlFor="is_adaptive" className="text-brand font-bold flex-1 cursor-pointer text-xs">
+                    Adaptive MCQ Mode
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 border border-emerald-500/20 p-3 rounded-lg bg-emerald-50 mt-2 transition-all">
+                  <input 
+                    type="checkbox" 
+                    id="is_simulation" 
+                    className="w-4 h-4 rounded text-emerald-600 border-emerald-500/30"
+                    checked={assessmentForm.is_simulation}
+                    onChange={(e) => setAssessmentForm({ ...assessmentForm, is_simulation: e.target.checked })}
+                  />
+                  <Label htmlFor="is_simulation" className="text-emerald-700 font-bold flex-1 cursor-pointer text-xs">
+                    IMD Simulation Mode
+                  </Label>
+                </div>
+              </div>
+
+              {assessmentForm.is_simulation && (
+                <div className="space-y-1.5">
+                  <Label className="text-zinc-200/80">Dataset URL / Image Link (Optional)</Label>
+                  <Input value={assessmentForm.simulation_dataset_url} onChange={e => setAssessmentForm({...assessmentForm, simulation_dataset_url: e.target.value})} placeholder="https://example.com/weather-chart.jpg" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
+                  <p className="text-[10px] text-zinc-200/50">Link to weather chart or dataset to display alongside questions.</p>
+                </div>
+              )}
 
               {assessmentForm.assessment_type !== 'daily' && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-ink/80">Start Time</Label>
-                      <Input type="time" value={assessmentForm.start_time} onChange={e => setAssessmentForm({...assessmentForm, start_time: e.target.value})} className="bg-ink/5 border-ink/20 text-ink h-9" />
+                      <Label className="text-zinc-200/80">Start Time</Label>
+                      <Input type="time" value={assessmentForm.start_time} onChange={e => setAssessmentForm({...assessmentForm, start_time: e.target.value})} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-ink/80">End Time</Label>
-                      <Input type="time" value={assessmentForm.end_time} onChange={e => setAssessmentForm({...assessmentForm, end_time: e.target.value})} className="bg-ink/5 border-ink/20 text-ink h-9" />
+                      <Label className="text-zinc-200/80">End Time</Label>
+                      <Input type="time" value={assessmentForm.end_time} onChange={e => setAssessmentForm({...assessmentForm, end_time: e.target.value})} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
                     </div>
                   </div>
                   {assessmentForm.start_time && assessmentForm.end_time && (
-                    <div className="text-xs font-medium text-ink/70">
+                    <div className="text-xs font-medium text-zinc-200/70">
                       Duration: <span className="text-brand">
                         {(() => {
                           const [startH, startM] = assessmentForm.start_time.split(':').map(Number);
@@ -996,7 +1057,7 @@ export function AssessmentsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)} className="border-ink/20 text-ink">Cancel</Button>
+              <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)} className="border-cyan-500/30 text-zinc-200">Cancel</Button>
               <Button onClick={handleSaveAssessment} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Save
@@ -1007,44 +1068,44 @@ export function AssessmentsPage() {
 
         {/* AI Generation Dialog (Light Theme) */}
         <Dialog open={aiGenDialogOpen} onOpenChange={setAiGenDialogOpen}>
-          <DialogContent className="sm:max-w-[500px] bg-white border border-purple-100 shadow-xl !rounded-2xl overflow-hidden p-0">
+          <DialogContent className="sm:max-w-[500px] bg-[#070E20]/90 border border-cyan-500/30 shadow-xl !rounded-2xl overflow-hidden p-0">
             <div className="relative z-10 p-6">
               <DialogHeader className="mb-6">
-                <DialogTitle className="text-xl font-bold text-ink flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg border border-purple-200">
+                <DialogTitle className="text-xl font-bold text-zinc-200 flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg border border-cyan-500/30">
                     <Brain className="w-5 h-5 text-purple-600"/> 
                   </div>
                   Auto-Generate Test
                 </DialogTitle>
-                <p className="text-ink/60 text-sm mt-1">Harness AI to instantly create a highly effective assessment.</p>
+                <p className="text-zinc-200/60 text-sm mt-1">Harness AI to instantly create a highly effective assessment.</p>
               </DialogHeader>
 
               <div className="space-y-5">
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Assessment Type</Label>
+                  <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Assessment Type</Label>
                   <Select value={aiGenForm.type} onValueChange={v => setAiGenForm({...aiGenForm, type: v})}>
-                    <SelectTrigger className="bg-ink/5 border-ink/10 text-ink h-10 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all">
+                    <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-ink/10 text-ink rounded-lg">
-                      <SelectItem value="daily_test" className="focus:bg-purple-50 focus:text-purple-700">Daily Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="assessment_test" className="focus:bg-purple-50 focus:text-purple-700">Assessment Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="mock_test" className="focus:bg-purple-50 focus:text-purple-700">Mock Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="final" className="focus:bg-purple-50 focus:text-purple-700">Final Exam (Admin Approval Required)</SelectItem>
+                    <SelectContent className="bg-[#070E20]/90 border-cyan-500/30 text-zinc-200 rounded-lg">
+                      <SelectItem value="daily_test" className="focus:bg-cyan-950/30 focus:text-cyan-400">Daily Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="assessment_test" className="focus:bg-cyan-950/30 focus:text-cyan-400">Assessment Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="mock_test" className="focus:bg-cyan-950/30 focus:text-cyan-400">Mock Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="final" className="focus:bg-cyan-950/30 focus:text-cyan-400">Final Exam (Admin Approval Required)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Source Material (Optional)</Label>
+                  <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Source Material (Optional)</Label>
                   <Select value={aiGenForm.material_id} onValueChange={v => setAiGenForm({...aiGenForm, material_id: v})}>
-                    <SelectTrigger className="bg-ink/5 border-ink/10 text-ink h-10 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all">
+                    <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all">
                       <SelectValue placeholder="Select a course material" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-ink/10 text-ink rounded-lg max-h-60">
-                      <SelectItem value="none" className="focus:bg-purple-50 focus:text-purple-700">None (Provide topic manually)</SelectItem>
+                    <SelectContent className="bg-[#070E20]/90 border-cyan-500/30 text-zinc-200 rounded-lg max-h-60">
+                      <SelectItem value="none" className="focus:bg-cyan-950/30 focus:text-cyan-400">None (Provide topic manually)</SelectItem>
                       {materials.map(m => (
-                        <SelectItem key={m.id} value={m.id} className="focus:bg-purple-50 focus:text-purple-700">
+                        <SelectItem key={m.id} value={m.id} className="focus:bg-cyan-950/30 focus:text-cyan-400">
                           {m.file_name} {m.extracted_text ? '' : '(No text)'}
                         </SelectItem>
                       ))}
@@ -1053,40 +1114,40 @@ export function AssessmentsPage() {
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Topic / Instructions for AI {aiGenForm.material_id !== 'none' && '(Optional)'}</Label>
+                  <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Topic / Instructions for AI {aiGenForm.material_id !== 'none' && '(Optional)'}</Label>
                   <div className="relative">
                     <Textarea 
                       placeholder="e.g. Generate a test about advanced marine biology and coral reefs..." 
                       value={aiGenForm.topic} 
                       onChange={e => setAiGenForm({...aiGenForm, topic: e.target.value})} 
-                      className="bg-ink/5 border-ink/10 text-ink h-24 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all resize-none p-3 placeholder:text-ink/30" 
+                      className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-24 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all resize-none p-3 placeholder:text-zinc-200/30" 
                     />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Number of Questions</Label>
+                    <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Number of Questions</Label>
                     <Input 
                       type="number"
                       min="1"
                       max="50"
                       value={aiGenForm.count}
                       onChange={e => setAiGenForm({...aiGenForm, count: parseInt(e.target.value) || 5})}
-                      className="bg-ink/5 border-ink/10 text-ink h-10 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all"
+                      className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-ink/80 font-semibold text-xs uppercase tracking-wider">Difficulty Level</Label>
+                    <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Difficulty Level</Label>
                     <Select value={aiGenForm.difficulty} onValueChange={v => setAiGenForm({...aiGenForm, difficulty: v})}>
-                      <SelectTrigger className="bg-ink/5 border-ink/10 text-ink h-10 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition-all">
+                      <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-ink/10 text-ink rounded-lg">
-                        <SelectItem value="mixed" className="focus:bg-purple-50 focus:text-purple-700">Mixed Combinations</SelectItem>
-                        <SelectItem value="easy" className="focus:bg-purple-50 focus:text-purple-700">Easy</SelectItem>
-                        <SelectItem value="medium" className="focus:bg-purple-50 focus:text-purple-700">Medium</SelectItem>
-                        <SelectItem value="hard" className="focus:bg-purple-50 focus:text-purple-700">Hard</SelectItem>
+                      <SelectContent className="bg-[#070E20]/90 border-cyan-500/30 text-zinc-200 rounded-lg">
+                        <SelectItem value="mixed" className="focus:bg-cyan-950/30 focus:text-cyan-400">Mixed Combinations</SelectItem>
+                        <SelectItem value="easy" className="focus:bg-cyan-950/30 focus:text-cyan-400">Easy</SelectItem>
+                        <SelectItem value="medium" className="focus:bg-cyan-950/30 focus:text-cyan-400">Medium</SelectItem>
+                        <SelectItem value="hard" className="focus:bg-cyan-950/30 focus:text-cyan-400">Hard</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1094,7 +1155,7 @@ export function AssessmentsPage() {
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
-                <Button variant="ghost" onClick={() => setAiGenDialogOpen(false)} className="text-ink/60 hover:text-ink hover:bg-ink/5 h-10 rounded-lg px-4 border-0">
+                <Button variant="ghost" onClick={() => setAiGenDialogOpen(false)} className="text-zinc-200/60 hover:text-zinc-200 hover:bg-ink/5 h-10 rounded-lg px-4 border-0">
                   Cancel
                 </Button>
                 <Button onClick={handleAIGenerate} disabled={saving} className="bg-purple-600 text-white hover:bg-purple-700 font-semibold h-10 rounded-lg px-6 shadow-sm transition-all border-0">

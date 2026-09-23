@@ -108,19 +108,20 @@ const steps: Step[] = [
 ];
 
 export function StickyScrollFeatures() {
+  const containerRef = useRef<HTMLElement | null>(null);
   const pinWrapperRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // Kill any existing ScrollTrigger instances on this trigger to prevent duplicate pin-spacers
     ScrollTrigger.getAll().forEach((st) => {
-      if (st.trigger === pinWrapperRef.current) {
+      if (st.trigger === containerRef.current || st.trigger === pinWrapperRef.current) {
         st.kill(true);
       }
     });
 
     const ctx = gsap.context(() => {
-      if (!trackRef.current || !pinWrapperRef.current) return;
+      if (!trackRef.current || !pinWrapperRef.current || !containerRef.current) return;
 
       const panelsCount = steps.length;
       // Total horizontal shift to reveal the last panel: (panelsCount - 1) / panelsCount * 100%
@@ -133,8 +134,8 @@ export function StickyScrollFeatures() {
         ease: 'none',
         force3D: true,
         scrollTrigger: {
-          trigger: pinWrapperRef.current,
-          pin: true,
+          trigger: containerRef.current,
+          pin: pinWrapperRef.current,
           scrub: isMobile ? 0.4 : 0.6,
           start: 'top top',
           end: () => `+=${getScrollDistance()}`,
@@ -142,7 +143,7 @@ export function StickyScrollFeatures() {
           anticipatePin: 1,
         },
       });
-    }, pinWrapperRef);
+    }, containerRef);
 
     const refreshHandler = () => ScrollTrigger.refresh();
     window.addEventListener('resize', refreshHandler);
@@ -150,7 +151,7 @@ export function StickyScrollFeatures() {
     return () => {
       window.removeEventListener('resize', refreshHandler);
       ScrollTrigger.getAll().forEach((st) => {
-        if (st.trigger === pinWrapperRef.current) {
+        if (st.trigger === containerRef.current || st.trigger === pinWrapperRef.current) {
           st.kill(true);
         }
       });
@@ -161,9 +162,13 @@ export function StickyScrollFeatures() {
   return (
     <section
       id="sticky-features"
-      ref={pinWrapperRef}
-      className="pin-wrapper relative w-full bg-[#040814] text-white border-t border-cyan-500/20 overflow-hidden h-[100dvh] max-h-[100dvh] min-h-[580px] flex flex-col justify-between"
+      ref={containerRef}
+      className="relative w-full bg-[#040814] text-white border-t border-cyan-500/20"
     >
+      <div
+        ref={pinWrapperRef}
+        className="pin-wrapper relative w-full overflow-hidden h-[100dvh] max-h-[100dvh] min-h-[580px] flex flex-col justify-between"
+      >
       {/* Decorative ambient atmospheric nebula glows */}
       <div className="pointer-events-none absolute top-1/4 -left-64 w-[600px] h-[600px] rounded-full bg-cyan-500/10 blur-[150px]" />
       <div className="pointer-events-none absolute bottom-1/4 -right-64 w-[600px] h-[600px] rounded-full bg-amber-500/10 blur-[150px]" />
@@ -334,6 +339,7 @@ export function StickyScrollFeatures() {
       </div>
 
       <div className="pb-2" />
+      </div>
     </section>
   );
 }

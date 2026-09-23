@@ -227,11 +227,11 @@ export function AdminCourseEditPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50/30">
       <div className="max-w-3xl mx-auto px-4 py-8">
         <motion.div initial="hidden" animate="visible" variants={fadeUp} className="mb-8">
-          <button onClick={() => navigate('/admin')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-purple-700 mb-4 font-medium transition-colors">
+          <button onClick={() => navigate('/admin')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-400 mb-4 font-medium transition-colors">
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-cyan-950/50">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -248,7 +248,7 @@ export function AdminCourseEditPage() {
             const isDone = step > s.id
             return (
               <React.Fragment key={s.id}>
-                <div className={'flex items-center gap-2 px-3 py-2 rounded-xl shrink-0 text-xs font-semibold transition-all ' + (isActive ? 'bg-purple-100 text-purple-700' : isDone ? 'bg-purple-50 text-purple-600' : 'bg-slate-50 text-slate-400 opacity-50')}>
+                <div className={'flex items-center gap-2 px-3 py-2 rounded-xl shrink-0 text-xs font-semibold transition-all ' + (isActive ? 'bg-purple-100 text-cyan-400' : isDone ? 'bg-cyan-950/30 text-purple-600' : 'bg-slate-50 text-slate-400 opacity-50')}>
                   {isDone ? <CheckCircle className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
                   {s.label}
                 </div>
@@ -259,7 +259,7 @@ export function AdminCourseEditPage() {
         </motion.div>
 
         <motion.div key={step} initial="hidden" animate="visible" variants={fadeUp}>
-          <Card className="bg-white border-purple-500/15 shadow-xl shadow-purple-500/5 rounded-3xl overflow-hidden">
+          <Card className="bg-[#070E20]/90 border-cyan-500/30 shadow-xl shadow-cyan-950/50 rounded-3xl overflow-hidden">
             <CardContent className="p-8">
 
               {step === 1 && (
@@ -269,7 +269,7 @@ export function AdminCourseEditPage() {
                     <Label className="text-sm font-semibold text-slate-700">Trainer *</Label>
                     {loadingTrainers ? <div className="flex items-center gap-2 text-slate-400 text-sm py-3"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</div> : (
                       <Select disabled={isTrainerApplied} value={trainerForm.watch('trainer_id')} onValueChange={v => trainerForm.setValue('trainer_id', v, { shouldValidate: true })}>
-                        <SelectTrigger className="border-slate-200 focus:border-purple-500 rounded-xl h-12"><SelectValue placeholder="Select a trainer..." /></SelectTrigger>
+                        <SelectTrigger className="border-slate-200 focus:border-cyan-500/30 rounded-xl h-12"><SelectValue placeholder="Select a trainer..." /></SelectTrigger>
                         <SelectContent>
                           {trainers.map(t => (
                             <SelectItem key={t.id} value={t.id}>
@@ -293,12 +293,12 @@ export function AdminCourseEditPage() {
                     )}
                   </div>
                   {selectedTrainer && (
-                    <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200/60 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-purple-500/20">{selectedTrainer.full_name.charAt(0)}</div>
+                    <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-cyan-950/50">{selectedTrainer.full_name.charAt(0)}</div>
                       <div>
-                        <p className="font-bold text-purple-900">{selectedTrainer.full_name}</p>
+                        <p className="font-bold text-cyan-300">{selectedTrainer.full_name}</p>
                         <p className="text-xs text-purple-600">{selectedTrainer.email}</p>
-                        <p className="text-[11px] font-medium text-purple-700/80 mt-1 bg-white/50 inline-block px-2 py-0.5 rounded-full border border-purple-200/50">
+                        <p className="text-[11px] font-medium text-cyan-400/80 mt-1 bg-[#070E20]/90/50 inline-block px-2 py-0.5 rounded-full border border-cyan-500/30">
                           {selectedTrainer.qualifications || 'Certified Trainer'}{selectedTrainer.years_of_experience ? ` • ${selectedTrainer.years_of_experience} years exp.` : ''}
                         </p>
                       </div>
@@ -307,13 +307,13 @@ export function AdminCourseEditPage() {
                   )}
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-slate-700">Message to Trainer <span className="text-slate-400 font-normal">(optional)</span></Label>
-                    <Textarea {...trainerForm.register('assignment_message')} placeholder="e.g. Please build this course by October. Focus on practical exercises..." className="border-slate-200 focus:border-purple-500 rounded-xl resize-none" rows={3} />
+                    <Textarea {...trainerForm.register('assignment_message')} placeholder="e.g. Please build this course by October. Focus on practical exercises..." className="border-slate-200 focus:border-cyan-500/30 rounded-xl resize-none" rows={3} />
                     <p className="text-xs text-slate-400">This message will appear in the trainer's announcement.</p>
                   </div>
                   {selectedTrainer && (
-                    <div className="p-4 rounded-2xl border border-dashed border-purple-300 bg-purple-50/40 space-y-2">
-                      <div className="flex items-center gap-2 text-purple-700 text-xs font-bold uppercase tracking-wider"><Megaphone className="w-3.5 h-3.5" /> Preview: Trainer announcement</div>
-                      <div className="bg-white rounded-xl p-3 border border-purple-200/60 shadow-sm">
+                    <div className="p-4 rounded-2xl border border-dashed border-cyan-500/30 bg-cyan-950/30/40 space-y-2">
+                      <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider"><Megaphone className="w-3.5 h-3.5" /> Preview: Trainer announcement</div>
+                      <div className="bg-[#070E20]/90 rounded-xl p-3 border border-cyan-500/30 shadow-sm">
                         <p className="text-sm font-semibold text-slate-800">🎓 New Course Assigned to You</p>
                         <p className="text-xs text-slate-500 mt-0.5">"{detailsForm.watch('title') || 'Course Title'}" — assigned by {profile?.full_name ?? 'Admin'}</p>
                         {trainerForm.watch('assignment_message') && <p className="text-xs text-slate-600 mt-2 italic">"{trainerForm.watch('assignment_message')}"</p>}
@@ -328,12 +328,12 @@ export function AdminCourseEditPage() {
                   <div><h2 className="text-xl font-bold text-slate-900 mb-1">Course Details</h2></div>
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-slate-700">Title *</Label>
-                    <Input {...detailsForm.register('title')} placeholder="e.g. Advanced Data Analytics" className="border-slate-200 focus:border-purple-500 rounded-xl h-12" />
+                    <Input {...detailsForm.register('title')} placeholder="e.g. Advanced Data Analytics" className="border-slate-200 focus:border-cyan-500/30 rounded-xl h-12" />
                     {detailsForm.formState.errors.title && <p className="text-xs text-red-500">{detailsForm.formState.errors.title.message}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-slate-700">Description *</Label>
-                    <Textarea {...detailsForm.register('description')} placeholder="What will trainees learn?" className="border-slate-200 focus:border-purple-500 rounded-xl resize-none" rows={5} />
+                    <Textarea {...detailsForm.register('description')} placeholder="What will trainees learn?" className="border-slate-200 focus:border-cyan-500/30 rounded-xl resize-none" rows={5} />
                     {detailsForm.formState.errors.description && <p className="text-xs text-red-500">{detailsForm.formState.errors.description.message}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -363,19 +363,19 @@ export function AdminCourseEditPage() {
                         <Input 
                           {...detailsForm.register('course_type')} 
                           placeholder="Enter custom course type" 
-                          className="border-slate-200 focus:border-purple-500 rounded-xl h-12 mt-2" 
+                          className="border-slate-200 focus:border-cyan-500/30 rounded-xl h-12 mt-2" 
                         />
                       )}
                       {detailsForm.formState.errors.course_type && <p className="text-xs text-red-500">{detailsForm.formState.errors.course_type.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-semibold text-slate-700">Department</Label>
-                      <Input {...detailsForm.register('department')} placeholder="e.g. Engineering" className="border-slate-200 focus:border-purple-500 rounded-xl h-12" />
+                      <Input {...detailsForm.register('department')} placeholder="e.g. Engineering" className="border-slate-200 focus:border-cyan-500/30 rounded-xl h-12" />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-slate-700">Thumbnail <span className="text-slate-400 font-normal">(optional)</span></Label>
-                    <div onClick={() => thumbRef.current?.click()} className="flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-purple-400 cursor-pointer transition-colors">
+                    <div onClick={() => thumbRef.current?.click()} className="flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-cyan-500/30 cursor-pointer transition-colors">
                       {thumbnailPreview ? <img src={thumbnailPreview} alt="thumb" className="w-20 h-14 object-cover rounded-xl" /> : <div className="w-20 h-14 rounded-xl bg-slate-100 flex items-center justify-center"><Image className="w-6 h-6 text-slate-300" /></div>}
                       <div><p className="text-sm font-medium text-slate-700">{thumbnail ? thumbnail.name : 'Click to upload thumbnail'}</p><p className="text-xs text-slate-400">PNG, JPG — max 5MB (16:5 ratio, e.g. 1600x500px)</p></div>
                     </div>
@@ -404,7 +404,7 @@ export function AdminCourseEditPage() {
                     ].map(({ label, field, type, placeholder }) => (
                       <div key={field} className="space-y-2">
                         <Label className="text-sm font-semibold text-slate-700">{label}</Label>
-                        <Input {...settingsForm.register(field as any)} type={type} placeholder={placeholder} className="border-slate-200 focus:border-purple-500 rounded-xl h-12" />
+                        <Input {...settingsForm.register(field as any)} type={type} placeholder={placeholder} className="border-slate-200 focus:border-cyan-500/30 rounded-xl h-12" />
                       </div>
                     ))}
                     <div className="space-y-2">
@@ -428,7 +428,7 @@ export function AdminCourseEditPage() {
                   {(['understand', 'able_to_do', 'competencies_built'] as const).map((field, i) => (
                     <div key={field} className="space-y-2">
                       <Label className="text-sm font-semibold text-slate-700">{['Will Understand *', 'Will be Able to Do *', 'Competencies Built *'][i]}</Label>
-                      <Textarea {...objectivesForm.register(field)} className="border-slate-200 focus:border-purple-500 rounded-xl resize-none" rows={3} placeholder={['Core concepts, theories...', 'Practical skills, tasks...', 'Professional competencies...'][i]} />
+                      <Textarea {...objectivesForm.register(field)} className="border-slate-200 focus:border-cyan-500/30 rounded-xl resize-none" rows={3} placeholder={['Core concepts, theories...', 'Practical skills, tasks...', 'Professional competencies...'][i]} />
                       {objectivesForm.formState.errors[field] && <p className="text-xs text-red-500">{objectivesForm.formState.errors[field]?.message}</p>}
                     </div>
                   ))}
@@ -436,7 +436,7 @@ export function AdminCourseEditPage() {
                     <Label className="text-sm font-semibold text-slate-700">Required Skills</Label>
                     <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-200 min-h-[60px]">
                       {skills.map(skill => (
-                        <button key={skill.id} type="button" onClick={() => toggleSkill(skill.id)} className={'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ' + (selectedSkills.includes(skill.id) ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>{skill.name}</button>
+                        <button key={skill.id} type="button" onClick={() => toggleSkill(skill.id)} className={'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ' + (selectedSkills.includes(skill.id) ? 'bg-purple-100 text-cyan-400 border-cyan-500/30' : 'bg-[#070E20]/90 text-slate-600 border-slate-200 hover:bg-slate-50')}>{skill.name}</button>
                       ))}
                     </div>
                   </div>
@@ -446,8 +446,8 @@ export function AdminCourseEditPage() {
               {step === 5 && (
                 <div className="space-y-6">
                   <div><h2 className="text-xl font-bold text-slate-900 mb-1">Review & Publish</h2></div>
-                  <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200/60">
-                    <p className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-2">Trainer Assignment</p>
+                  <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30">
+                    <p className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">Trainer Assignment</p>
                     {selectedTrainer ? (
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold shadow">{selectedTrainer.full_name.charAt(0)}</div>
@@ -478,7 +478,7 @@ export function AdminCourseEditPage() {
                     <Button type="button" variant="outline" onClick={() => handlePublish('draft')} disabled={saving} className="flex-1 border-slate-200 text-slate-600 rounded-xl h-12">
                       {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Save as Draft
                     </Button>
-                    <Button type="button" onClick={() => handlePublish('published')} disabled={saving} className="flex-1 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold rounded-xl h-12 shadow-lg shadow-purple-500/30">
+                    <Button type="button" onClick={() => handlePublish('published')} disabled={saving} className="flex-1 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold rounded-xl h-12 shadow-lg shadow-cyan-950/50">
                       {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Megaphone className="w-4 h-4 mr-2" />} Publish & Assign
                     </Button>
                   </div>

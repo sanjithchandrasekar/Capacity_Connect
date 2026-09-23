@@ -527,7 +527,7 @@ export function LandingPage() {
           >
             {/* Tier 1: Eyebrow Tag Pill (Uppercase, letter-spaced, Ashoka Chakra Indian Emblem) */}
             <motion.div variants={fadeUp} className="mb-4 sm:mb-5 max-w-full flex justify-center">
-              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-1 rounded-full bg-white/10 border border-white/20 text-zinc-200 backdrop-blur-md text-[8.5px] min-[380px]:text-[9.5px] sm:text-xs font-semibold tracking-wide sm:tracking-wider uppercase shadow-sm whitespace-nowrap max-w-full">
+              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-4 sm:py-1 rounded-full bg-[#070E20]/90/10 border border-white/20 text-zinc-200 backdrop-blur-md text-[8.5px] min-[380px]:text-[9.5px] sm:text-xs font-semibold tracking-wide sm:tracking-wider uppercase shadow-sm whitespace-nowrap max-w-full">
                 <IndianAshokaChakraIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-white" />
                 <span className="truncate">Ministry of Earth Sciences, Government of India</span>
               </div>
@@ -772,7 +772,7 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/20 text-zinc-200 text-[11px] font-medium tracking-wide uppercase mb-3 sm:mb-4 shadow-sm backdrop-blur-md">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#070E20]/90/10 border border-white/20 text-zinc-200 text-[11px] font-medium tracking-wide uppercase mb-3 sm:mb-4 shadow-sm backdrop-blur-md">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Upcoming Announcements</span>
               </div>
@@ -786,7 +786,7 @@ export function LandingPage() {
             <Link to="/courses">
               <Button
                 variant="outline"
-                className="border-white/20 bg-white/5 hover:bg-white text-zinc-200 hover:text-black rounded-full shadow-sm transition-all duration-300 tracking-[-0.01em] group h-11 px-6 font-medium text-sm"
+                className="border-white/20 bg-[#070E20]/90/5 hover:bg-[#070E20]/90 text-zinc-200 hover:text-black rounded-full shadow-sm transition-all duration-300 tracking-[-0.01em] group h-11 px-6 font-medium text-sm"
               >
                 <span>View Complete Catalog</span>
                 <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
@@ -816,7 +816,7 @@ export function LandingPage() {
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.iconBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
                       <c.icon className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-slate-200 tracking-wide">
+                    <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-[#070E20]/90/10 border border-white/15 text-slate-200 tracking-wide">
                       {c.level}
                     </span>
                   </div>
@@ -834,7 +834,7 @@ export function LandingPage() {
                     {c.keySkills.map((skill) => (
                       <span
                         key={skill}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300 group-hover:border-cyan-500/30 transition-colors"
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#070E20]/90/5 border border-white/10 text-slate-300 group-hover:border-cyan-500/30 transition-colors"
                       >
                         {skill}
                       </span>

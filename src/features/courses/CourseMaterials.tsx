@@ -404,10 +404,10 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
 
   if (loading) {
     return embedded ? (
-      <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-ink" /></div>
+      <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-zinc-200" /></div>
     ) : (
       <TrainerLayout>
-        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div>
+        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-zinc-200" /></div>
       </TrainerLayout>
     )
   }
@@ -416,11 +416,11 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
     <div className={embedded ? '' : 'max-w-5xl mx-auto space-y-6'}>
       {!embedded && (
         <div>
-          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
-          <h2 className="text-2xl font-bold tracking-tight text-ink">Course Materials</h2>
-          <p className="text-ink/60 text-sm mt-1">Upload documents, videos, and resources for "{course?.title}"</p>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Course Materials</h2>
+          <p className="text-zinc-200/60 text-sm mt-1">Upload documents, videos, and resources for "{course?.title}"</p>
         </div>
       )}
 
@@ -430,8 +430,8 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
           onClick={() => setActiveTab('files')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'files'
-              ? 'bg-ink/20 text-ink'
-              : 'text-ink/60 hover:text-ink'
+              ? 'bg-ink/20 text-zinc-200'
+              : 'text-zinc-200/60 hover:text-zinc-200'
           }`}
         >
           <FileText className="w-4 h-4 mr-1.5 inline" />
@@ -441,8 +441,8 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
           onClick={() => setActiveTab('links')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'links'
-              ? 'bg-ink/20 text-ink'
-              : 'text-ink/60 hover:text-ink'
+              ? 'bg-ink/20 text-zinc-200'
+              : 'text-zinc-200/60 hover:text-zinc-200'
           }`}
         >
           <Link2 className="w-4 h-4 mr-1.5 inline" />
@@ -453,7 +453,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
       {activeTab === 'files' && (
         <div
           className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
-                    dragOver ? 'border-ink bg-ink/10' : 'border-ink/20 hover:border-ink/30 hover:bg-ink/5'
+                    dragOver ? 'border-ink bg-ink/10' : 'border-cyan-500/30 hover:border-cyan-500/30 hover:bg-ink/5'
           }`}
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
@@ -469,18 +469,18 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
             onChange={handleFileInput}
             disabled={uploading}
           />
-          <Upload className={`w-8 h-8 mx-auto mb-3 ${dragOver ? 'text-ink' : 'text-ink/50'}`} />
+          <Upload className={`w-8 h-8 mx-auto mb-3 ${dragOver ? 'text-zinc-200' : 'text-zinc-200/50'}`} />
           {uploading ? (
             <div>
-              <p className="text-sm text-ink font-medium">Uploading: {uploadProgress}</p>
-              <Loader2 className="w-4 h-4 animate-spin text-ink mx-auto mt-2" />
+              <p className="text-sm text-zinc-200 font-medium">Uploading: {uploadProgress}</p>
+              <Loader2 className="w-4 h-4 animate-spin text-zinc-200 mx-auto mt-2" />
             </div>
           ) : (
             <div>
-              <p className="text-sm text-ink font-medium mb-1">
+              <p className="text-sm text-zinc-200 font-medium mb-1">
                 {dragOver ? 'Drop files here' : 'Click to upload or drag and drop'}
               </p>
-              <p className="text-xs text-ink/50">
+              <p className="text-xs text-zinc-200/50">
                 PDF, DOCX, PPTX, TXT, MP4, Images — Max 100MB each
               </p>
             </div>
@@ -489,16 +489,16 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
       )}
 
       {activeTab === 'links' && (
-        <Card className="bg-white border-ink/10">
+        <Card className="bg-[#070E20]/90 border-cyan-500/30">
           <CardContent className="p-4 space-y-3">
-            <p className="text-xs text-ink/50">Add links to external resources, YouTube videos, or any online material.</p>
+            <p className="text-xs text-zinc-200/50">Add links to external resources, YouTube videos, or any online material.</p>
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
               <Input
                 value={linkUrl}
                 onChange={e => setLinkUrl(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
                 placeholder="https://example.com/resource"
-                className="bg-ink/5 border-ink/20 text-ink h-9 text-xs"
+                className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs"
                 disabled={addingLink}
               />
               <Input
@@ -506,14 +506,14 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                 onChange={e => setLinkTitle(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
                 placeholder="Title (optional)"
-                className="bg-ink/5 border-ink/20 text-ink h-9 text-xs"
+                className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs"
                 disabled={addingLink}
               />
               <Button
                 type="button"
                 onClick={addLink}
                 disabled={!linkUrl.trim() || addingLink}
-                className="bg-ink hover:bg-ink/90 text-ink h-9 px-3 shrink-0"
+                className="bg-ink hover:bg-ink/90 text-zinc-200 h-9 px-3 shrink-0"
               >
                 {addingLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               </Button>
@@ -522,20 +522,20 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
         </Card>
       )}
 
-      <div className="flex items-center gap-2 p-3 rounded-lg bg-ink/5 border-ink/10">
-        <Brain className="w-4 h-4 text-ink shrink-0" />
-        <p className="text-xs text-ink/60">
-          <span className="font-medium text-ink">AI Question Generation:</span> Click the <Sparkles className="w-3 h-3 inline" /> icon on any material to auto-generate assessment questions from its content.
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-ink/5 border-cyan-500/30">
+        <Brain className="w-4 h-4 text-zinc-200 shrink-0" />
+        <p className="text-xs text-zinc-200/60">
+          <span className="font-medium text-zinc-200">AI Question Generation:</span> Click the <Sparkles className="w-3 h-3 inline" /> icon on any material to auto-generate assessment questions from its content.
         </p>
       </div>
 
       {materials.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-ink">
+            <h3 className="text-sm font-semibold text-zinc-200">
               Materials ({materials.length})
               {materials.some(m => m.material_type === 'file') && materials.some(m => m.material_type !== 'file') && (
-                <span className="text-ink/50 font-normal ml-2">
+                <span className="text-zinc-200/50 font-normal ml-2">
                   — {materials.filter(m => m.material_type === 'file').length} files, {materials.filter(m => m.material_type !== 'file').length} links
                 </span>
               )}
@@ -549,7 +549,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                 })
               }}
               disabled={!!generatingForMaterial}
-              className="border-ink/20 text-ink hover:bg-ink/5 h-8 text-xs"
+              className="border-cyan-500/30 text-zinc-200 hover:bg-ink/5 h-8 text-xs"
             >
               {generatingForMaterial ? (
                 <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -565,25 +565,25 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
               const isVideo = material.mime_type?.startsWith('video/') || material.material_type === 'video'
               const Icon = isLink ? Globe : isVideo ? Video : getFileIcon(material.mime_type)
               return (
-                <div key={material.id} className="flex items-center gap-3 p-3 rounded-xl bg-cream border border-ink/10 hover:border-ink/10 transition-all group">
+                <div key={material.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#040814] border border-cyan-500/30 hover:border-cyan-500/30 transition-all group">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                     isLink ? 'bg-ink/5' : isVideo ? 'bg-ink/5' : 'bg-ink/5'
                   }`}>
-                    <Icon className={`w-5 h-5 ${isLink ? 'text-ink' : isVideo ? 'text-ink' : 'text-ink'}`} />
+                    <Icon className={`w-5 h-5 ${isLink ? 'text-zinc-200' : isVideo ? 'text-zinc-200' : 'text-zinc-200'}`} />
                   </div>
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handlePreview(material)}>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm text-ink font-medium truncate hover:underline">{material.file_name}</p>
+                      <p className="text-sm text-zinc-200 font-medium truncate hover:underline">{material.file_name}</p>
                       {isLink && (
-                        <Badge className="bg-ink/10 text-ink border-ink/20 text-[10px] h-4">
+                        <Badge className="bg-ink/10 text-zinc-200 border-cyan-500/30 text-[10px] h-4">
                           <Link2 className="w-2.5 h-2.5 mr-0.5 inline" />
                           Link
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-ink/50 mt-0.5">
+                    <div className="flex items-center gap-2 text-xs text-zinc-200/50 mt-0.5">
                       {isLink ? (
-                        <span className="text-ink hover:text-ink truncate max-w-xs flex items-center gap-1">
+                        <span className="text-zinc-200 hover:text-zinc-200 truncate max-w-xs flex items-center gap-1">
                           {material.url}
                           <ExternalLink className="w-3 h-3 shrink-0" />
                         </span>
@@ -598,7 +598,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                         <Badge className={
                           material.extraction_status === 'completed' ? 'bg-green-50 text-green-700 border border-green-200 text-[10px] h-4' :
                           material.extraction_status === 'failed' ? 'bg-red-50 text-red-600 border border-red-200 text-[10px] h-4' :
-                            'bg-ink/10 text-ink/60 border border-ink/20 text-[10px] h-4'
+                            'bg-ink/10 text-zinc-200/60 border border-cyan-500/30 text-[10px] h-4'
                         }>
                           {material.extraction_status === 'completed' && <CheckCircle className="w-2.5 h-2.5 mr-0.5 inline" />}
                           {material.extraction_status}
@@ -610,7 +610,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                     <button
                       onClick={() => handleGenerateQuestions(material)}
                       disabled={generatingForMaterial === material.id}
-                      className="p-2 rounded-lg hover:bg-ink/5 text-ink/60 hover:text-ink transition-all"
+                      className="p-2 rounded-lg hover:bg-ink/5 text-zinc-200/60 hover:text-zinc-200 transition-all"
                       title="Generate AI Questions"
                     >
                       {generatingForMaterial === material.id ? (
@@ -623,7 +623,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                       <button
                         onClick={() => handleDownload(material)}
                         disabled={downloadingId === material.id}
-                        className="p-2 rounded-lg hover:bg-ink/5 text-ink/60 hover:text-ink transition-all"
+                        className="p-2 rounded-lg hover:bg-ink/5 text-zinc-200/60 hover:text-zinc-200 transition-all"
                         title="Download"
                       >
                         {downloadingId === material.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -632,7 +632,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                     <button
                       onClick={() => handleDelete(material)}
                       disabled={deletingId === material.id}
-                      className="p-2 rounded-lg hover:bg-red-500/10 text-ink/60 hover:text-red-400 transition-all"
+                      className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-200/60 hover:text-red-400 transition-all"
                       title="Delete"
                     >
                       {deletingId === material.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -647,9 +647,9 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
 
       {materials.length === 0 && !uploading && (
         <div className="text-center py-8">
-          <FileText className="w-10 h-10 text-ink/30 mx-auto mb-3" />
-          <p className="text-ink/60 text-sm">No materials added yet.</p>
-          <p className="text-ink/40 text-xs mt-1">Upload files or add links to build your course content.</p>
+          <FileText className="w-10 h-10 text-zinc-200/30 mx-auto mb-3" />
+          <p className="text-zinc-200/60 text-sm">No materials added yet.</p>
+          <p className="text-zinc-200/40 text-xs mt-1">Upload files or add links to build your course content.</p>
         </div>
       )}
     </div>
@@ -661,15 +661,15 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
 
       {/* AI Question Review Dialog */}
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-cream border-ink/20">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-[#040814] border-cyan-500/30">
           <DialogHeader>
-            <DialogTitle className="text-ink flex items-center gap-2">
-              <Brain className="w-5 h-5 text-ink" />
+            <DialogTitle className="text-zinc-200 flex items-center gap-2">
+              <Brain className="w-5 h-5 text-zinc-200" />
               AI-Generated Questions ({generatedQuestions.length})
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-ink/50">
+            <p className="text-xs text-zinc-200/50">
               Review and select questions to add to your assessment. Uncheck questions you don't want.
             </p>
             {generatedQuestions.map((q: any, i: number) => (
@@ -677,8 +677,8 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                 key={i}
                 className={`p-3 rounded-lg border transition-all ${
                   selectedQuestions.has(i)
-                    ? 'bg-ink/5 border-ink/20'
-                    : 'bg-cream border-ink/10 opacity-50'
+                    ? 'bg-ink/5 border-cyan-500/30'
+                    : 'bg-[#040814] border-cyan-500/30 opacity-50'
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -686,10 +686,10 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                     type="checkbox"
                     checked={selectedQuestions.has(i)}
                     onChange={() => toggleQuestionSelection(i)}
-                    className="mt-1 rounded border-ink/30 bg-ink/5 text-ink focus:ring-ink/50"
+                    className="mt-1 rounded border-cyan-500/30 bg-ink/5 text-zinc-200 focus:ring-ink/50"
                   />
                   <div className="flex-1">
-                    <p className="text-sm text-ink font-medium mb-2">{q.question_text}</p>
+                    <p className="text-sm text-zinc-200 font-medium mb-2">{q.question_text}</p>
                     <div className="grid grid-cols-2 gap-1.5 text-xs">
                       {['A', 'B', 'C', 'D'].map(opt => (
                         <div
@@ -697,7 +697,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                           className={`px-2 py-1 rounded border ${
                             q.correct_answer === opt
                               ? 'bg-green-50 border-green-200 text-green-700'
-                              : 'bg-ink/5 border-ink/10 text-ink/60'
+                              : 'bg-ink/5 border-cyan-500/30 text-zinc-200/60'
                           }`}
                         >
                           <span className="font-medium">{opt}.</span> {q.options?.[opt]}
@@ -705,8 +705,8 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                       ))}
                     </div>
                     {q.explanation && (
-                      <p className="text-xs text-ink/50 mt-2 italic">
-                        <span className="text-ink/60">Explanation:</span> {q.explanation}
+                      <p className="text-xs text-zinc-200/50 mt-2 italic">
+                        <span className="text-zinc-200/60">Explanation:</span> {q.explanation}
                       </p>
                     )}
                   </div>
@@ -718,14 +718,14 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
             <Button
               variant="outline"
               onClick={() => setReviewOpen(false)}
-              className="border-ink/20 text-ink"
+              className="border-cyan-500/30 text-zinc-200"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveAcceptedQuestions}
               disabled={savingQuestions || selectedQuestions.size === 0}
-              className="bg-ink hover:bg-ink/90 text-ink"
+              className="bg-ink hover:bg-ink/90 text-zinc-200"
             >
               {savingQuestions ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
               Add {selectedQuestions.size} Question{selectedQuestions.size !== 1 ? 's' : ''}

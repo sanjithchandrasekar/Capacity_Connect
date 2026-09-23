@@ -68,7 +68,7 @@ export function TrainerAssignmentBanner() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -10, scale: 0.98 }}
         transition={{ duration: 0.4, type: 'spring', bounce: 0.2 }}
-        className="relative overflow-hidden rounded-3xl border border-purple-400/30 bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 text-white shadow-2xl shadow-purple-900/40 mb-6"
+        className="relative overflow-hidden rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 text-white shadow-2xl shadow-cyan-950/50 mb-6"
       >
         {/* Decorative blobs */}
         <div className="absolute inset-0 pointer-events-none">
@@ -80,7 +80,7 @@ export function TrainerAssignmentBanner() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4 flex-1 min-w-0">
               {/* Icon */}
-              <div className="shrink-0 w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-inner">
+              <div className="shrink-0 w-14 h-14 rounded-2xl bg-[#070E20]/90/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-inner">
                 <Megaphone className="w-7 h-7 text-orange-300" />
               </div>
 
@@ -97,7 +97,7 @@ export function TrainerAssignmentBanner() {
                   {assignment.course?.description ?? 'Admin has assigned you a new course to develop and manage.'}
                 </p>
                 {assignment.message && (
-                  <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-2.5 mb-3">
+                  <div className="bg-[#070E20]/90/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-2.5 mb-3">
                     <p className="text-white/90 text-sm italic">"{assignment.message}"</p>
                     <p className="text-white/40 text-xs mt-0.5">— {assignment.assigned_by_name}</p>
                   </div>
@@ -107,7 +107,7 @@ export function TrainerAssignmentBanner() {
                     {formatDistanceToNow(new Date(assignment.assigned_at), { addSuffix: true })}
                   </span>
                   <Link to={'/trainer/courses/' + assignment.course_id}>
-                    <Button className="bg-white text-purple-800 hover:bg-white/90 font-bold rounded-xl px-5 py-2 h-auto text-sm shadow-lg shadow-black/20 hover:scale-105 transition-all">
+                    <Button className="bg-[#070E20]/90 text-purple-800 hover:bg-[#070E20]/90/90 font-bold rounded-xl px-5 py-2 h-auto text-sm shadow-lg shadow-black/20 hover:scale-105 transition-all">
                       <BookOpen className="w-4 h-4 mr-1.5" />
                       View Course
                       <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
@@ -120,7 +120,7 @@ export function TrainerAssignmentBanner() {
             {/* Dismiss */}
             <button
               onClick={() => dismiss(assignment.id)}
-              className="shrink-0 w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              className="shrink-0 w-8 h-8 rounded-xl bg-[#070E20]/90/10 hover:bg-[#070E20]/90/20 flex items-center justify-center transition-colors"
               aria-label="Dismiss"
             >
               <X className="w-4 h-4 text-white/70" />
@@ -136,7 +136,7 @@ export function TrainerAssignmentBanner() {
                   <button
                     key={i}
                     onClick={() => setCurrent(i)}
-                    className={'rounded-full transition-all ' + (i === safeCurrent ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30 hover:bg-white/60')}
+                    className={'rounded-full transition-all ' + (i === safeCurrent ? 'w-5 h-1.5 bg-[#070E20]/90' : 'w-1.5 h-1.5 bg-[#070E20]/90/30 hover:bg-[#070E20]/90/60')}
                   />
                 ))}
               </div>

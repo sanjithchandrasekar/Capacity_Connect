@@ -77,18 +77,18 @@ export function SetupPassword() {
   }
 
   const inputClass = (hasError: boolean) =>
-    `bg-purple-500/[0.03] border-purple-500/20 text-midnight placeholder:text-midnight/40 focus:border-pink-500 h-11 ${hasError ? 'border-red-500/60' : ''}`
+    `bg-purple-500/[0.03] border-cyan-500/30 text-zinc-200 placeholder:text-zinc-200/40 focus:border-pink-500 h-11 ${hasError ? 'border-red-500/60' : ''}`
 
   if (!hasSession) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#070E20]/90 flex items-center justify-center p-4">
         <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white text-midnight flex items-center justify-center p-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[#070E20]/90 text-zinc-200 flex items-center justify-center p-4 py-12 relative overflow-hidden">
       {/* Decorative ambient gradients */}
       <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-purple-500/15 via-pink-500/15 to-orange-500/10 blur-[100px]" />
       <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-orange-500/15 via-pink-500/15 to-purple-500/10 blur-[100px]" />
@@ -103,25 +103,25 @@ export function SetupPassword() {
           <div className="inline-flex items-center gap-2.5 mb-6">
             <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
             <span className="text-lg font-bold">
-              <span className="text-purple-900">Capacity</span>
+              <span className="text-cyan-300">Capacity</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500"> Connect</span>
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold text-midnight tracking-tight">Set New Password</h1>
-          <p className="text-midnight/60 mt-2 text-sm">Please enter a new password for your account.</p>
+          <h1 className="text-3xl font-extrabold text-zinc-200 tracking-tight">Set New Password</h1>
+          <p className="text-zinc-200/60 mt-2 text-sm">Please enter a new password for your account.</p>
           {userEmail && (
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-50 border border-purple-100 text-sm font-semibold text-purple-700 shadow-sm">
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-sm font-semibold text-cyan-400 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ring-2 ring-emerald-500/20"></span>
               {userEmail}
             </div>
           )}
         </div>
 
-        <div className="bg-white/90 backdrop-blur-xl border border-purple-500/15 rounded-2xl p-8 shadow-2xl shadow-purple-500/10">
+        <div className="bg-[#070E20]/90/90 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-8 shadow-2xl shadow-cyan-950/50">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-midnight/70 text-sm">New Password</Label>
+              <Label htmlFor="password" className="text-zinc-200/70 text-sm">New Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -131,7 +131,7 @@ export function SetupPassword() {
                   className={`${inputClass(!!errors.password)} pr-10`}
                   disabled={isLoading}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-midnight/50 hover:text-midnight transition-colors" tabIndex={-1}>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-zinc-200/50 hover:text-zinc-200 transition-colors" tabIndex={-1}>
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -139,7 +139,7 @@ export function SetupPassword() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" className="text-midnight/70 text-sm">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-zinc-200/70 text-sm">Confirm Password</Label>
               <Input id="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...register('confirmPassword')} className={inputClass(!!errors.confirmPassword)} disabled={isLoading} />
               {errors.confirmPassword && <p className="text-xs text-red-600">{errors.confirmPassword.message}</p>}
             </div>

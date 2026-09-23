@@ -5,9 +5,9 @@ import { Loader2 } from 'lucide-react'
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-cream gap-3">
-      <Loader2 className="w-6 h-6 text-ink animate-spin" />
-      <p className="text-sm text-ink/70">Loading...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#040814] gap-3">
+      <Loader2 className="w-6 h-6 text-zinc-200 animate-spin" />
+      <p className="text-sm text-zinc-200/70">Loading...</p>
     </div>
   )
 }

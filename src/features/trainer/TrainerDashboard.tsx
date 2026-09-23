@@ -15,7 +15,7 @@ type AssessmentAttempt = Database['public']['Tables']['assessment_attempts']['Ro
 type ActivityLog = Database['public']['Tables']['audit_logs']['Row']
 
 const statusColors: Record<string, string> = {
-  draft: 'bg-ink/10 text-ink/80 border border-ink/20',
+  draft: 'bg-ink/10 text-zinc-200/80 border border-cyan-500/30',
   pending_review: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
   published: 'bg-green-50 text-green-700 border border-green-200',
   archived: 'bg-red-50 text-red-600 border border-red-200',
@@ -90,13 +90,13 @@ export function TrainerDashboard() {
     : 0
 
   const stats = [
-    { label: 'Total Courses', value: totalCourses, icon: BookOpen, color: 'from-ink/10 to-ink/5 border-ink/20' },
-    { label: 'Published', value: publishedCourses, icon: CheckCircle, color: 'from-ink/10 to-ink/5 border-ink/20' },
+    { label: 'Total Courses', value: totalCourses, icon: BookOpen, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
+    { label: 'Published', value: publishedCourses, icon: CheckCircle, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
     { label: 'Pending Review', value: pendingReview, icon: Clock, color: 'from-yellow-50 to-yellow-50 border-yellow-200' },
-    { label: 'Drafts', value: draftCourses, icon: FileText, color: 'from-ink/10 to-ink/5 border-ink/20' },
-    { label: 'Enrolled Trainees', value: totalEnrollments, icon: Users, color: 'from-ink/10 to-ink/5 border-ink/20' },
-    { label: 'Avg. Score', value: `${avgScore}%`, icon: TrendingUp, color: 'from-ink/10 to-ink/5 border-ink/20' },
-    { label: 'Completion Rate', value: `${completionRate}%`, icon: Target, color: 'from-ink/10 to-ink/5 border-ink/20' },
+    { label: 'Drafts', value: draftCourses, icon: FileText, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
+    { label: 'Enrolled Trainees', value: totalEnrollments, icon: Users, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
+    { label: 'Avg. Score', value: `${avgScore}%`, icon: TrendingUp, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
+    { label: 'Completion Rate', value: `${completionRate}%`, icon: Target, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
     { label: 'Certificates', value: completedEnrollments, icon: Star, color: 'from-yellow-50 to-yellow-50 border-yellow-200' },
   ]
 
@@ -105,8 +105,8 @@ export function TrainerDashboard() {
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-4 md:space-y-6 max-w-6xl">
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-ink">Trainer Dashboard</h2>
-            <p className="text-ink/60 text-sm mt-1">Welcome back, {user?.email?.split('@')[0]}</p>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-200">Trainer Dashboard</h2>
+            <p className="text-zinc-200/60 text-sm mt-1">Welcome back, {user?.email?.split('@')[0]}</p>
           </div>
           <Link to="/trainer/courses/new">
             <Button className="bg-ink hover:bg-ink/90 text-cream w-full sm:w-auto">
@@ -118,31 +118,31 @@ export function TrainerDashboard() {
         <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {stats.map(s => (
             <div key={s.label} className={`p-3 md:p-4 rounded-2xl border bg-gradient-to-br ${s.color} backdrop-blur-sm`}>
-              <s.icon className="w-4 h-4 text-ink/60 mb-1.5" />
-              <div className="text-lg md:text-xl font-bold text-ink">{s.value}</div>
-              <div className="text-[10px] md:text-[11px] text-ink/60 mt-0.5">{s.label}</div>
+              <s.icon className="w-4 h-4 text-zinc-200/60 mb-1.5" />
+              <div className="text-lg md:text-xl font-bold text-zinc-200">{s.value}</div>
+              <div className="text-[10px] md:text-[11px] text-zinc-200/60 mt-0.5">{s.label}</div>
             </div>
           ))}
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-          <motion.div variants={fadeUp} className="lg:col-span-2 bg-white border border-ink/10 rounded-2xl overflow-hidden">
-            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-ink/10 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-ink">Recent Courses</h3>
-              <Link to="/trainer/courses" className="text-xs text-ink hover:text-ink">View all</Link>
+          <motion.div variants={fadeUp} className="lg:col-span-2 bg-[#070E20]/90 border border-cyan-500/30 rounded-2xl overflow-hidden">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-cyan-500/30 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-zinc-200">Recent Courses</h3>
+              <Link to="/trainer/courses" className="text-xs text-zinc-200 hover:text-zinc-200">View all</Link>
             </div>
             {courses.length === 0 ? (
               <div className="p-8 md:p-12 text-center">
-                <p className="text-ink/50 mb-3">No courses yet.</p>
+                <p className="text-zinc-200/50 mb-3">No courses yet.</p>
                 <Link to="/trainer/courses/new"><Button className="bg-ink hover:bg-ink/90 text-cream"><PlusCircle className="w-4 h-4 mr-2" /> Create First Course</Button></Link>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[450px]">
                   <thead>
-                    <tr className="border-b border-ink/10">
+                    <tr className="border-b border-cyan-500/30">
                       {['Course', 'Status', 'Enrollments', 'Type', 'Created'].map(h => (
-                        <th key={h} className="text-left text-xs text-ink/50 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
+                        <th key={h} className="text-left text-xs text-zinc-200/50 font-medium px-3 md:px-4 py-3 whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -152,16 +152,16 @@ export function TrainerDashboard() {
                       return (
                         <tr key={course.id} className="hover:bg-ink/5 transition-colors">
                           <td className="px-3 md:px-4 py-2.5">
-                            <Link to={`/trainer/courses/${course.id}`} className="text-xs md:text-sm text-ink hover:text-ink transition-colors font-medium truncate max-w-[150px] block">
+                            <Link to={`/trainer/courses/${course.id}`} className="text-xs md:text-sm text-zinc-200 hover:text-zinc-200 transition-colors font-medium truncate max-w-[150px] block">
                               {course.title}
                             </Link>
                           </td>
                           <td className="px-3 md:px-4 py-2.5">
                             <Badge className={`${statusColors[course.status]} text-[9px] md:text-[10px]`}>{course.status.replace('_', ' ')}</Badge>
                           </td>
-                          <td className="px-3 md:px-4 py-2.5 text-xs text-ink/60">{enrollCount}</td>
-                          <td className="px-3 md:px-4 py-2.5 text-xs text-ink/60 capitalize">{course.course_type}</td>
-                          <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-ink/50">{new Date(course.created_at).toLocaleDateString()}</td>
+                          <td className="px-3 md:px-4 py-2.5 text-xs text-zinc-200/60">{enrollCount}</td>
+                          <td className="px-3 md:px-4 py-2.5 text-xs text-zinc-200/60 capitalize">{course.course_type}</td>
+                          <td className="px-3 md:px-4 py-2.5 text-[10px] md:text-xs text-zinc-200/50">{new Date(course.created_at).toLocaleDateString()}</td>
                         </tr>
                       )
                     })}
@@ -171,20 +171,20 @@ export function TrainerDashboard() {
             )}
           </motion.div>
 
-          <motion.div variants={fadeUp} className="bg-white border border-ink/10 rounded-2xl overflow-hidden">
-            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-ink/10">
-              <h3 className="text-sm font-semibold text-ink">Recent Activity</h3>
+          <motion.div variants={fadeUp} className="bg-[#070E20]/90 border border-cyan-500/30 rounded-2xl overflow-hidden">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-cyan-500/30">
+              <h3 className="text-sm font-semibold text-zinc-200">Recent Activity</h3>
             </div>
             {activities.length === 0 ? (
               <div className="p-8 text-center">
-                <p className="text-ink/50 text-sm">No recent activity.</p>
+                <p className="text-zinc-200/50 text-sm">No recent activity.</p>
               </div>
             ) : (
               <div className="divide-y divide-ink/10">
                 {activities.slice(0, 8).map(a => (
                   <div key={a.id} className="px-4 md:px-6 py-2.5 md:py-3">
-                    <p className="text-xs text-ink truncate">{a.action}</p>
-                    <p className="text-[10px] text-ink/40 mt-0.5">{new Date(a.created_at).toLocaleString()}</p>
+                    <p className="text-xs text-zinc-200 truncate">{a.action}</p>
+                    <p className="text-[10px] text-zinc-200/40 mt-0.5">{new Date(a.created_at).toLocaleString()}</p>
                   </div>
                 ))}
               </div>

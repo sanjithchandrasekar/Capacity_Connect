@@ -50,10 +50,10 @@ export function MaterialPreviewDialog({ material, previewUrl, onClose, onDownloa
 
   return (
     <Dialog open={!!material} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl w-[90vw] h-[80vh] flex flex-col bg-cream border-ink/20 p-0 overflow-hidden">
-        <DialogHeader className="p-4 border-b border-ink/10 shrink-0 flex flex-row items-center justify-between">
-          <DialogTitle className="text-ink flex items-center gap-2 truncate">
-            <FileText className="w-4 h-4 shrink-0 text-ink/60" />
+      <DialogContent className="max-w-4xl w-[90vw] h-[80vh] flex flex-col bg-[#040814] border-cyan-500/30 p-0 overflow-hidden">
+        <DialogHeader className="p-4 border-b border-cyan-500/30 shrink-0 flex flex-row items-center justify-between">
+          <DialogTitle className="text-zinc-200 flex items-center gap-2 truncate">
+            <FileText className="w-4 h-4 shrink-0 text-zinc-200/60" />
             {material?.file_name}
           </DialogTitle>
           <div className="flex items-center gap-2 shrink-0 ml-4">
@@ -61,14 +61,14 @@ export function MaterialPreviewDialog({ material, previewUrl, onClose, onDownloa
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-ink/60 hover:text-ink"
+                className="text-zinc-200/60 hover:text-zinc-200"
                 onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
               >
                 <ExternalLink className="w-4 h-4 mr-1.5" /> Open in New Tab
               </Button>
             )}
             {onDownload && (
-              <Button variant="ghost" size="sm" className="text-ink/60 hover:text-ink" onClick={onDownload}>
+              <Button variant="ghost" size="sm" className="text-zinc-200/60 hover:text-zinc-200" onClick={onDownload}>
                 <Download className="w-4 h-4 mr-1.5" /> Download
               </Button>
             )}
@@ -77,7 +77,7 @@ export function MaterialPreviewDialog({ material, previewUrl, onClose, onDownloa
 
         <div className="flex-1 overflow-hidden bg-ink/5 relative flex items-center justify-center">
           {!previewUrl ? (
-            <div className="flex flex-col items-center justify-center text-ink/50">
+            <div className="flex flex-col items-center justify-center text-zinc-200/50">
               <Loader2 className="w-8 h-8 animate-spin mb-4" />
               <p>Loading preview...</p>
             </div>
@@ -88,18 +88,18 @@ export function MaterialPreviewDialog({ material, previewUrl, onClose, onDownloa
           ) : isPdf ? (
             <iframe src={`${previewUrl}#view=FitH`} className="w-full h-full border-0" title={material?.file_name} />
           ) : isText ? (
-            <iframe src={previewUrl} className="w-full h-full border-0 bg-white" title={material?.file_name} />
+            <iframe src={previewUrl} className="w-full h-full border-0 bg-[#070E20]/90" title={material?.file_name} />
           ) : isOffice ? (
             <iframe src={`https://docs.google.com/viewer?url=${encodeURIComponent(previewUrl)}&embedded=true`} className="w-full h-full border-0" title={material?.file_name} />
           ) : (
             /* For other unrecognized docs show a fallback */
-            <div className="flex flex-col items-center justify-center text-ink/50 gap-4 p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center">
+            <div className="flex flex-col items-center justify-center text-zinc-200/50 gap-4 p-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 flex items-center justify-center">
                 <FileText className="w-8 h-8 text-purple-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-ink/70 mb-1">{material?.file_name}</p>
-                <p className="text-xs text-ink/40">This file type cannot be previewed inline.</p>
+                <p className="text-sm font-semibold text-zinc-200/70 mb-1">{material?.file_name}</p>
+                <p className="text-xs text-zinc-200/40">This file type cannot be previewed inline.</p>
               </div>
               <Button
                 onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}

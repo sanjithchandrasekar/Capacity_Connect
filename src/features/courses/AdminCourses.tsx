@@ -30,7 +30,7 @@ function StatusBadge({ status }: { status: Course['status'] }) {
   const styles: Record<Course['status'], string> = {
     published: 'bg-green-50 text-green-700 border border-green-200',
     pending_review: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
-    draft: 'bg-ink/10 text-ink/70 border border-ink/20',
+    draft: 'bg-ink/10 text-zinc-200/70 border border-cyan-500/30',
     archived: 'bg-red-50 text-red-600 border border-red-200',
   }
   const labels: Record<Course['status'], string> = {
@@ -179,7 +179,7 @@ export function AdminCourses() {
       // Add notification
       const { error: notificationError } = await supabase.from('notifications').insert({
         user_id: trainee.id,
-        type: 'enrollment_status',
+        type: `enrollment_status:${course.id}`,
         title: `Enrollment ${action === 'approve' ? 'Approved' : 'Rejected'} (Admin)`,
         message: `Your request to enroll in ${course.title} was ${action === 'approve' ? 'approved' : 'rejected'} by an Administrator.`,
       })
@@ -248,31 +248,31 @@ export function AdminCourses() {
 
   return (
     <>
-      <Card className="bg-white border-purple-500/15 rounded-3xl shadow-sm overflow-hidden">
-        <CardHeader className="border-b border-purple-500/10 space-y-4 pb-6">
+      <Card className="bg-[#070E20]/90 border-cyan-500/30 rounded-3xl shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-cyan-500/30 space-y-4 pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 text-midnight text-base font-bold">
+              <CardTitle className="flex items-center gap-2 text-zinc-200 text-base font-bold">
                 <BookOpen className="h-5 w-5 text-purple-600" />
                 Course Management
               </CardTitle>
-              <CardDescription className="text-midnight/50 text-xs">Review, approve, publish or archive courses.</CardDescription>
+              <CardDescription className="text-zinc-200/50 text-xs">Review, approve, publish or archive courses.</CardDescription>
             </div>
             <Button
               onClick={() => navigate('/admin/courses/new')}
-              className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold rounded-xl px-4 py-2 h-9 text-xs shadow-md shadow-purple-500/20 hover:scale-105 transition-all"
+              className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold rounded-xl px-4 py-2 h-9 text-xs shadow-md shadow-cyan-950/50 hover:scale-105 transition-all"
             >
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Course
             </Button>
           </div>
           
-          <div className="flex bg-purple-50/50 p-1 rounded-xl border border-purple-100 w-fit">
+          <div className="flex bg-cyan-950/40 p-1 rounded-xl border border-cyan-500/30 w-fit">
             {(['all', 'admin_created', 'trainer_submitted'] as const).map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filter === f ? 'bg-white text-purple-700 shadow-sm' : 'text-midnight/60 hover:text-midnight hover:bg-purple-100/50'
+                  filter === f ? 'bg-[#070E20]/90 text-cyan-400 shadow-sm' : 'text-zinc-200/60 hover:text-zinc-200 hover:bg-purple-100/50'
                 }`}
               >
                 {f === 'all' ? 'All Courses' : f === 'admin_created' ? 'Admin Created' : 'Trainer Submitted'}
@@ -286,7 +286,7 @@ export function AdminCourses() {
               <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
             </div>
           ) : courses.length === 0 ? (
-            <p className="text-midnight/40 text-sm text-center py-12">No courses found.</p>
+            <p className="text-zinc-200/40 text-sm text-center py-12">No courses found.</p>
           ) : (
             <div className="space-y-3.5">
               {courses
@@ -308,22 +308,22 @@ export function AdminCourses() {
                 .map(course => {
                 const trainer = (course as any).trainer
                 return (
-                  <div key={course.id} className={`flex items-center gap-4 p-4 rounded-2xl ${course.isUrgent ? 'bg-red-50/40 hover:bg-red-50/80 border-red-500/30' : 'bg-purple-50/40 hover:bg-purple-50/80 border-purple-500/10'} border hover:border-purple-500/20 transition-all`}>
+                  <div key={course.id} className={`flex items-center gap-4 p-4 rounded-2xl ${course.isUrgent ? 'bg-red-50/40 hover:bg-red-50/80 border-red-500/30' : 'bg-cyan-950/30/40 hover:bg-cyan-950/30/80 border-cyan-500/30'} border hover:border-cyan-500/30 transition-all`}>
                     {/* Thumbnail */}
-                    <div className="w-20 h-16 rounded-xl bg-purple-100 border border-purple-200/60 overflow-hidden shrink-0">
+                    <div className="w-20 h-16 rounded-xl bg-purple-100 border border-cyan-500/30 overflow-hidden shrink-0">
                       <Thumbnail path={course.thumbnail_path} alt={course.title} fallbackIcon={<BookOpen className="w-6 h-6 text-purple-400" />} />
                     </div>
                     
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-bold text-midnight truncate">{course.title}</h3>
+                        <h3 className="text-sm font-bold text-zinc-200 truncate">{course.title}</h3>
                         <StatusBadge status={course.status} />
                         {course.isUrgent && <Badge className="bg-red-100 text-red-700 hover:bg-red-200 border-red-200 text-[10px]">🚨 URGENT</Badge>}
                       </div>
-                      <p className="text-xs text-midnight/60 line-clamp-1 mb-1.5">{course.description || 'No description provided.'}</p>
-                      <div className="flex items-center gap-3 text-[11px] text-midnight/50 font-medium">
-                        <span className="capitalize px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">{course.course_type}</span>
+                      <p className="text-xs text-zinc-200/60 line-clamp-1 mb-1.5">{course.description || 'No description provided.'}</p>
+                      <div className="flex items-center gap-3 text-[11px] text-zinc-200/50 font-medium">
+                        <span className="capitalize px-2 py-0.5 rounded-full bg-cyan-950/30 text-cyan-400 border border-cyan-500/30">{course.course_type}</span>
                         <span>{course.department || 'General'}</span>
                         {trainer?.full_name && <span>taught by {trainer.full_name}</span>}
                         {((course as any).course_assignments && (course as any).course_assignments.length > 0) && (
@@ -339,17 +339,17 @@ export function AdminCourses() {
                         size="sm"
                         variant="outline"
                         onClick={() => openCourseDetail(course)}
-                        className="border-purple-200 text-purple-900 hover:bg-purple-50 h-8 rounded-xl text-xs font-semibold"
+                        className="border-cyan-500/30 text-cyan-300 hover:bg-cyan-950/30 h-8 rounded-xl text-xs font-semibold"
                       >
                         <Eye className="w-3.5 h-3.5 mr-1" /> View
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-midnight/60 rounded-xl hover:bg-purple-50">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-200/60 rounded-xl hover:bg-cyan-950/30">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white border-purple-500/15 rounded-2xl shadow-lg">
+                        <DropdownMenuContent align="end" className="bg-[#070E20]/90 border-cyan-500/30 rounded-2xl shadow-lg">
                           {course.status === 'pending_review' && (
                             <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')} className="text-emerald-700 font-medium">
                               Approve & Publish
@@ -388,11 +388,11 @@ export function AdminCourses() {
 
       {/* Course Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-white border-purple-500/15 rounded-3xl shadow-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-[#070E20]/90 border-cyan-500/30 rounded-3xl shadow-2xl">
           {selectedCourse && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-midnight flex items-center justify-between gap-2 font-bold w-full pr-6">
+                <DialogTitle className="text-zinc-200 flex items-center justify-between gap-2 font-bold w-full pr-6">
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-purple-600" />
                     Course Details
@@ -412,17 +412,17 @@ export function AdminCourses() {
                   {/* Thumbnail + Basic Info */}
                   <div className="flex gap-4">
                     {selectedCourse.thumbnail_path && (
-                      <div className="w-32 h-24 rounded-2xl bg-purple-100 border border-purple-200/60 overflow-hidden shrink-0">
+                      <div className="w-32 h-24 rounded-2xl bg-purple-100 border border-cyan-500/30 overflow-hidden shrink-0">
                         <Thumbnail path={selectedCourse.thumbnail_path} alt={selectedCourse.title} />
                       </div>
                     )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-bold text-midnight">{selectedCourse.title}</h3>
+                        <h3 className="text-lg font-bold text-zinc-200">{selectedCourse.title}</h3>
                         <StatusBadge status={selectedCourse.status} />
                       </div>
-                      <p className="text-sm text-midnight/60 mb-2">{selectedCourse.description}</p>
-                      <div className="flex flex-wrap gap-3 text-xs text-midnight/50">
+                      <p className="text-sm text-zinc-200/60 mb-2">{selectedCourse.description}</p>
+                      <div className="flex flex-wrap gap-3 text-xs text-zinc-200/50">
                         <span className="capitalize">{selectedCourse.course_type} Training</span>
                         <span>{selectedCourse.department || 'General'}</span>
                         <span>{selectedCourse.duration_minutes ? `${selectedCourse.duration_minutes} min` : 'Self-paced'}</span>
@@ -434,11 +434,11 @@ export function AdminCourses() {
 
                   {/* Trainer Suggestion */}
                   {selectedCourse.trainer_suggestion && (
-                    <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl space-y-2">
+                    <div className="bg-cyan-950/30 border border-cyan-500/30 p-4 rounded-xl space-y-2">
                       <div className="flex items-center gap-2 text-xs font-bold text-purple-800 uppercase tracking-wider">
                         <AlertCircle className="w-4 h-4" /> Notice / Suggestion from Trainer
                       </div>
-                      <p className="text-sm text-purple-900 leading-relaxed whitespace-pre-wrap">
+                      <p className="text-sm text-cyan-300 leading-relaxed whitespace-pre-wrap">
                         {selectedCourse.trainer_suggestion}
                       </p>
                     </div>
@@ -446,12 +446,12 @@ export function AdminCourses() {
 
                   {/* Capacity & Limits */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/50 uppercase tracking-wider">
                       <Users className="w-3.5 h-3.5" /> Capacity & Limits
                     </div>
                     <div className="bg-ink/5 rounded-lg p-4 flex items-center justify-between">
                       <div>
-                        <span className="text-ink/60 block text-xs">Max Trainees</span>
+                        <span className="text-zinc-200/60 block text-xs">Max Trainees</span>
                         {editMaxTrainees ? (
                           <div className="flex items-center gap-2 mt-1">
                             <Input 
@@ -468,7 +468,7 @@ export function AdminCourses() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-ink font-medium">{selectedCourse.max_trainees ?? 'Unlimited'}</span>
+                            <span className="text-zinc-200 font-medium">{selectedCourse.max_trainees ?? 'Unlimited'}</span>
                             <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setEditMaxTrainees(true)}>
                               Edit
                             </Button>
@@ -486,10 +486,10 @@ export function AdminCourses() {
                     <div className="bg-orange-50/50 rounded-lg p-3 border border-orange-100 space-y-2">
                       {pendingEnrollments.length > 0 ? (
                         pendingEnrollments.map((enrollment) => (
-                          <div key={enrollment.id} className="p-3 rounded-lg bg-white border border-orange-100 flex items-center justify-between">
+                          <div key={enrollment.id} className="p-3 rounded-lg bg-[#070E20]/90 border border-orange-100 flex items-center justify-between">
                             <div>
-                              <h4 className="text-xs font-semibold text-midnight">{enrollment.trainee?.full_name || 'Unknown Trainee'}</h4>
-                              <p className="text-[10px] text-midnight/60">{enrollment.trainee?.email}</p>
+                              <h4 className="text-xs font-semibold text-zinc-200">{enrollment.trainee?.full_name || 'Unknown Trainee'}</h4>
+                              <p className="text-[10px] text-zinc-200/60">{enrollment.trainee?.email}</p>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button
@@ -524,19 +524,19 @@ export function AdminCourses() {
                   {/* Schedule & Dates */}
                   {(selectedCourse.start_date || selectedCourse.end_date || selectedCourse.meet_link) && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/50 uppercase tracking-wider">
                         <Clock className="w-3.5 h-3.5" /> Schedule & Dates
                       </div>
                       <div className="bg-ink/5 rounded-lg p-4 space-y-2 text-sm">
                         {(selectedCourse.start_date || selectedCourse.end_date) && (
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-ink/60 w-24 block">Course Span:</span>
-                            <span className="text-ink font-medium">
+                            <span className="text-zinc-200/60 w-24 block">Course Span:</span>
+                            <span className="text-zinc-200 font-medium">
                               {selectedCourse.start_date ? new Date(selectedCourse.start_date).toLocaleDateString() : 'TBD'} -{' '}
                               {selectedCourse.end_date ? new Date(selectedCourse.end_date).toLocaleDateString() : 'TBD'}
                             </span>
                             {selectedCourse.start_date && selectedCourse.end_date && (
-                              <span className="text-xs text-ink/50 ml-2">
+                              <span className="text-xs text-zinc-200/50 ml-2">
                                 ({Math.max(1, Math.ceil((new Date(selectedCourse.end_date).getTime() - new Date(selectedCourse.start_date).getTime()) / (1000 * 60 * 60 * 24)))} days)
                               </span>
                             )}
@@ -544,7 +544,7 @@ export function AdminCourses() {
                         )}
                         {selectedCourse.meet_link && (
                           <div className="flex items-center gap-2">
-                            <span className="text-ink/60 w-24 block">Meeting Link:</span>
+                            <span className="text-zinc-200/60 w-24 block">Meeting Link:</span>
                             <a href={selectedCourse.meet_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline break-all">
                               {selectedCourse.meet_link}
                             </a>
@@ -557,29 +557,29 @@ export function AdminCourses() {
                   {/* Test & Assessment Plan */}
                   {((selectedCourse.planned_assessments_count || 0) > 0 || (selectedCourse.planned_mock_tests_count || 0) > 0 || selectedCourse.final_test_date) && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/50 uppercase tracking-wider">
                         <Target className="w-3.5 h-3.5" /> Test & Assessment Plan
                       </div>
                       <div className="bg-ink/5 rounded-lg p-4 grid grid-cols-2 gap-4 text-sm">
                         {(selectedCourse.planned_assessments_count || 0) > 0 && (
                           <div>
-                            <span className="text-ink/60 block text-xs">Daily Assessments</span>
-                            <span className="text-ink font-medium">{selectedCourse.planned_assessments_count} Planned</span>
+                            <span className="text-zinc-200/60 block text-xs">Daily Assessments</span>
+                            <span className="text-zinc-200 font-medium">{selectedCourse.planned_assessments_count} Planned</span>
                           </div>
                         )}
                         {(selectedCourse.planned_mock_tests_count || 0) > 0 && (
                           <div>
-                            <span className="text-ink/60 block text-xs">Mock Tests</span>
-                            <span className="text-ink font-medium">{selectedCourse.planned_mock_tests_count} Planned</span>
+                            <span className="text-zinc-200/60 block text-xs">Mock Tests</span>
+                            <span className="text-zinc-200 font-medium">{selectedCourse.planned_mock_tests_count} Planned</span>
                           </div>
                         )}
                         {selectedCourse.final_test_date && (
                           <div className="col-span-2">
-                            <span className="text-ink/60 block text-xs">Final Exam</span>
-                            <div className="flex flex-col text-ink font-medium mt-1">
+                            <span className="text-zinc-200/60 block text-xs">Final Exam</span>
+                            <div className="flex flex-col text-zinc-200 font-medium mt-1">
                               <span>{new Date(selectedCourse.final_test_date).toLocaleDateString()}</span>
                               {(selectedCourse.final_test_start_time || selectedCourse.final_test_end_time) && (
-                                <span className="text-xs text-ink/70">
+                                <span className="text-xs text-zinc-200/70">
                                   {selectedCourse.final_test_start_time ? new Date(`2000-01-01T${selectedCourse.final_test_start_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} 
                                   {selectedCourse.final_test_end_time ? ` - ${new Date(`2000-01-01T${selectedCourse.final_test_end_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}
                                 </span>
@@ -594,12 +594,12 @@ export function AdminCourses() {
                   {/* Session Flow */}
                   {(selectedCourse.session_flow_text || selectedCourse.session_flow_document_path) && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/50 uppercase tracking-wider">
                         <BookOpen className="w-3.5 h-3.5" /> Session Flow
                       </div>
                       <div className="bg-ink/5 rounded-lg p-4 text-sm space-y-3">
                         {selectedCourse.session_flow_text && (
-                          <p className="text-ink/80 whitespace-pre-wrap">{selectedCourse.session_flow_text}</p>
+                          <p className="text-zinc-200/80 whitespace-pre-wrap">{selectedCourse.session_flow_text}</p>
                         )}
                         {selectedCourse.session_flow_document_path && (
                           <Button variant="outline" size="sm" onClick={async () => {
@@ -625,18 +625,18 @@ export function AdminCourses() {
                   {/* Learning Objectives */}
                   {objectives && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/50 uppercase tracking-wider">
                         <Target className="w-3.5 h-3.5" /> Learning Objectives
                       </div>
                       <div className="bg-ink/5 rounded-lg p-4 space-y-2">
                         {objectives.understand && (
-                          <div><span className="text-[10px] text-ink/40 uppercase">Understand</span><p className="text-sm text-ink/70">{objectives.understand}</p></div>
+                          <div><span className="text-[10px] text-zinc-200/40 uppercase">Understand</span><p className="text-sm text-zinc-200/70">{objectives.understand}</p></div>
                         )}
                         {objectives.able_to_do && (
-                          <div><span className="text-[10px] text-ink/40 uppercase">Able to Do</span><p className="text-sm text-ink/70">{objectives.able_to_do}</p></div>
+                          <div><span className="text-[10px] text-zinc-200/40 uppercase">Able to Do</span><p className="text-sm text-zinc-200/70">{objectives.able_to_do}</p></div>
                         )}
                         {objectives.competencies_built && (
-                          <div><span className="text-[10px] text-ink/40 uppercase">Competencies</span><p className="text-sm text-ink/70">{objectives.competencies_built}</p></div>
+                          <div><span className="text-[10px] text-zinc-200/40 uppercase">Competencies</span><p className="text-sm text-zinc-200/70">{objectives.competencies_built}</p></div>
                         )}
                       </div>
                     </div>
@@ -645,13 +645,13 @@ export function AdminCourses() {
                   {/* Skills */}
                   {skills.length > 0 && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/50 uppercase tracking-wider">
                         <Target className="w-3.5 h-3.5" /> Required Skills
                       </div>
                       <div className="bg-ink/5 rounded-lg p-4">
                         <div className="flex flex-wrap gap-1.5">
                           {skills.map(cs => (
-                            <span key={cs.skill_id} className="px-2 py-0.5 rounded-full text-[10px] bg-ink/10 text-ink border border-ink/20">
+                            <span key={cs.skill_id} className="px-2 py-0.5 rounded-full text-[10px] bg-ink/10 text-zinc-200 border border-cyan-500/30">
                               {cs.skills?.name ?? 'Unknown'}
                             </span>
                           ))}
@@ -663,18 +663,18 @@ export function AdminCourses() {
                   {/* Course Sessions */}
                   {sessions.length > 0 && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/50 uppercase tracking-wider">
                         <Layers className="w-3.5 h-3.5" /> Course Sessions ({sessions.length})
                       </div>
                       <div className="bg-ink/5 rounded-lg p-4 space-y-3">
                         {sessions.map((session, index) => (
-                          <div key={session.id} className="p-3 rounded-xl bg-white border border-ink/10 shadow-sm">
+                          <div key={session.id} className="p-3 rounded-xl bg-[#070E20]/90 border border-cyan-500/30 shadow-sm">
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline" className="text-[10px] h-4 bg-ink/5">Session {index + 1}</Badge>
-                              <h4 className="text-sm font-semibold text-ink">{session.title}</h4>
+                              <h4 className="text-sm font-semibold text-zinc-200">{session.title}</h4>
                             </div>
-                            {session.description && <p className="text-xs text-ink/70 mt-1">{session.description}</p>}
-                            <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-ink/60">
+                            {session.description && <p className="text-xs text-zinc-200/70 mt-1">{session.description}</p>}
+                            <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-zinc-200/60">
                               {session.start_time && (
                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(session.start_time).toLocaleString()}</span>
                               )}
@@ -692,7 +692,7 @@ export function AdminCourses() {
 
                   {/* Materials */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-medium text-ink/50 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-xs font-medium text-zinc-200/50 uppercase tracking-wider">
                       <FileText className="w-3.5 h-3.5" /> Materials ({materials.length})
                     </div>
                     <div className="bg-ink/5 rounded-lg p-4">
@@ -702,24 +702,24 @@ export function AdminCourses() {
                             const isLink = mat.material_type === 'link' || mat.material_type === 'video'
                             const Icon = getMaterialIcon(mat.mime_type)
                             return (
-                              <div key={mat.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-cream border border-ink/10">
+                              <div key={mat.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-[#040814] border border-cyan-500/30">
                                 <div className="w-8 h-8 rounded-md bg-ink/10 flex items-center justify-center shrink-0">
-                                  <Icon className="w-4 h-4 text-ink/60" />
+                                  <Icon className="w-4 h-4 text-zinc-200/60" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-medium text-ink truncate">{mat.file_name}</p>
-                                  <p className="text-[10px] text-ink/40">
+                                  <p className="text-xs font-medium text-zinc-200 truncate">{mat.file_name}</p>
+                                  <p className="text-[10px] text-zinc-200/40">
                                     {isLink ? mat.url : formatFileSize(mat.file_size)}
                                   </p>
                                 </div>
-                                <Badge className="text-[9px] h-4 bg-ink/10 text-ink border-ink/20">
+                                <Badge className="text-[9px] h-4 bg-ink/10 text-zinc-200 border-cyan-500/30">
                                   {mat.material_type || 'file'}
                                 </Badge>
                                 {!isLink && mat.extraction_status && (
                                   <Badge className={`text-[9px] h-4 ${
                                     mat.extraction_status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
                                     mat.extraction_status === 'failed' ? 'bg-red-50 text-red-600 border-red-200' :
-                                    'bg-ink/10 text-ink/60 border-ink/20'
+                                    'bg-ink/10 text-zinc-200/60 border-cyan-500/30'
                                   }`}>
                                     {mat.extraction_status}
                                   </Badge>
@@ -728,7 +728,7 @@ export function AdminCourses() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 px-2 text-ink/60 hover:text-ink"
+                                    className="h-7 px-2 text-zinc-200/60 hover:text-zinc-200"
                                     onClick={() => mat.url && window.open(mat.url, '_blank')}
                                   >
                                     <ExternalLink className="w-3.5 h-3.5" />
@@ -738,7 +738,7 @@ export function AdminCourses() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 px-2 text-ink/60 hover:text-ink"
+                                      className="h-7 px-2 text-zinc-200/60 hover:text-zinc-200"
                                       onClick={async () => {
                                         try {
                                           const { data, error } = await supabase.storage.from('materials').createSignedUrl(mat.storage_path!, 3600)
@@ -757,7 +757,7 @@ export function AdminCourses() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 px-2 text-ink/60 hover:text-ink"
+                                      className="h-7 px-2 text-zinc-200/60 hover:text-zinc-200"
                                       onClick={async () => {
                                         try {
                                           const { data, error } = await supabase.storage.from('materials').createSignedUrl(mat.storage_path!, 60, { download: true })
@@ -778,7 +778,7 @@ export function AdminCourses() {
                           })}
                         </div>
                       ) : (
-                        <p className="text-xs text-ink/40 text-center py-4">No materials uploaded yet</p>
+                        <p className="text-xs text-zinc-200/40 text-center py-4">No materials uploaded yet</p>
                       )}
                     </div>
                   </div>
@@ -793,7 +793,7 @@ export function AdminCourses() {
                           variant="outline"
                           onClick={() => updateCourseStatus(selectedCourse.id, 'draft')}
                           disabled={!!updating}
-                          className="border-ink/20 text-ink"
+                          className="border-cyan-500/30 text-zinc-200"
                         >
                           {updating === selectedCourse.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                           Return to Draft

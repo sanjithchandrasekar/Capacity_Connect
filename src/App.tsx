@@ -92,8 +92,8 @@ function AtmosphericThemeVeil() {
 function DashboardRedirect() {
   const { session, profile, loading } = useAuth()
   if (loading) return (
-    <div className="min-h-screen bg-cream flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-screen bg-[#040814] flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-cyan-500/30 border-t-transparent rounded-full animate-spin" />
     </div>
   )
   if (!session) return <Navigate to="/login" replace />

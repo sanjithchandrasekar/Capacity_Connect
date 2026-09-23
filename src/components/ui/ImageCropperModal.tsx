@@ -52,13 +52,13 @@ export function ImageCropperModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-cream border-ink/10">
+      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-[#040814] border-cyan-500/30">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold text-ink">Crop Thumbnail</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-zinc-200">Crop Thumbnail</DialogTitle>
         </DialogHeader>
         
         <div className="px-6 space-y-4">
-          <div className="relative w-full h-[350px] bg-black/5 rounded-xl overflow-hidden border border-ink/10">
+          <div className="relative w-full h-[350px] bg-black/5 rounded-xl overflow-hidden border border-cyan-500/30">
             {imageSrc ? (
               <Cropper
                 image={imageSrc}
@@ -70,14 +70,14 @@ export function ImageCropperModal({
                 onZoomChange={onZoomChange}
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-ink/40 text-sm">
+              <div className="absolute inset-0 flex items-center justify-center text-zinc-200/40 text-sm">
                 No image selected
               </div>
             )}
           </div>
           
           <div className="py-2 flex items-center gap-4">
-            <span className="text-sm font-medium text-ink/70">Zoom</span>
+            <span className="text-sm font-medium text-zinc-200/70">Zoom</span>
             <input
               type="range"
               value={zoom}
@@ -91,8 +91,8 @@ export function ImageCropperModal({
           </div>
         </div>
         
-        <DialogFooter className="p-6 pt-2 bg-cream/50 border-t border-ink/5 mt-4">
-          <Button variant="outline" onClick={onClose} disabled={isProcessing} className="border-ink/20 text-ink/70">
+        <DialogFooter className="p-6 pt-2 bg-[#040814]/50 border-t border-cyan-500/30 mt-4">
+          <Button variant="outline" onClick={onClose} disabled={isProcessing} className="border-cyan-500/30 text-zinc-200/70">
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isProcessing || !imageSrc} className="bg-primary text-primary-foreground">

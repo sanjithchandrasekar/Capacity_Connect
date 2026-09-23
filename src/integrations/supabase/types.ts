@@ -420,6 +420,10 @@ export interface Database {
           start_time: string | null
           end_time: string | null
           duration_minutes: number | null
+            results_publish_date: string | null
+            is_adaptive: boolean | null
+            is_simulation: boolean | null
+            simulation_dataset_url: string | null
         }
         Insert: {
           id?: string
@@ -438,6 +442,10 @@ export interface Database {
           start_time?: string | null
           end_time?: string | null
           duration_minutes?: number | null
+            results_publish_date?: string | null
+            is_adaptive?: boolean | null
+            is_simulation?: boolean | null
+            simulation_dataset_url?: string | null
         }
         Update: {
           id?: string
@@ -456,6 +464,10 @@ export interface Database {
           start_time?: string | null
           end_time?: string | null
           duration_minutes?: number | null
+            results_publish_date?: string | null
+            is_adaptive?: boolean | null
+            is_simulation?: boolean | null
+            simulation_dataset_url?: string | null
         }
         Relationships: []
       }
@@ -470,6 +482,7 @@ export interface Database {
           position: number
           approved: boolean
           created_at: string
+            difficulty: 'easy' | 'medium' | 'hard' | null
         }
         Insert: {
           id?: string
@@ -481,6 +494,7 @@ export interface Database {
           position?: number
           approved?: boolean
           created_at?: string
+            difficulty?: 'easy' | 'medium' | 'hard' | null
         }
         Update: {
           id?: string
@@ -492,6 +506,7 @@ export interface Database {
           position?: number
           approved?: boolean
           created_at?: string
+            difficulty?: 'easy' | 'medium' | 'hard' | null
         }
         Relationships: []
       }

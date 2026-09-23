@@ -125,11 +125,11 @@ export function CourseSessionsPage() {
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-4xl mx-auto space-y-6">
         <motion.div variants={fadeUp} className="flex items-center justify-between">
           <div>
-            <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+            <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
               <ArrowLeft className="w-4 h-4" /> Back to Course
             </Link>
-            <h2 className="text-2xl font-bold tracking-tight text-ink">Course Sessions</h2>
-            <p className="text-ink/60 text-sm mt-1">{course?.title}</p>
+            <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Course Sessions</h2>
+            <p className="text-zinc-200/60 text-sm mt-1">{course?.title}</p>
           </div>
           <Button onClick={openNew} className="bg-ink hover:bg-ink/90 text-cream">
             <Plus className="w-4 h-4 mr-2" /> Add Session
@@ -138,10 +138,10 @@ export function CourseSessionsPage() {
 
         {sessions.length === 0 ? (
           <motion.div variants={fadeUp}>
-            <Card className="bg-white border-ink/10">
+            <Card className="bg-[#070E20]/90 border-cyan-500/30">
               <CardContent className="py-12 text-center">
-                <Calendar className="w-12 h-12 text-ink/20 mx-auto mb-4" />
-                <p className="text-ink/60 mb-4">No sessions created yet. Group your course into days or modules.</p>
+                <Calendar className="w-12 h-12 text-zinc-200/20 mx-auto mb-4" />
+                <p className="text-zinc-200/60 mb-4">No sessions created yet. Group your course into days or modules.</p>
                 <Button onClick={openNew} className="bg-ink hover:bg-ink/90 text-cream">
                   <Plus className="w-4 h-4 mr-2" /> Add First Session
                 </Button>
@@ -154,19 +154,19 @@ export function CourseSessionsPage() {
               const sessionMaterials = materials.filter(m => m.session_id === session.id)
               return (
                 <motion.div key={session.id} variants={fadeUp}>
-                  <Card className="bg-white border-ink/10 overflow-hidden group hover:border-ink/20 transition-all">
-                    <CardHeader className="bg-ink/5 border-b border-ink/5 pb-4">
+                  <Card className="bg-[#070E20]/90 border-cyan-500/30 overflow-hidden group hover:border-cyan-500/30 transition-all">
+                    <CardHeader className="bg-ink/5 border-b border-cyan-500/30 pb-4">
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline" className="text-[10px]">Session {index + 1}</Badge>
-                            <CardTitle className="text-lg text-ink">{session.title}</CardTitle>
+                            <CardTitle className="text-lg text-zinc-200">{session.title}</CardTitle>
                           </div>
-                          {session.description && <p className="text-sm text-ink/60 mt-2">{session.description}</p>}
+                          {session.description && <p className="text-sm text-zinc-200/60 mt-2">{session.description}</p>}
                           
-                          <div className="flex flex-wrap gap-4 mt-3 text-xs text-ink/70">
+                          <div className="flex flex-wrap gap-4 mt-3 text-xs text-zinc-200/70">
                             {session.session_type && (
-                              <Badge className={`text-[10px] capitalize ${session.session_type === 'live' || session.session_type === 'hybrid' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200' : session.session_type === 'recorded' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200' : 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200'}`}>
+                              <Badge className={`text-[10px] capitalize ${session.session_type === 'live' || session.session_type === 'hybrid' ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200' : session.session_type === 'recorded' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200' : 'bg-purple-100 text-cyan-400 hover:bg-purple-200 border-cyan-500/30'}`}>
                                 {session.session_type.replace('_', ' ')}
                               </Badge>
                             )}
@@ -179,7 +179,7 @@ export function CourseSessionsPage() {
                               </a>
                             )}
                             {session.location && (session.session_type === 'in_person' || session.session_type === 'hybrid') && (
-                              <span className="flex items-center gap-1.5 text-ink/70">
+                              <span className="flex items-center gap-1.5 text-zinc-200/70">
                                 <Globe className="w-3.5 h-3.5" /> {session.location}
                               </span>
                             )}
@@ -200,19 +200,19 @@ export function CourseSessionsPage() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-4 bg-white">
+                    <CardContent className="p-4 bg-[#070E20]/90">
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium text-ink">Session Materials</h4>
+                        <h4 className="text-sm font-medium text-zinc-200">Session Materials</h4>
                         <Link to={`/trainer/courses/${courseId}/materials?session=${session.id}`}>
-                          <Button variant="outline" size="sm" className="h-8 text-xs border-ink/20">Manage Materials</Button>
+                          <Button variant="outline" size="sm" className="h-8 text-xs border-cyan-500/30">Manage Materials</Button>
                         </Link>
                       </div>
                       {sessionMaterials.length === 0 ? (
-                        <p className="text-xs text-ink/50 italic">No materials assigned to this session.</p>
+                        <p className="text-xs text-zinc-200/50 italic">No materials assigned to this session.</p>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {sessionMaterials.map(m => (
-                            <div key={m.id} className="flex items-center gap-2 p-2 rounded-lg bg-ink/5 text-xs text-ink/80">
+                            <div key={m.id} className="flex items-center gap-2 p-2 rounded-lg bg-ink/5 text-xs text-zinc-200/80">
                               <FileText className="w-3.5 h-3.5 shrink-0" />
                               <span className="truncate">{m.file_name}</span>
                             </div>
@@ -229,21 +229,21 @@ export function CourseSessionsPage() {
       </motion.div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-white border-ink/10">
-          <DialogHeader><DialogTitle className="text-ink">{editingSession?.id ? 'Edit Session' : 'New Session'}</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-[425px] bg-[#070E20]/90 border-cyan-500/30">
+          <DialogHeader><DialogTitle className="text-zinc-200">{editingSession?.id ? 'Edit Session' : 'New Session'}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-1.5">
-              <Label className="text-ink/80">Session Title *</Label>
-              <Input className="bg-ink/5 border-ink/20 text-ink" value={editingSession?.title || ''} onChange={e => setEditingSession({ ...editingSession, title: e.target.value })} placeholder="e.g. Day 1: Basics" />
+              <Label className="text-zinc-200/80">Session Title *</Label>
+              <Input className="bg-ink/5 border-cyan-500/30 text-zinc-200" value={editingSession?.title || ''} onChange={e => setEditingSession({ ...editingSession, title: e.target.value })} placeholder="e.g. Day 1: Basics" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-ink/80">Description</Label>
-              <Textarea className="bg-ink/5 border-ink/20 text-ink" value={editingSession?.description || ''} onChange={e => setEditingSession({ ...editingSession, description: e.target.value })} />
+              <Label className="text-zinc-200/80">Description</Label>
+              <Textarea className="bg-ink/5 border-cyan-500/30 text-zinc-200" value={editingSession?.description || ''} onChange={e => setEditingSession({ ...editingSession, description: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-ink/80">Delivery Mode</Label>
+              <Label className="text-zinc-200/80">Delivery Mode</Label>
               <Select value={editingSession?.session_type || 'recorded'} onValueChange={v => setEditingSession({ ...editingSession, session_type: v })}>
-                <SelectTrigger className="bg-ink/5 border-ink/20 text-ink"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recorded">Fully Video Class</SelectItem>
                   <SelectItem value="live">Only Online Live Class</SelectItem>
@@ -254,29 +254,29 @@ export function CourseSessionsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Start Time</Label>
-                <Input className="bg-ink/5 border-ink/20 text-ink" type="datetime-local" value={editingSession?.start_time || ''} onChange={e => setEditingSession({ ...editingSession, start_time: e.target.value })} />
+                <Label className="text-zinc-200/80">Start Time</Label>
+                <Input className="bg-ink/5 border-cyan-500/30 text-zinc-200" type="datetime-local" value={editingSession?.start_time || ''} onChange={e => setEditingSession({ ...editingSession, start_time: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-ink/80">End Time</Label>
-                <Input className="bg-ink/5 border-ink/20 text-ink" type="datetime-local" value={editingSession?.end_time || ''} onChange={e => setEditingSession({ ...editingSession, end_time: e.target.value })} />
+                <Label className="text-zinc-200/80">End Time</Label>
+                <Input className="bg-ink/5 border-cyan-500/30 text-zinc-200" type="datetime-local" value={editingSession?.end_time || ''} onChange={e => setEditingSession({ ...editingSession, end_time: e.target.value })} />
               </div>
             </div>
             {(editingSession?.session_type === 'live' || editingSession?.session_type === 'hybrid') && (
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Live Class Meet Link</Label>
-                <Input className="bg-ink/5 border-ink/20 text-ink" type="url" value={editingSession?.meet_link || ''} onChange={e => setEditingSession({ ...editingSession, meet_link: e.target.value })} placeholder="https://meet.google.com/..." />
+                <Label className="text-zinc-200/80">Live Class Meet Link</Label>
+                <Input className="bg-ink/5 border-cyan-500/30 text-zinc-200" type="url" value={editingSession?.meet_link || ''} onChange={e => setEditingSession({ ...editingSession, meet_link: e.target.value })} placeholder="https://meet.google.com/..." />
               </div>
             )}
             {(editingSession?.session_type === 'in_person' || editingSession?.session_type === 'hybrid') && (
               <div className="space-y-1.5">
-                <Label className="text-ink/80">Physical Location</Label>
-                <Input className="bg-ink/5 border-ink/20 text-ink" type="text" value={editingSession?.location || ''} onChange={e => setEditingSession({ ...editingSession, location: e.target.value })} placeholder="e.g. Room 402, Main Campus" />
+                <Label className="text-zinc-200/80">Physical Location</Label>
+                <Input className="bg-ink/5 border-cyan-500/30 text-zinc-200" type="text" value={editingSession?.location || ''} onChange={e => setEditingSession({ ...editingSession, location: e.target.value })} placeholder="e.g. Room 402, Main Campus" />
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-ink/20 text-ink" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="border-cyan-500/30 text-zinc-200" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveSession} disabled={saving} className="bg-ink text-cream hover:bg-ink/90">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Save Session

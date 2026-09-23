@@ -94,36 +94,36 @@ export function PerformancePage() {
   const needsSupport = activeTraineeRows.filter(r => r.enrollment.status !== 'completed' && r.bestScore !== null && (r.bestScore ?? 0) < (course?.passing_score ?? 60))
 
   const stats = [
-    { label: 'Enrolled', value: totalEnrolled, icon: Users, color: 'from-ink/10 to-ink/5 border-ink/20' },
-    { label: 'Completed', value: completed, icon: Target, color: 'from-ink/10 to-ink/5 border-ink/20' },
-    { label: 'Completion Rate', value: `${completionRate}%`, icon: BarChart3, color: 'from-ink/10 to-ink/5 border-ink/20' },
-    { label: 'Avg. Progress', value: `${avgProgress}%`, icon: TrendingUp, color: 'from-ink/10 to-ink/5 border-ink/20' },
-    { label: 'Avg. Score', value: `${avgScore}%`, icon: BarChart3, color: 'from-ink/10 to-ink/5 border-ink/20' },
+    { label: 'Enrolled', value: totalEnrolled, icon: Users, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
+    { label: 'Completed', value: completed, icon: Target, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
+    { label: 'Completion Rate', value: `${completionRate}%`, icon: BarChart3, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
+    { label: 'Avg. Progress', value: `${avgProgress}%`, icon: TrendingUp, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
+    { label: 'Avg. Score', value: `${avgScore}%`, icon: BarChart3, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
     { label: 'Pass Rate', value: `${passRate}%`, icon: Target, color: 'from-yellow-50 to-yellow-50 border-yellow-200' },
-    { label: 'Avg. Attempts', value: avgAttempts.toString(), icon: BookOpen, color: 'from-ink/10 to-ink/5 border-ink/20' },
+    { label: 'Avg. Attempts', value: avgAttempts.toString(), icon: BookOpen, color: 'from-ink/10 to-ink/5 border-cyan-500/30' },
   ]
 
   if (loading) {
-    return <TrainerLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-ink" /></div></TrainerLayout>
+    return <TrainerLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-zinc-200" /></div></TrainerLayout>
   }
 
   return (
     <TrainerLayout>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-6xl mx-auto space-y-6">
         <motion.div variants={fadeUp}>
-          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-ink/60 hover:text-ink transition-colors mb-4">
+          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
-          <h2 className="text-2xl font-bold tracking-tight text-ink">Trainee Performance</h2>
-          <p className="text-ink/60 text-sm mt-1">{course?.title}</p>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Trainee Performance</h2>
+          <p className="text-zinc-200/60 text-sm mt-1">{course?.title}</p>
         </motion.div>
 
         <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           {stats.map(s => (
             <div key={s.label} className={`p-4 rounded-2xl border bg-gradient-to-br ${s.color} backdrop-blur-sm`}>
-              <s.icon className="w-4 h-4 text-ink/60 mb-2" />
-              <div className="text-xl font-bold text-ink">{s.value}</div>
-              <div className="text-[11px] text-ink/60 mt-0.5">{s.label}</div>
+              <s.icon className="w-4 h-4 text-zinc-200/60 mb-2" />
+              <div className="text-xl font-bold text-zinc-200">{s.value}</div>
+              <div className="text-[11px] text-zinc-200/60 mt-0.5">{s.label}</div>
             </div>
           ))}
         </motion.div>
@@ -148,19 +148,19 @@ export function PerformancePage() {
           </motion.div>
         )}
 
-        <motion.div variants={fadeUp} className="bg-white border border-ink/10 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-ink/10">
-            <h3 className="text-sm font-semibold text-ink">Enrolled Trainees</h3>
+        <motion.div variants={fadeUp} className="bg-[#070E20]/90 border border-cyan-500/30 rounded-2xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-cyan-500/30">
+            <h3 className="text-sm font-semibold text-zinc-200">Enrolled Trainees</h3>
           </div>
           {activeTraineeRows.length === 0 ? (
-            <div className="p-8 text-center text-ink/50 text-sm">No trainees enrolled yet.</div>
+            <div className="p-8 text-center text-zinc-200/50 text-sm">No trainees enrolled yet.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-ink/10">
+                  <tr className="border-b border-cyan-500/30">
                     {['Trainee', 'Enrolled', 'Progress', 'Attempts', 'Best Score', 'Status'].map(h => (
-                      <th key={h} className="text-left text-xs text-ink/50 font-medium px-6 py-3">{h}</th>
+                      <th key={h} className="text-left text-xs text-zinc-200/50 font-medium px-6 py-3">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -173,29 +173,29 @@ export function PerformancePage() {
                             {r.trainee?.full_name?.charAt(0) ?? '?'}
                           </div>
                           <div>
-                            <p className="text-sm text-ink font-medium">{r.trainee?.full_name ?? 'Unknown'}</p>
-                            <p className="text-xs text-ink/50">{r.trainee?.email}</p>
+                            <p className="text-sm text-zinc-200 font-medium">{r.trainee?.full_name ?? 'Unknown'}</p>
+                            <p className="text-xs text-zinc-200/50">{r.trainee?.email}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-xs text-ink/60">{new Date(r.enrollment.enrolled_at).toLocaleDateString()}</td>
+                      <td className="px-6 py-3 text-xs text-zinc-200/60">{new Date(r.enrollment.enrolled_at).toLocaleDateString()}</td>
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-20 h-1.5 bg-ink/5 rounded-full overflow-hidden">
                             <div className="h-full bg-gradient-to-r from-ink to-ink/80 rounded-full" style={{ width: `${r.enrollment.progress_percent}%` }} />
                           </div>
-                          <span className="text-xs text-ink/60">{r.enrollment.progress_percent}%</span>
+                          <span className="text-xs text-zinc-200/60">{r.enrollment.progress_percent}%</span>
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-xs text-ink/60">{r.attemptCount}</td>
-                      <td className="px-6 py-3 text-xs text-ink/60">
+                      <td className="px-6 py-3 text-xs text-zinc-200/60">{r.attemptCount}</td>
+                      <td className="px-6 py-3 text-xs text-zinc-200/60">
                         {r.bestScore !== null ? `${r.bestScore}%` : '—'}
                       </td>
                       <td className="px-6 py-3">
                         <Badge className={
-                          r.enrollment.status === 'completed' ? 'bg-ink/10 text-ink/70 border border-ink/20 text-xs' :
-                          r.enrollment.status === 'in_progress' ? 'bg-ink/10 text-ink/70 border border-ink/20 text-xs' :
-                          'bg-ink/10 text-ink/80 border border-ink/20 text-xs'
+                          r.enrollment.status === 'completed' ? 'bg-ink/10 text-zinc-200/70 border border-cyan-500/30 text-xs' :
+                          r.enrollment.status === 'in_progress' ? 'bg-ink/10 text-zinc-200/70 border border-cyan-500/30 text-xs' :
+                          'bg-ink/10 text-zinc-200/80 border border-cyan-500/30 text-xs'
                         }>
                           {r.enrollment.status.replace('_', ' ')}
                         </Badge>
