@@ -10,25 +10,25 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/25 hover:opacity-95 hover:shadow-lg transition-all",
+          "bg-gradient-to-r from-cyan-600 via-blue-600 to-amber-600 text-white shadow-md shadow-cyan-600/20 hover:opacity-95 hover:shadow-lg transition-all",
         primary:
-          "bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white shadow-md shadow-pink-500/25 hover:opacity-95 transition-all",
+          "bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white shadow-md shadow-cyan-600/20 hover:opacity-95 transition-all",
         purple:
-          "bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-cyan-950/50 transition-all",
+          "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 transition-all",
         pink:
-          "bg-pink-500 hover:bg-pink-600 text-white shadow-md shadow-pink-500/25 transition-all",
+          "bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-600/20 transition-all",
         orange:
-          "bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/25 transition-all",
+          "bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20 transition-all",
         coral:
-          "bg-coral-500 hover:bg-coral-600 text-white shadow-md shadow-coral-500/25 transition-all",
+          "bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all",
         destructive:
           "bg-red-600 text-white shadow-sm hover:bg-red-700 transition-all",
         outline:
-          "border border-cyan-500/30 bg-[#070E20]/90/90 shadow-sm hover:bg-cyan-950/30 hover:border-cyan-500/30 text-zinc-200 transition-all",
+          "border border-slate-200 bg-white shadow-xs hover:bg-slate-50 hover:border-slate-300 text-slate-800 transition-all",
         secondary:
-          "bg-purple-500/10 text-cyan-400 hover:bg-purple-500/15 border border-cyan-500/30 transition-all",
-        ghost: "hover:bg-cyan-950/30 hover:text-purple-600 text-zinc-200/80 transition-all",
-        link: "text-pink-600 underline-offset-4 hover:underline",
+          "bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 transition-all",
+        ghost: "hover:bg-slate-100 hover:text-slate-900 text-slate-700 transition-all",
+        link: "text-cyan-600 underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",

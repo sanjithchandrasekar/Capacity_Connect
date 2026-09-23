@@ -25,7 +25,6 @@ export function TrainerAssignmentBanner() {
 
   useEffect(() => {
     if (!user) return
-    // Load dismissed from localStorage
     const stored = JSON.parse(localStorage.getItem('dismissed_assignments') || '[]')
     setDismissedIds(stored)
 
@@ -50,7 +49,6 @@ export function TrainerAssignmentBanner() {
     const newDismissed = [...dismissedIds, id]
     setDismissedIds(newDismissed)
     localStorage.setItem('dismissed_assignments', JSON.stringify(newDismissed))
-    // Mark as read in DB
     await (supabase as any).from('course_assignments').update({ is_read: true }).eq('id', id)
   }
 
@@ -68,46 +66,43 @@ export function TrainerAssignmentBanner() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -10, scale: 0.98 }}
         transition={{ duration: 0.4, type: 'spring', bounce: 0.2 }}
-        className="relative overflow-hidden rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 text-white shadow-2xl shadow-cyan-950/50 mb-6"
+        className="relative overflow-hidden rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-[#040814] via-[#07132a] to-[#0a1e3f] text-white shadow-xl mb-6"
       >
-        {/* Decorative blobs */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-10 -right-10 w-64 h-64 bg-gradient-to-br from-pink-500/30 to-orange-500/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-8 -left-8 w-48 h-48 bg-gradient-to-tr from-purple-400/20 to-indigo-400/20 rounded-full blur-3xl" />
+          <div className="absolute -top-10 -right-10 w-64 h-64 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-8 -left-8 w-48 h-48 bg-gradient-to-tr from-sky-400/20 to-blue-400/20 rounded-full blur-3xl" />
         </div>
 
         <div className="relative z-10 p-6 md:p-8">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4 flex-1 min-w-0">
-              {/* Icon */}
-              <div className="shrink-0 w-14 h-14 rounded-2xl bg-[#070E20]/90/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-inner">
-                <Megaphone className="w-7 h-7 text-orange-300" />
+              <div className="shrink-0 w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-inner">
+                <Megaphone className="w-7 h-7 text-amber-300" />
               </div>
 
-              {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-400/20 border border-orange-300/30 text-orange-200 text-[11px] font-bold uppercase tracking-wider mb-2">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-400/20 border border-amber-300/30 text-amber-200 text-[11px] font-bold uppercase tracking-wider mb-2">
                   <Sparkles className="w-3 h-3" />
                   New Course Assignment
                 </div>
                 <h3 className="text-xl font-extrabold text-white leading-tight mb-1 truncate">
                   🎓 {assignment.course?.title ?? 'Course Assigned to You'}
                 </h3>
-                <p className="text-white/70 text-sm mb-2 line-clamp-2">
+                <p className="text-slate-300 text-sm mb-2 line-clamp-2">
                   {assignment.course?.description ?? 'Admin has assigned you a new course to develop and manage.'}
                 </p>
                 {assignment.message && (
-                  <div className="bg-[#070E20]/90/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-2.5 mb-3">
+                  <div className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-2.5 mb-3">
                     <p className="text-white/90 text-sm italic">"{assignment.message}"</p>
-                    <p className="text-white/40 text-xs mt-0.5">— {assignment.assigned_by_name}</p>
+                    <p className="text-slate-400 text-xs mt-0.5">— {assignment.assigned_by_name}</p>
                   </div>
                 )}
                 <div className="flex items-center gap-4 flex-wrap">
-                  <span className="text-white/50 text-xs">
+                  <span className="text-slate-400 text-xs">
                     {formatDistanceToNow(new Date(assignment.assigned_at), { addSuffix: true })}
                   </span>
                   <Link to={'/trainer/courses/' + assignment.course_id}>
-                    <Button className="bg-[#070E20]/90 text-purple-800 hover:bg-[#070E20]/90/90 font-bold rounded-xl px-5 py-2 h-auto text-sm shadow-lg shadow-black/20 hover:scale-105 transition-all">
+                    <Button className="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold rounded-xl px-5 py-2 h-auto text-sm shadow-md hover:scale-105 transition-all">
                       <BookOpen className="w-4 h-4 mr-1.5" />
                       View Course
                       <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
@@ -117,32 +112,30 @@ export function TrainerAssignmentBanner() {
               </div>
             </div>
 
-            {/* Dismiss */}
             <button
               onClick={() => dismiss(assignment.id)}
-              className="shrink-0 w-8 h-8 rounded-xl bg-[#070E20]/90/10 hover:bg-[#070E20]/90/20 flex items-center justify-center transition-colors"
+              className="shrink-0 w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
               aria-label="Dismiss"
             >
               <X className="w-4 h-4 text-white/70" />
             </button>
           </div>
 
-          {/* Pagination dots (multiple assignments) */}
           {visible.length > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-white/10">
-              <span className="text-white/40 text-xs">{safeCurrent + 1} of {visible.length}</span>
+              <span className="text-slate-400 text-xs">{safeCurrent + 1} of {visible.length}</span>
               <div className="flex gap-1.5">
                 {visible.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => setCurrent(i)}
-                    className={'rounded-full transition-all ' + (i === safeCurrent ? 'w-5 h-1.5 bg-[#070E20]/90' : 'w-1.5 h-1.5 bg-[#070E20]/90/30 hover:bg-[#070E20]/90/60')}
+                    className={'rounded-full transition-all ' + (i === safeCurrent ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30 hover:bg-white/60')}
                   />
                 ))}
               </div>
               <button
                 onClick={() => setCurrent(c => (c + 1) % visible.length)}
-                className="text-white/40 hover:text-white/80 text-xs ml-2 transition-colors"
+                className="text-slate-400 hover:text-white text-xs ml-2 transition-colors"
               >
                 Next &rarr;
               </button>

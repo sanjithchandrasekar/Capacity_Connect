@@ -124,8 +124,8 @@ export function AdminAnnouncements() {
 
   if (loading && announcements.length === 0) {
     return (
-      <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm flex justify-center py-10">
-        <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm flex justify-center py-10">
+        <Loader2 className="w-6 h-6 animate-spin text-cyan-600" />
       </div>
     )
   }
@@ -134,11 +134,11 @@ export function AdminAnnouncements() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-base font-bold text-zinc-200">Global Announcements</h3>
-          <p className="text-xs text-zinc-200/50 mt-0.5">Publish news and updates to the homepage.</p>
+          <h3 className="text-base font-bold text-slate-900">Global Announcements</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Publish news and updates to the homepage.</p>
         </div>
         {!isFormOpen && (
-          <Button onClick={() => setIsFormOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs h-9">
+          <Button onClick={() => setIsFormOpen(true)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white rounded-xl text-xs h-9 shadow-md shadow-cyan-600/10">
             <Plus className="w-4 h-4 mr-1.5" /> New Announcement
           </Button>
         )}
@@ -147,30 +147,30 @@ export function AdminAnnouncements() {
       <ConfirmDialog />
 
       {isFormOpen && (
-        <motion.form variants={fadeUp} initial="hidden" animate="visible" onSubmit={handleSubmit} className="bg-cyan-950/40 border border-cyan-500/30 rounded-3xl p-6 shadow-inner mb-6 space-y-4">
+        <motion.form variants={fadeUp} initial="hidden" animate="visible" onSubmit={handleSubmit} className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm mb-6 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-zinc-200 mb-1">Title</label>
-            <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-[#070E20]/90 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none" placeholder="e.g., New Training Module Available" required />
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Title</label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all outline-none placeholder:text-slate-400" placeholder="e.g., New Training Module Available" required />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-zinc-200 mb-1">Target Audience</label>
-            <select value={targetAudience} onChange={e => setTargetAudience(e.target.value)} className="w-full bg-[#070E20]/90 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Target Audience</label>
+            <select value={targetAudience} onChange={e => setTargetAudience(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all outline-none">
               <option value="all">All Users (Public & Internal)</option>
               <option value="trainer">Trainers Only</option>
               <option value="trainee">Trainees Only</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-zinc-200 mb-1">Content</label>
-            <textarea value={content} onChange={e => setContent(e.target.value)} className="w-full bg-[#070E20]/90 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none min-h-[100px]" placeholder="Type your announcement here..." required />
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Content</label>
+            <textarea value={content} onChange={e => setContent(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all outline-none min-h-[100px] placeholder:text-slate-400" placeholder="Type your announcement here..." required />
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" id="isActive" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="rounded text-purple-600 focus:ring-purple-500 border-cyan-500/30" />
-            <label htmlFor="isActive" className="text-sm text-zinc-200/80 font-medium">Publish immediately (Active)</label>
+            <input type="checkbox" id="isActive" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="rounded text-cyan-600 focus:ring-cyan-500 border-slate-300" />
+            <label htmlFor="isActive" className="text-sm text-slate-700 font-medium">Publish immediately (Active)</label>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={resetForm} className="rounded-xl border-cyan-500/30 text-purple-800">Cancel</Button>
-            <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl">
+            <Button type="button" variant="outline" onClick={resetForm} className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50">Cancel</Button>
+            <Button type="submit" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white rounded-xl shadow-md shadow-cyan-600/10">
               {editingId ? 'Save Changes' : 'Publish Announcement'}
             </Button>
           </div>
@@ -179,25 +179,25 @@ export function AdminAnnouncements() {
 
       <div className="grid gap-4">
         {announcements.filter(ann => ann.id !== editingId).map((ann, i) => (
-          <motion.div key={ann.id} variants={fadeUp} custom={i} className={`bg-[#070E20]/90 border ${ann.is_active ? 'border-cyan-500/30' : 'border-gray-200 opacity-70'} rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-start justify-between gap-4`}>
+          <motion.div key={ann.id} variants={fadeUp} custom={i} className={`bg-white border ${ann.is_active ? 'border-slate-200/90' : 'border-slate-200 opacity-70'} rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-start justify-between gap-4`}>
             <div className="flex gap-4">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${ann.is_active ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${ann.is_active ? 'bg-cyan-50 text-cyan-600' : 'bg-slate-100 text-slate-400'}`}>
                 <Megaphone className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   {ann.title}
-                  <span className="text-[10px] bg-cyan-950/30 text-cyan-400 px-2 py-0.5 rounded-full font-semibold border border-cyan-500/30 uppercase">
+                  <span className="text-[10px] bg-cyan-50 text-cyan-700 px-2.5 py-0.5 rounded-full font-semibold border border-cyan-200 uppercase">
                     {ann.target_audience || 'ALL'}
                   </span>
-                  {!ann.is_active && <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold border border-gray-200">DRAFT</span>}
+                  {!ann.is_active && <span className="text-[10px] bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full font-semibold border border-slate-200">DRAFT</span>}
                 </h4>
-                <p className="text-xs text-zinc-200/60 mt-1 mb-2">Published: {new Date(ann.created_at).toLocaleDateString()}</p>
-                <p className="text-sm text-zinc-200/80 whitespace-pre-wrap">{ann.content.replace(/\n\n<!--AUTHOR:.*?-->/g, '')}</p>
+                <p className="text-xs text-slate-400 mt-1 mb-2 font-medium">Published: {new Date(ann.created_at).toLocaleDateString()}</p>
+                <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{ann.content.replace(/\n\n<!--AUTHOR:.*?-->/g, '')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 md:self-start">
-              <button onClick={() => handleEdit(ann)} className="p-2 hover:bg-cyan-950/30 text-purple-600 rounded-lg transition-colors" title="Edit">
+              <button onClick={() => handleEdit(ann)} className="p-2 hover:bg-slate-100 text-cyan-600 rounded-lg transition-colors" title="Edit">
                 <Edit2 className="w-4 h-4" />
               </button>
               <button onClick={() => handleDelete(ann.id)} className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors" title="Delete">
@@ -207,7 +207,7 @@ export function AdminAnnouncements() {
           </motion.div>
         ))}
         {announcements.length === 0 && !loading && (
-          <div className="text-center py-10 text-zinc-200/40 text-sm">No announcements found.</div>
+          <div className="text-center py-10 text-slate-400 text-sm">No announcements found.</div>
         )}
       </div>
     </div>

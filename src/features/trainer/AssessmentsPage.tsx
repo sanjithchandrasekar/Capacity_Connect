@@ -568,7 +568,7 @@ export function AssessmentsPage() {
   if (loading && !assessments.length) {
     return (
       <TrainerLayout>
-        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-zinc-200" /></div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-cyan-600" /></div>
       </TrainerLayout>
     )
   }
@@ -583,17 +583,17 @@ export function AssessmentsPage() {
           <>
             <motion.div variants={fadeUp} className="flex items-center justify-between">
               <div>
-                <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
+                <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-4 font-medium">
                   <ArrowLeft className="w-4 h-4" /> Back to Course
                 </Link>
-                <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Tests & Assessments</h2>
-                <p className="text-zinc-200/60 text-sm mt-1">{course?.title}</p>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900">Tests & Assessments</h2>
+                <p className="text-slate-500 text-sm mt-1 font-medium">{course?.title}</p>
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => setAiGenDialogOpen(true)} variant="outline" className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/30 hover:text-purple-800 font-bold">
-                  <Brain className="w-4 h-4 mr-2" /> Auto-Generate with AI
+                <Button onClick={() => setAiGenDialogOpen(true)} variant="outline" className="border-cyan-200 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 font-bold rounded-xl">
+                  <Brain className="w-4 h-4 mr-2 text-cyan-600" /> Auto-Generate with AI
                 </Button>
-                <Button onClick={openNewAssessmentDialog} className="bg-ink hover:bg-ink/90 text-cream">
+                <Button onClick={openNewAssessmentDialog} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">
                   <Plus className="w-4 h-4 mr-2" /> Create Test
                 </Button>
               </div>
@@ -601,42 +601,40 @@ export function AssessmentsPage() {
 
             {assessments.length === 0 ? (
               <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                {/* Premium AI Generation Card */}
-                <motion.div whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Card className="relative overflow-hidden group border border-cyan-500/30 hover:border-cyan-500/30 shadow-sm hover:shadow-xl h-full cursor-pointer bg-gradient-to-br from-white to-purple-50/50" onClick={() => setAiGenDialogOpen(true)}>
-                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse" />
-                    
-                    <CardContent className="p-8 relative z-10 h-full flex flex-col justify-between rounded-xl">
+                {/* AI Generation Card */}
+                <motion.div whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="relative overflow-hidden group border border-cyan-200 hover:border-cyan-400 shadow-sm hover:shadow-lg h-full cursor-pointer bg-gradient-to-br from-white to-cyan-50/50 rounded-3xl" onClick={() => setAiGenDialogOpen(true)}>
+                    <CardContent className="p-8 relative z-10 h-full flex flex-col justify-between">
                       <div>
-                        <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 border border-cyan-500/30 shadow-sm group-hover:shadow-md transition-all">
-                          <Brain className="w-7 h-7 text-purple-600" />
+                        <div className="w-14 h-14 bg-cyan-100 rounded-2xl flex items-center justify-center mb-6 border border-cyan-200 shadow-sm text-cyan-600">
+                          <Brain className="w-7 h-7" />
                         </div>
-                        <h3 className="text-2xl font-extrabold text-zinc-200 mb-3 tracking-tight">Auto-Generate with AI</h3>
-                        <p className="text-sm text-zinc-200/70 mb-8 leading-relaxed font-medium">
+                        <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Auto-Generate with AI</h3>
+                        <p className="text-sm text-slate-600 mb-8 leading-relaxed font-medium">
                           Instantly generate a complete, high-quality assessment tailored perfectly to your course content, objectives, and desired difficulty level.
                         </p>
                       </div>
-                      <Button className="w-full bg-purple-600 text-white hover:bg-purple-700 shadow-sm font-bold text-sm h-12 rounded-xl group-hover:scale-[1.02] transition-transform">
+                      <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:opacity-95 shadow-md font-bold text-sm h-12 rounded-xl">
                         <Brain className="w-4 h-4 mr-2" /> Start AI Generation
                       </Button>
                     </CardContent>
                   </Card>
                 </motion.div>
 
-                {/* Neo-Brutalist Manual Creation Card */}
-                <motion.div whileHover={{ scale: 1.02, y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Card className="relative overflow-hidden group border-2 border-ink shadow-[8px_8px_0px_0px_#1E1E24] hover:shadow-[12px_12px_0px_0px_#1E1E24] hover:-translate-x-1 hover:-translate-y-1 transition-all h-full cursor-pointer bg-[#070E20]/90" onClick={openNewAssessmentDialog}>
+                {/* Manual Creation Card */}
+                <motion.div whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="relative overflow-hidden group border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-lg h-full cursor-pointer bg-white rounded-3xl" onClick={openNewAssessmentDialog}>
                     <CardContent className="p-8 relative z-10 h-full flex flex-col justify-between">
                       <div>
-                        <div className="w-14 h-14 bg-ink text-white rounded-2xl flex items-center justify-center mb-6 transform group-hover:rotate-12 transition-transform duration-300">
+                        <div className="w-14 h-14 bg-slate-100 text-slate-800 rounded-2xl flex items-center justify-center mb-6 border border-slate-200">
                           <Plus className="w-7 h-7" />
                         </div>
-                        <h3 className="text-2xl font-black text-zinc-200 mb-3 tracking-tight">Create Manually</h3>
-                        <p className="text-sm text-zinc-200/70 mb-8 leading-relaxed font-medium">
+                        <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Create Manually</h3>
+                        <p className="text-sm text-slate-600 mb-8 leading-relaxed font-medium">
                           Build your assessment from scratch. Define your own questions, options, and passing criteria with absolute precision and control.
                         </p>
                       </div>
-                      <Button variant="outline" className="w-full border-2 border-ink text-zinc-200 hover:bg-ink hover:text-white font-bold text-sm h-12 rounded-xl transition-colors">
+                      <Button variant="outline" className="w-full border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-sm h-12 rounded-xl">
                         Create Blank Test
                       </Button>
                     </CardContent>
@@ -646,37 +644,37 @@ export function AssessmentsPage() {
             ) : (
               <motion.div variants={fadeUp} className="space-y-4">
                 {assessments.map((a) => (
-                  <Card key={a.id} className="bg-[#070E20]/90 border-cyan-500/30 hover:border-cyan-500/30 transition-all overflow-hidden group">
-                    <CardHeader className="bg-ink/5 border-b border-cyan-500/30 pb-4">
+                  <Card key={a.id} className="bg-white border border-slate-200/90 hover:border-slate-300 shadow-sm hover:shadow-md transition-all overflow-hidden rounded-3xl group">
+                    <CardHeader className="bg-slate-50/80 border-b border-slate-100 pb-4">
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="capitalize text-[10px]">{a.assessment_type} Test</Badge>
-                            {a.requires_sea && <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none text-[10px]">SEA Enabled</Badge>}
-                            <CardTitle className="text-lg text-zinc-200">{cleanTitle(a.title)}</CardTitle>
+                            <Badge variant="outline" className="capitalize text-[10px] bg-white border-slate-200 text-slate-700">{a.assessment_type} Test</Badge>
+                            {a.requires_sea && <Badge className="bg-cyan-50 text-cyan-700 hover:bg-cyan-100 border border-cyan-200 text-[10px]">SEA Enabled</Badge>}
+                            <CardTitle className="text-lg text-slate-900 font-bold">{cleanTitle(a.title)}</CardTitle>
                           </div>
-                          <div className="flex flex-wrap gap-4 mt-3 text-xs text-zinc-200/70">
+                          <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-500 font-medium">
                             {a.scheduled_date && (
-                              <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {new Date(a.scheduled_date).toLocaleDateString()}</span>
+                              <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {new Date(a.scheduled_date).toLocaleDateString()}</span>
                             )}
                             {a.start_time && (
-                              <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {format(new Date(a.start_time), 'h:mm a')} - {a.end_time ? format(new Date(a.end_time), 'h:mm a') : 'TBD'}</span>
+                              <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-slate-400" /> {format(new Date(a.start_time), 'h:mm a')} - {a.end_time ? format(new Date(a.end_time), 'h:mm a') : 'TBD'}</span>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => openEditAssessmentDialog(a)}>Settings</Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEditAssessmentDialog(a)} className="text-slate-600 hover:text-slate-900">Settings</Button>
                           <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteAssessment(a.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-4 bg-[#070E20]/90 flex justify-between items-center">
+                    <CardContent className="p-5 bg-white flex justify-between items-center">
                       <div>
-                        <p className="text-sm font-medium text-zinc-200">Status: <span className="capitalize">{a.status.replace('_', ' ')}</span></p>
+                        <p className="text-sm font-semibold text-slate-700">Status: <span className="capitalize text-slate-900">{a.status.replace('_', ' ')}</span></p>
                       </div>
-                      <Button onClick={() => setSelectedAssessmentId(a.id)} className="bg-ink text-cream hover:bg-ink/90">
+                      <Button onClick={() => setSelectedAssessmentId(a.id)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
                         Manage Questions
                       </Button>
                     </CardContent>
@@ -689,24 +687,24 @@ export function AssessmentsPage() {
           /* DETAIL VIEW (Question Builder) */
           <>
             <motion.div variants={fadeUp}>
-              <button onClick={() => setSelectedAssessmentId(null)} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
+              <button onClick={() => setSelectedAssessmentId(null)} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-4 font-medium">
                 <ArrowLeft className="w-4 h-4" /> Back to Assessments
               </button>
               
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-bold tracking-tight text-zinc-200">{cleanTitle(selectedAssessment?.title)}</h2>
-                    <Badge variant="outline" className="capitalize text-[10px] py-0">{selectedAssessment?.assessment_type}</Badge>
+                    <h2 className="text-2xl font-black tracking-tight text-slate-900">{cleanTitle(selectedAssessment?.title)}</h2>
+                    <Badge variant="outline" className="capitalize text-[10px] py-0 border-slate-200">{selectedAssessment?.assessment_type}</Badge>
                   </div>
-                  <p className="text-xs text-zinc-200/50 mt-1">{questions.length} questions | Passing: {selectedAssessment?.passing_score}%</p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">{questions.length} questions | Passing: {selectedAssessment?.passing_score}%</p>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={() => { setEditingQuestion(emptyQuestion); setEditingQuestionId(null); setQuestionDialogOpen(true) }}
-                    className="bg-ink hover:bg-ink/90 text-cream">
+                    className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
                     <Plus className="w-4 h-4 mr-2" /> Add Question
                   </Button>
-                  <Button onClick={handleSubmitForReview} disabled={saving || questions.length === 0} variant="outline" className="border-cyan-500/30 text-zinc-200">
+                  <Button onClick={handleSubmitForReview} disabled={saving || questions.length === 0} variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
                     <Send className="w-4 h-4 mr-2" /> {selectedAssessment?.assessment_type === 'final' ? 'Submit for Admin Review' : 'Approve & Publish'}
                   </Button>
                 </div>
@@ -715,16 +713,16 @@ export function AssessmentsPage() {
               {/* Analytics Dashboard */}
               {attemptsStats && (
                 <div className="grid grid-cols-3 gap-4 mb-8">
-                  <div className="bg-[#070E20]/90 p-4 rounded-xl border border-cyan-500/30 flex flex-col justify-center items-center">
-                    <p className="text-xs text-zinc-200/60 uppercase font-bold tracking-wider mb-1">Total Attempts</p>
-                    <p className="text-2xl font-black text-zinc-200">{attemptsStats.total}</p>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Total Attempts</p>
+                    <p className="text-2xl font-black text-slate-900">{attemptsStats.total}</p>
                   </div>
-                  <div className="bg-[#070E20]/90 p-4 rounded-xl border border-cyan-500/30 flex flex-col justify-center items-center">
-                    <p className="text-xs text-zinc-200/60 uppercase font-bold tracking-wider mb-1">Average Score</p>
-                    <p className="text-2xl font-black text-blue-600">{attemptsStats.avgScore}%</p>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Average Score</p>
+                    <p className="text-2xl font-black text-cyan-600">{attemptsStats.avgScore}%</p>
                   </div>
-                  <div className="bg-[#070E20]/90 p-4 rounded-xl border border-cyan-500/30 flex flex-col justify-center items-center">
-                    <p className="text-xs text-zinc-200/60 uppercase font-bold tracking-wider mb-1">Pass Ratio</p>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Pass Ratio</p>
                     <p className={`text-2xl font-black ${attemptsStats.passRatio >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{attemptsStats.passRatio}%</p>
                   </div>
                 </div>
@@ -732,20 +730,20 @@ export function AssessmentsPage() {
             </motion.div>
 
               {/* Tabs */}
-              <div className="flex border-b border-cyan-500/30 mb-6">
+              <div className="flex border-b border-slate-200 mb-6">
                 <button 
                   onClick={() => setActiveTab('questions')}
-                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'questions' ? 'border-cyan-500/30 text-purple-600' : 'border-transparent text-zinc-200/50 hover:text-zinc-200/80'}`}
+                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'questions' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
                 >
                   Questions
                 </button>
                 <button 
                   onClick={() => setActiveTab('grading')}
-                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'grading' ? 'border-cyan-500/30 text-purple-600' : 'border-transparent text-zinc-200/50 hover:text-zinc-200/80'}`}
+                  className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'grading' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
                 >
                   Grading Queue
                   {attempts.filter(a => a.grade_status === 'pending_manual').length > 0 && (
-                    <span className="ml-2 px-2 py-0.5 bg-rose-500 text-white text-[10px] rounded-full">
+                    <span className="ml-2 px-2 py-0.5 bg-rose-500 text-white text-[10px] rounded-full font-bold">
                       {attempts.filter(a => a.grade_status === 'pending_manual').length}
                     </span>
                   )}
@@ -755,50 +753,50 @@ export function AssessmentsPage() {
             {activeTab === 'questions' ? (
               questions.length === 0 ? (
               <motion.div variants={fadeUp}>
-                <Card className="bg-[#070E20]/90 border-cyan-500/30">
+                <Card className="bg-white border border-slate-200/90 shadow-sm rounded-3xl">
                   <CardContent className="py-12 text-center">
-                    <p className="text-zinc-200/60">No questions yet. Add your first question.</p>
+                    <p className="text-slate-500 font-medium">No questions yet. Add your first question.</p>
                   </CardContent>
                 </Card>
               </motion.div>
             ) : (
               <motion.div variants={fadeUp} className="space-y-3">
-                {questions.map((q, i) => {
+                {questions.map((q) => {
                   const opts = q.options as Record<string, string>
                   return (
-                    <div key={q.id} className="p-4 rounded-xl bg-[#070E20]/90 border border-cyan-500/30 hover:border-cyan-500/30 transition-all">
+                    <div key={q.id} className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 shadow-sm transition-all">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-slate-800">Q{q.position}. {q.question_text}</h4>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 capitalize mb-2 inline-block">
+                          <h4 className="font-bold text-slate-900 text-base mb-1">Q{q.position}. {q.question_text}</h4>
+                          <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold capitalize mb-3 inline-block">
                             {(q as any).question_type?.replace('_', ' ') || 'Question'}
                           </span>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             {(q as any).question_type === 'open_ended' ? (
-                               <div className="col-span-2 px-3 py-2 rounded-lg bg-ink/5 border border-cyan-500/30 text-zinc-200/80 italic">
+                               <div className="col-span-2 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 italic font-medium">
                                  Open-Ended Question. Reference Answer: {q.correct_answer}
                                </div>
                             ) : (
                                ['A', 'B', 'C', 'D'].map(opt => (
-                                <div key={opt} className={`px-3 py-2 rounded-lg border ${
+                                <div key={opt} className={`px-3.5 py-2.5 rounded-xl border ${
                                   q.correct_answer === opt
-                                    ? 'bg-ink/10 border-cyan-500/30 text-zinc-200'
-                                    : 'bg-ink/5 border-cyan-500/30 text-zinc-200/60'
+                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold'
+                                    : 'bg-slate-50 border-slate-200 text-slate-700 font-medium'
                                 }`}>
-                                  <span className="font-medium mr-1">{opt}.</span> {opts[opt]}
+                                  <span className="font-bold mr-1">{opt}.</span> {opts[opt]}
                                 </div>
                               ))
                             )}
                           </div>
                           {q.explanation && (
-                            <p className="text-xs text-zinc-200/50 mt-2 italic">Explanation: {q.explanation}</p>
+                            <p className="text-xs text-slate-500 mt-2.5 italic">Explanation: {q.explanation}</p>
                           )}
                         </div>
                         <div className="flex gap-1 shrink-0">
-                          <button onClick={() => openEditQuestion(q)} className="p-1.5 rounded-lg hover:bg-ink/5 text-zinc-200/60 hover:text-zinc-200 transition-all">
+                          <button onClick={() => openEditQuestion(q)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-all">
                             <FileText className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-200/60 hover:text-red-600 transition-all">
+                          <button onClick={() => handleDeleteQuestion(q.id)} className="p-2 rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-all">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -810,35 +808,35 @@ export function AssessmentsPage() {
             )) : (
               <motion.div variants={fadeUp} className="space-y-4">
                 {attempts.length === 0 ? (
-                  <Card className="bg-[#070E20]/90 border-cyan-500/30">
+                  <Card className="bg-white border border-slate-200/90 shadow-sm rounded-3xl">
                     <CardContent className="py-12 text-center">
-                      <p className="text-zinc-200/60">No attempts submitted yet.</p>
+                      <p className="text-slate-500 font-medium">No attempts submitted yet.</p>
                     </CardContent>
                   </Card>
                 ) : (
                   attempts.map((att) => (
-                    <Card key={att.id} className="bg-[#070E20]/90 border-cyan-500/30">
-                      <CardHeader className="bg-ink/5 border-b border-cyan-500/30 py-3 px-4">
+                    <Card key={att.id} className="bg-white border border-slate-200/90 shadow-sm rounded-3xl overflow-hidden">
+                      <CardHeader className="bg-slate-50 border-b border-slate-100 py-3.5 px-5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-zinc-200">{att.profiles?.first_name} {att.profiles?.last_name}</span>
-                            <span className="text-xs text-zinc-200/50">{new Date(att.submitted_at).toLocaleString()}</span>
+                            <span className="font-bold text-slate-900">{att.profiles?.first_name} {att.profiles?.last_name}</span>
+                            <span className="text-xs text-slate-400 font-medium">{new Date(att.submitted_at).toLocaleString()}</span>
                           </div>
-                          <Badge className={att.grade_status === 'pending_manual' ? 'bg-orange-100 text-orange-800 hover:bg-orange-100' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100'}>
+                          <Badge className={att.grade_status === 'pending_manual' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100'}>
                             {att.grade_status === 'pending_manual' ? 'Needs Grading' : `Graded: ${att.score}%`}
                           </Badge>
                         </div>
                       </CardHeader>
-                      <CardContent className="p-4 space-y-6">
-                        {questions.filter(q => (q as any).question_type === 'open_ended').map((q, i) => {
+                      <CardContent className="p-5 space-y-6">
+                        {questions.filter(q => (q as any).question_type === 'open_ended').map((q) => {
                           const traineeAnswer = att.answers?.[q.id] || 'No answer provided.';
                           return (
-                            <div key={q.id} className="space-y-2 border-b border-cyan-500/30 pb-4 last:border-0">
-                              <p className="text-sm font-medium text-zinc-200"><span className="text-zinc-200/50 mr-1">Q.</span>{q.question_text}</p>
-                              <div className="bg-ink/5 p-3 rounded-lg text-sm text-zinc-200/80 font-mono whitespace-pre-wrap">
+                            <div key={q.id} className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
+                              <p className="text-sm font-semibold text-slate-900"><span className="text-slate-400 mr-1">Q.</span>{q.question_text}</p>
+                              <div className="bg-slate-50 p-3 rounded-xl text-sm text-slate-800 font-mono whitespace-pre-wrap border border-slate-200">
                                 {traineeAnswer}
                               </div>
-                              <div className="bg-emerald-50 p-3 rounded-lg text-xs text-emerald-900 italic border border-emerald-100">
+                              <div className="bg-emerald-50 p-3 rounded-xl text-xs text-emerald-900 italic border border-emerald-200">
                                 <span className="font-bold block mb-1">Reference/Rubric:</span>
                                 {q.correct_answer}
                               </div>
@@ -846,12 +844,12 @@ export function AssessmentsPage() {
                           )
                         })}
                         {att.grade_status === 'pending_manual' && (
-                          <div className="flex items-center gap-3 pt-4 border-t border-cyan-500/30">
-                            <Label className="font-bold text-zinc-200 whitespace-nowrap">Final Score (0-100):</Label>
+                          <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                            <Label className="font-bold text-slate-900 whitespace-nowrap">Final Score (0-100):</Label>
                             <Input 
                               type="number" 
                               min="0" max="100" 
-                              className="w-24 bg-[#070E20]/90 border-cyan-500/30"
+                              className="w-24 bg-slate-50 border-slate-200 text-slate-900 rounded-xl"
                               placeholder={att.score?.toString()}
                               value={gradingAttemptId === att.id ? gradingScore : att.score}
                               onChange={(e) => {
@@ -861,7 +859,7 @@ export function AssessmentsPage() {
                             />
                             <Button 
                               size="sm" 
-                              className="bg-ink text-cream hover:bg-ink/90"
+                              className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl"
                               onClick={() => handleGradeAttempt(att.id)}
                               disabled={saving || gradingAttemptId !== att.id}
                             >
@@ -880,15 +878,15 @@ export function AssessmentsPage() {
 
         {/* Question Dialog */}
         <Dialog open={questionDialogOpen} onOpenChange={(o) => { if (!o) { setQuestionDialogOpen(false); setEditingQuestionId(null) } }}>
-          <DialogContent className="max-w-lg bg-[#070E20]/90 border-cyan-500/30">
+          <DialogContent className="max-w-lg bg-white border border-slate-200/90 shadow-2xl rounded-3xl text-slate-900">
             <DialogHeader>
-              <DialogTitle className="text-zinc-200">{editingQuestionId ? 'Edit Question' : 'Add Question'}</DialogTitle>
+              <DialogTitle className="text-slate-900 font-black text-xl">{editingQuestionId ? 'Edit Question' : 'Add Question'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-zinc-200/80">Question Type</Label>
+                <Label className="text-slate-700 font-semibold text-xs">Question Type</Label>
                 <Select value={editingQuestion.question_type} onValueChange={(v: 'mcq' | 'open_ended') => setEditingQuestion(p => ({ ...p, question_type: v }))}>
-                  <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="mcq">Multiple Choice</SelectItem>
                     <SelectItem value="open_ended">Open-Ended (Text)</SelectItem>
@@ -896,9 +894,9 @@ export function AssessmentsPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-zinc-200/80">Difficulty</Label>
+                <Label className="text-slate-700 font-semibold text-xs">Difficulty</Label>
                 <Select value={editingQuestion.difficulty} onValueChange={(v: 'easy' | 'medium' | 'hard') => setEditingQuestion(p => ({ ...p, difficulty: v }))}>
-                  <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="easy">Easy</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -907,52 +905,52 @@ export function AssessmentsPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-zinc-200/80">Question *</Label>
-                <Textarea value={editingQuestion.question_text} onChange={e => setEditingQuestion(p => ({ ...p, question_text: e.target.value }))} rows={3} className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
+                <Label className="text-slate-700 font-semibold text-xs">Question *</Label>
+                <Textarea value={editingQuestion.question_text} onChange={e => setEditingQuestion(p => ({ ...p, question_text: e.target.value }))} rows={3} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
               </div>
 
               {editingQuestion.question_type === 'mcq' ? (
                 <>
                   {['A', 'B', 'C', 'D'].map(opt => (
                     <div key={opt} className="space-y-1.5">
-                      <Label className="text-zinc-200/80">Option {opt} *</Label>
+                      <Label className="text-slate-700 font-semibold text-xs">Option {opt} *</Label>
                       <Input value={editingQuestion[`option_${opt.toLowerCase()}` as keyof QuestionForm] as string}
                         onChange={e => setEditingQuestion(p => ({ ...p, [`option_${opt.toLowerCase()}`]: e.target.value }))}
-                        className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
+                        className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
                     </div>
                   ))}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-zinc-200/80">Correct Answer</Label>
+                      <Label className="text-slate-700 font-semibold text-xs">Correct Answer</Label>
                       <select value={editingQuestion.correct_answer}
                         onChange={e => setEditingQuestion(p => ({ ...p, correct_answer: e.target.value }))}
-                        className="w-full h-10 px-3 rounded-lg bg-ink/5 border border-cyan-500/30 text-zinc-200 text-sm appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-ink/30">
-                        <option value="A" className="bg-[#070E20]/90 text-zinc-200">A</option>
-                        <option value="B" className="bg-[#070E20]/90 text-zinc-200">B</option>
-                        <option value="C" className="bg-[#070E20]/90 text-zinc-200">C</option>
-                        <option value="D" className="bg-[#070E20]/90 text-zinc-200">D</option>
+                        className="w-full h-10 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-zinc-200/80">Explanation</Label>
-                      <Input value={editingQuestion.explanation} onChange={e => setEditingQuestion(p => ({ ...p, explanation: e.target.value }))} className="bg-ink/5 border-cyan-500/30 text-zinc-200" placeholder="Optional" />
+                      <Label className="text-slate-700 font-semibold text-xs">Explanation</Label>
+                      <Input value={editingQuestion.explanation} onChange={e => setEditingQuestion(p => ({ ...p, explanation: e.target.value }))} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" placeholder="Optional" />
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80">Reference Answer / Grading Rubric</Label>
+                    <Label className="text-slate-700 font-semibold text-xs">Reference Answer / Grading Rubric</Label>
                     <Textarea value={editingQuestion.correct_answer}
                       onChange={e => setEditingQuestion(p => ({ ...p, correct_answer: e.target.value }))}
-                      className="bg-ink/5 border-cyan-500/30 text-zinc-200" rows={3} placeholder="What should a good answer contain?" />
+                      className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" rows={3} placeholder="What should a good answer contain?" />
                   </div>
                 </div>
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setQuestionDialogOpen(false); setEditingQuestionId(null) }} className="border-cyan-500/30 text-zinc-200">Cancel</Button>
-              <Button onClick={handleSaveQuestion} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream">
+              <Button variant="outline" onClick={() => { setQuestionDialogOpen(false); setEditingQuestionId(null) }} className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">Cancel</Button>
+              <Button onClick={handleSaveQuestion} disabled={saving} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 {editingQuestionId ? 'Update' : 'Add'} Question
               </Button>
@@ -962,19 +960,19 @@ export function AssessmentsPage() {
 
         {/* Assessment Settings Dialog */}
         <Dialog open={assessmentDialogOpen} onOpenChange={setAssessmentDialogOpen}>
-          <DialogContent className="sm:max-w-[425px] bg-[#070E20]/90 border-cyan-500/30">
+          <DialogContent className="sm:max-w-[425px] bg-white border border-slate-200/90 shadow-2xl rounded-3xl text-slate-900">
             <DialogHeader>
-              <DialogTitle className="text-zinc-200">{editingAssessmentId ? 'Edit Test Details' : 'New Test / Assessment'}</DialogTitle>
+              <DialogTitle className="text-slate-900 font-black text-xl">{editingAssessmentId ? 'Edit Test Details' : 'New Test / Assessment'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-1.5">
-                <Label className="text-zinc-200/80">Title</Label>
-                <Input value={assessmentForm.title} onChange={e => setAssessmentForm({...assessmentForm, title: e.target.value})} placeholder="e.g. Midterm Mock Test" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
+                <Label className="text-slate-700 font-semibold text-xs">Title</Label>
+                <Input value={assessmentForm.title} onChange={e => setAssessmentForm({...assessmentForm, title: e.target.value})} placeholder="e.g. Midterm Mock Test" className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-zinc-200/80">Assessment Type</Label>
+                <Label className="text-slate-700 font-semibold text-xs">Assessment Type</Label>
                 <Select value={assessmentForm.assessment_type} onValueChange={(v) => setAssessmentForm({ ...assessmentForm, assessment_type: v as any })}>
-                  <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="daily">Daily Assessment</SelectItem>
                     <SelectItem value="mock">Mock Test</SelectItem>
@@ -984,39 +982,39 @@ export function AssessmentsPage() {
               </div>
               
               <div className="space-y-1.5">
-                <Label className="text-zinc-200/80">Scheduled Date</Label>
-                <Input type="date" value={assessmentForm.scheduled_date} onChange={e => setAssessmentForm({...assessmentForm, scheduled_date: e.target.value})} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
-                {course && <p className="text-[10px] text-zinc-200/50">Must be between {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'start'} and {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'end'} of course.</p>}
+                <Label className="text-slate-700 font-semibold text-xs">Scheduled Date</Label>
+                <Input type="date" value={assessmentForm.scheduled_date} onChange={e => setAssessmentForm({...assessmentForm, scheduled_date: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
+                {course && <p className="text-[10px] text-slate-500">Must be between {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'start'} and {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'end'} of course.</p>}
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-zinc-200/80">Results Publish Date</Label>
-                <Input type="date" value={assessmentForm.results_publish_date} onChange={e => setAssessmentForm({...assessmentForm, results_publish_date: e.target.value})} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
-                <p className="text-[10px] text-zinc-200/50">If set, trainee marks are hidden until this date.</p>
+                <Label className="text-slate-700 font-semibold text-xs">Results Publish Date</Label>
+                <Input type="date" value={assessmentForm.results_publish_date} onChange={e => setAssessmentForm({...assessmentForm, results_publish_date: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
+                <p className="text-[10px] text-slate-500">If set, trainee marks are hidden until this date.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2 border border-brand/20 p-3 rounded-lg bg-brand/5 mt-2 transition-all">
+                <div className="flex items-center space-x-2 border border-cyan-200 p-3 rounded-xl bg-cyan-50/50 mt-2 transition-all">
                   <input 
                     type="checkbox" 
                     id="is_adaptive" 
-                    className="w-4 h-4 rounded text-brand border-brand/30"
+                    className="w-4 h-4 rounded text-cyan-600 border-cyan-300"
                     checked={assessmentForm.is_adaptive}
                     onChange={(e) => setAssessmentForm({ ...assessmentForm, is_adaptive: e.target.checked })}
                   />
-                  <Label htmlFor="is_adaptive" className="text-brand font-bold flex-1 cursor-pointer text-xs">
+                  <Label htmlFor="is_adaptive" className="text-cyan-800 font-bold flex-1 cursor-pointer text-xs">
                     Adaptive MCQ Mode
                   </Label>
                 </div>
-                <div className="flex items-center space-x-2 border border-emerald-500/20 p-3 rounded-lg bg-emerald-50 mt-2 transition-all">
+                <div className="flex items-center space-x-2 border border-emerald-200 p-3 rounded-xl bg-emerald-50 mt-2 transition-all">
                   <input 
                     type="checkbox" 
                     id="is_simulation" 
-                    className="w-4 h-4 rounded text-emerald-600 border-emerald-500/30"
+                    className="w-4 h-4 rounded text-emerald-600 border-emerald-300"
                     checked={assessmentForm.is_simulation}
                     onChange={(e) => setAssessmentForm({ ...assessmentForm, is_simulation: e.target.checked })}
                   />
-                  <Label htmlFor="is_simulation" className="text-emerald-700 font-bold flex-1 cursor-pointer text-xs">
+                  <Label htmlFor="is_simulation" className="text-emerald-800 font-bold flex-1 cursor-pointer text-xs">
                     IMD Simulation Mode
                   </Label>
                 </div>
@@ -1024,9 +1022,9 @@ export function AssessmentsPage() {
 
               {assessmentForm.is_simulation && (
                 <div className="space-y-1.5">
-                  <Label className="text-zinc-200/80">Dataset URL / Image Link (Optional)</Label>
-                  <Input value={assessmentForm.simulation_dataset_url} onChange={e => setAssessmentForm({...assessmentForm, simulation_dataset_url: e.target.value})} placeholder="https://example.com/weather-chart.jpg" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
-                  <p className="text-[10px] text-zinc-200/50">Link to weather chart or dataset to display alongside questions.</p>
+                  <Label className="text-slate-700 font-semibold text-xs">Dataset URL / Image Link (Optional)</Label>
+                  <Input value={assessmentForm.simulation_dataset_url} onChange={e => setAssessmentForm({...assessmentForm, simulation_dataset_url: e.target.value})} placeholder="https://example.com/weather-chart.jpg" className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
+                  <p className="text-[10px] text-slate-500">Link to weather chart or dataset to display alongside questions.</p>
                 </div>
               )}
 
@@ -1034,17 +1032,17 @@ export function AssessmentsPage() {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-zinc-200/80">Start Time</Label>
-                      <Input type="time" value={assessmentForm.start_time} onChange={e => setAssessmentForm({...assessmentForm, start_time: e.target.value})} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
+                      <Label className="text-slate-700 font-semibold text-xs">Start Time</Label>
+                      <Input type="time" value={assessmentForm.start_time} onChange={e => setAssessmentForm({...assessmentForm, start_time: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-zinc-200/80">End Time</Label>
-                      <Input type="time" value={assessmentForm.end_time} onChange={e => setAssessmentForm({...assessmentForm, end_time: e.target.value})} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9" />
+                      <Label className="text-slate-700 font-semibold text-xs">End Time</Label>
+                      <Input type="time" value={assessmentForm.end_time} onChange={e => setAssessmentForm({...assessmentForm, end_time: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
                     </div>
                   </div>
                   {assessmentForm.start_time && assessmentForm.end_time && (
-                    <div className="text-xs font-medium text-zinc-200/70">
-                      Duration: <span className="text-brand">
+                    <div className="text-xs font-medium text-slate-600">
+                      Duration: <span className="text-cyan-700 font-bold">
                         {(() => {
                           const [startH, startM] = assessmentForm.start_time.split(':').map(Number);
                           const [endH, endM] = assessmentForm.end_time.split(':').map(Number);
@@ -1060,26 +1058,26 @@ export function AssessmentsPage() {
                 </>
               )}
               
-              <div className="flex items-center space-x-2 border border-brand/20 p-3 rounded-lg bg-brand/5 mt-4 opacity-80 pointer-events-none">
+              <div className="flex items-center space-x-2 border border-cyan-200 p-3 rounded-xl bg-cyan-50/50 mt-4 opacity-90 pointer-events-none">
                 <input 
                   type="checkbox" 
                   id="requires_sea" 
-                  className="w-4 h-4 rounded text-brand border-brand/30"
+                  className="w-4 h-4 rounded text-cyan-600 border-cyan-300"
                   checked={true}
                   disabled
                   onChange={() => {}}
                 />
-                <Label htmlFor="requires_sea" className="text-brand font-bold flex-1">
+                <Label htmlFor="requires_sea" className="text-cyan-800 font-bold flex-1 text-xs">
                   Require SEA (Secure Exam Mode)
                 </Label>
               </div>
-              <div className="text-xs text-brand/80 pl-8 pb-2 font-medium">
+              <div className="text-xs text-cyan-700 pl-2 font-medium">
                 Locked: Secure Exam Mode (SEA) is permanently enabled for all assessments.
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)} className="border-cyan-500/30 text-zinc-200">Cancel</Button>
-              <Button onClick={handleSaveAssessment} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream">
+              <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)} className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">Cancel</Button>
+              <Button onClick={handleSaveAssessment} disabled={saving} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Save
               </Button>
@@ -1087,46 +1085,46 @@ export function AssessmentsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* AI Generation Dialog (Light Theme) */}
+        {/* AI Generation Dialog */}
         <Dialog open={aiGenDialogOpen} onOpenChange={setAiGenDialogOpen}>
-          <DialogContent className="sm:max-w-[500px] bg-[#070E20]/90 border border-cyan-500/30 shadow-xl !rounded-2xl overflow-hidden p-0">
-            <div className="relative z-10 p-6">
+          <DialogContent className="sm:max-w-[500px] bg-white border border-slate-200/90 shadow-2xl rounded-3xl overflow-hidden p-0 text-slate-900">
+            <div className="p-6">
               <DialogHeader className="mb-6">
-                <DialogTitle className="text-xl font-bold text-zinc-200 flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg border border-cyan-500/30">
-                    <Brain className="w-5 h-5 text-purple-600"/> 
+                <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-3">
+                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-200 text-cyan-600">
+                    <Brain className="w-5 h-5"/> 
                   </div>
                   Auto-Generate Test
                 </DialogTitle>
-                <p className="text-zinc-200/60 text-sm mt-1">Harness AI to instantly create a highly effective assessment.</p>
+                <p className="text-slate-500 text-sm mt-1 font-medium">Harness AI to instantly create a highly effective assessment.</p>
               </DialogHeader>
 
               <div className="space-y-5">
                 <div className="space-y-1.5">
-                  <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Assessment Type</Label>
+                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Assessment Type</Label>
                   <Select value={aiGenForm.type} onValueChange={v => setAiGenForm({...aiGenForm, type: v})}>
-                    <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#070E20]/90 border-cyan-500/30 text-zinc-200 rounded-lg">
-                      <SelectItem value="daily_test" className="focus:bg-cyan-950/30 focus:text-cyan-400">Daily Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="assessment_test" className="focus:bg-cyan-950/30 focus:text-cyan-400">Assessment Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="mock_test" className="focus:bg-cyan-950/30 focus:text-cyan-400">Mock Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="final" className="focus:bg-cyan-950/30 focus:text-cyan-400">Final Exam (Admin Approval Required)</SelectItem>
+                    <SelectContent>
+                      <SelectItem value="daily_test">Daily Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="assessment_test">Assessment Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="mock_test">Mock Test (Trainer Approved)</SelectItem>
+                      <SelectItem value="final">Final Exam (Admin Approval Required)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Source Material (Optional)</Label>
+                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Source Material (Optional)</Label>
                   <Select value={aiGenForm.material_id} onValueChange={v => setAiGenForm({...aiGenForm, material_id: v})}>
-                    <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all">
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl">
                       <SelectValue placeholder="Select a course material" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#070E20]/90 border-cyan-500/30 text-zinc-200 rounded-lg max-h-60">
-                      <SelectItem value="none" className="focus:bg-cyan-950/30 focus:text-cyan-400">None (Provide topic manually)</SelectItem>
+                    <SelectContent className="max-h-60">
+                      <SelectItem value="none">None (Provide topic manually)</SelectItem>
                       {materials.map(m => (
-                        <SelectItem key={m.id} value={m.id} className="focus:bg-cyan-950/30 focus:text-cyan-400">
+                        <SelectItem key={m.id} value={m.id}>
                           {m.file_name} {m.extracted_text ? '' : '(No text)'}
                         </SelectItem>
                       ))}
@@ -1135,40 +1133,40 @@ export function AssessmentsPage() {
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Topic / Instructions for AI {aiGenForm.material_id !== 'none' && '(Optional)'}</Label>
+                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Topic / Instructions for AI {aiGenForm.material_id !== 'none' && '(Optional)'}</Label>
                   <div className="relative">
                     <Textarea 
                       placeholder="e.g. Generate a test about advanced marine biology and coral reefs..." 
                       value={aiGenForm.topic} 
                       onChange={e => setAiGenForm({...aiGenForm, topic: e.target.value})} 
-                      className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-24 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all resize-none p-3 placeholder:text-zinc-200/30" 
+                      className="bg-slate-50 border-slate-200 text-slate-900 h-24 rounded-xl resize-none p-3 placeholder:text-slate-400" 
                     />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Number of Questions</Label>
+                    <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Number of Questions</Label>
                     <Input 
                       type="number"
                       min="1"
                       max="50"
                       value={aiGenForm.count}
                       onChange={e => setAiGenForm({...aiGenForm, count: parseInt(e.target.value) || 5})}
-                      className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all"
+                      className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 font-semibold text-xs uppercase tracking-wider">Difficulty Level</Label>
+                    <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Difficulty Level</Label>
                     <Select value={aiGenForm.difficulty} onValueChange={v => setAiGenForm({...aiGenForm, difficulty: v})}>
-                      <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 rounded-lg focus:ring-purple-500 focus:border-cyan-500/30 transition-all">
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#070E20]/90 border-cyan-500/30 text-zinc-200 rounded-lg">
-                        <SelectItem value="mixed" className="focus:bg-cyan-950/30 focus:text-cyan-400">Mixed Combinations</SelectItem>
-                        <SelectItem value="easy" className="focus:bg-cyan-950/30 focus:text-cyan-400">Easy</SelectItem>
-                        <SelectItem value="medium" className="focus:bg-cyan-950/30 focus:text-cyan-400">Medium</SelectItem>
-                        <SelectItem value="hard" className="focus:bg-cyan-950/30 focus:text-cyan-400">Hard</SelectItem>
+                      <SelectContent>
+                        <SelectItem value="mixed">Mixed Combinations</SelectItem>
+                        <SelectItem value="easy">Easy</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="hard">Hard</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1176,10 +1174,10 @@ export function AssessmentsPage() {
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
-                <Button variant="ghost" onClick={() => setAiGenDialogOpen(false)} className="text-zinc-200/60 hover:text-zinc-200 hover:bg-ink/5 h-10 rounded-lg px-4 border-0">
+                <Button variant="outline" onClick={() => setAiGenDialogOpen(false)} className="border-slate-200 text-slate-700 hover:bg-slate-50 h-11 rounded-xl px-5">
                   Cancel
                 </Button>
-                <Button onClick={handleAIGenerate} disabled={saving} className="bg-purple-600 text-white hover:bg-purple-700 font-semibold h-10 rounded-lg px-6 shadow-sm transition-all border-0">
+                <Button onClick={handleAIGenerate} disabled={saving} className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:opacity-95 font-semibold h-11 rounded-xl px-6 shadow-md shadow-cyan-600/10">
                   {saving ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin text-white/80" /> Synthesizing...</>
                   ) : (

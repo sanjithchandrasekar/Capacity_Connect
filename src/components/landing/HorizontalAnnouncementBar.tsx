@@ -66,8 +66,35 @@ export function HorizontalAnnouncementBar() {
     },
   });
 
-  // Combine database announcements with default items so there is always a rich flowing stream
+  const getTagColorClass = (color?: string) => {
+    switch (color) {
+      case 'amber':
+        return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+      case 'emerald':
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+      case 'sky':
+        return 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+      case 'purple':
+        return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+      case 'cyan':
+      default:
+        return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+    }
+  };
+
+  // Prioritize admin configured items when present
   const announcementsList = React.useMemo(() => {
+    if (settings?.announcements_items && settings.announcements_items.length > 0) {
+      return settings.announcements_items.map((item, idx) => ({
+        id: item.id || `admin-ann-${idx}`,
+        tag: item.tag || 'Notice',
+        tagColor: getTagColorClass(item.tag_color),
+        title: item.title,
+        icon: Megaphone,
+        link: item.link || '/courses',
+      }));
+    }
+
     const items: Array<{
       id: string;
       tag: string;
@@ -90,7 +117,7 @@ export function HorizontalAnnouncementBar() {
       });
     }
 
-    // Append fallback curated items
+    // Append fallback curated items only if no admin items exist
     defaultAnnouncements.forEach((d) => {
       if (!items.some((i) => i.title === d.title)) {
         items.push(d);
@@ -98,7 +125,7 @@ export function HorizontalAnnouncementBar() {
     });
 
     return items;
-  }, [dbAnnouncements]);
+  }, [settings?.announcements_items, dbAnnouncements]);
 
   // If toggled off by admin, do not render
   if (settings && !settings.announcements_bar_enabled) {

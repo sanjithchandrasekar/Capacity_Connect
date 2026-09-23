@@ -159,10 +159,10 @@ const stats = [
     suffix: '+',
     icon: BookOpen,
     desc: 'All MoES-certified',
-    glow: 'from-cyan-500/20 to-transparent',
-    border: 'border-cyan-500/30 hover:border-cyan-400',
-    iconColor: 'text-cyan-400',
-    iconBg: 'bg-cyan-950/80 border border-cyan-500/40',
+    glow: 'from-cyan-500/10 to-transparent',
+    border: 'border-slate-200/80 hover:border-cyan-500/50',
+    iconColor: 'text-cyan-600',
+    iconBg: 'bg-cyan-50 border border-cyan-200 shadow-sm',
   },
   {
     label: 'Active Users',
@@ -170,10 +170,10 @@ const stats = [
     suffix: '+',
     icon: Users,
     desc: 'Real scientists, real officers',
-    glow: 'from-sky-500/20 to-transparent',
-    border: 'border-sky-500/30 hover:border-sky-400',
-    iconColor: 'text-sky-400',
-    iconBg: 'bg-sky-950/80 border border-sky-500/40',
+    glow: 'from-sky-500/10 to-transparent',
+    border: 'border-slate-200/80 hover:border-sky-500/50',
+    iconColor: 'text-sky-600',
+    iconBg: 'bg-sky-50 border border-sky-200 shadow-sm',
   },
   {
     label: 'Completion Rate',
@@ -181,10 +181,10 @@ const stats = [
     suffix: '%',
     icon: BarChart3,
     desc: 'Learners who actually finish',
-    glow: 'from-amber-500/20 to-transparent',
-    border: 'border-amber-500/30 hover:border-amber-400',
-    iconColor: 'text-amber-400',
-    iconBg: 'bg-amber-950/80 border border-amber-500/40',
+    glow: 'from-amber-500/10 to-transparent',
+    border: 'border-slate-200/80 hover:border-amber-500/50',
+    iconColor: 'text-amber-600',
+    iconBg: 'bg-amber-50 border border-amber-200 shadow-sm',
   },
   {
     label: 'Certificates Issued',
@@ -192,10 +192,10 @@ const stats = [
     suffix: '+',
     icon: Star,
     desc: 'Credentials that hold up',
-    glow: 'from-emerald-500/20 to-transparent',
-    border: 'border-emerald-500/30 hover:border-emerald-400',
-    iconColor: 'text-emerald-400',
-    iconBg: 'bg-emerald-950/80 border border-emerald-500/40',
+    glow: 'from-emerald-500/10 to-transparent',
+    border: 'border-slate-200/80 hover:border-emerald-500/50',
+    iconColor: 'text-emerald-600',
+    iconBg: 'bg-emerald-50 border border-emerald-200 shadow-sm',
   },
 ];
 
@@ -211,7 +211,7 @@ const roles = [
       'Verifiable government micro-credentials',
     ],
     border: 'border-cyan-500/30 hover:border-cyan-400',
-    bg: 'bg-[#081022]/90',
+    bg: 'bg-gradient-to-b from-[#081226] via-[#060D1E] to-[#040814]',
     iconBg: 'bg-gradient-to-br from-cyan-600 to-blue-700 shadow-lg shadow-cyan-600/30',
     badgeColor: 'text-cyan-300 bg-cyan-950/80 border-cyan-500/40',
   },
@@ -226,7 +226,7 @@ const roles = [
       'Automated assessment generation & scoring',
     ],
     border: 'border-amber-500/30 hover:border-amber-400',
-    bg: 'bg-[#081022]/90',
+    bg: 'bg-gradient-to-b from-[#081226] via-[#060D1E] to-[#040814]',
     iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30',
     badgeColor: 'text-amber-300 bg-amber-950/80 border-amber-500/40',
   },
@@ -634,7 +634,7 @@ export function LandingPage() {
       {/* ========================================================================= */}
       {/* 3. STATS OVERVIEW SECTION (200+ Courses, 5000+ Users, 94% Completion, etc) */}
       {/* ========================================================================= */}
-      <section id="stats-section" className="relative py-20 bg-[#030712] border-t border-cyan-500/20">
+      <section id="stats-section" className="relative py-20 bg-gradient-to-b from-[#f8fafc] via-white to-[#f1f5f9] text-slate-900 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div
             variants={stagger}
@@ -647,7 +647,7 @@ export function LandingPage() {
               <motion.div
                 key={s.label}
                 variants={fadeUp}
-                className={`group relative bg-[#070E20]/90 border ${s.border} rounded-2xl p-6 text-center hover:scale-[1.02] shadow-xl shadow-cyan-950/40 transition-all duration-300 overflow-hidden`}
+                className={`group relative bg-white border ${s.border} rounded-2xl p-6 text-center hover:scale-[1.02] shadow-xl shadow-slate-200/60 hover:shadow-2xl transition-all duration-300 overflow-hidden`}
               >
                 {/* Background gradient glow on hover */}
                 <div
@@ -656,15 +656,15 @@ export function LandingPage() {
 
                 <div className="relative z-10">
                   <div
-                    className={`w-12 h-12 rounded-xl ${s.iconBg} flex items-center justify-center mx-auto mb-4 ${s.iconColor} group-hover:scale-110 transition-transform duration-300 shadow-md`}
+                    className={`w-12 h-12 rounded-xl ${s.iconBg} flex items-center justify-center mx-auto mb-4 ${s.iconColor} group-hover:scale-110 transition-transform duration-300`}
                   >
                     <s.icon className="w-6 h-6" />
                   </div>
-                  <div className="text-3xl sm:text-4xl font-extrabold font-display text-white mb-1 tracking-tight">
+                  <div className="text-3xl sm:text-4xl font-extrabold font-display text-slate-900 mb-1 tracking-tight">
                     <AnimatedCounter target={s.target} suffix={s.suffix} />
                   </div>
-                  <div className="text-sm font-semibold text-slate-200 mb-1 tracking-[-0.01em]">{s.label}</div>
-                  <div className="text-xs text-slate-400 font-mono">{s.desc}</div>
+                  <div className="text-sm font-semibold text-slate-800 mb-1 tracking-[-0.01em]">{s.label}</div>
+                  <div className="text-xs text-slate-500 font-medium">{s.desc}</div>
                 </div>
               </motion.div>
             ))}
@@ -680,17 +680,17 @@ export function LandingPage() {
       {/* ========================================================================= */}
       {/* 4. "BUILT FOR EVERY ROLE" (Trainees, Trainers, Coordinators)              */}
       {/* ========================================================================= */}
-      <section id="roles-section" className="relative py-24 bg-[#040814] border-t border-cyan-500/20">
+      <section id="roles-section" className="relative py-24 bg-gradient-to-b from-[#f1f5f9] via-white to-[#f8fafc] text-slate-900 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/70 border border-cyan-500/30 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-4 shadow-lg shadow-cyan-950/50">
-              <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs font-semibold uppercase tracking-wider mb-4 shadow-sm">
+              <Layers className="w-3.5 h-3.5 text-cyan-600" />
               Role-Specific Workspaces
             </div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-display text-white tracking-[-0.02em] mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-display text-slate-900 tracking-[-0.02em] mb-4">
               Designed for Every Stakeholder
             </h2>
-            <p className="text-slate-300 text-base sm:text-lg tracking-[-0.01em]">
+            <p className="text-slate-600 text-base sm:text-lg tracking-[-0.01em]">
               Tailored dashboards and tools configured specifically for field trainees, scientific
               instructors, and ministry administrators.
             </p>
@@ -704,7 +704,7 @@ export function LandingPage() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className={`group relative p-8 sm:p-10 rounded-3xl border ${r.border} ${r.bg} backdrop-blur-xl shadow-2xl shadow-cyan-950/60 hover:shadow-cyan-500/10 transition-all duration-500 hover:-translate-y-1 overflow-hidden flex flex-col justify-between`}
+                className={`group relative p-8 sm:p-10 rounded-3xl border ${r.border} ${r.bg} backdrop-blur-xl shadow-2xl shadow-black/70 hover:shadow-cyan-500/10 transition-all duration-500 hover:-translate-y-1 overflow-hidden flex flex-col justify-between`}
               >
                 <div className="relative z-10">
                   <div className="flex items-center justify-between gap-4 mb-6">
@@ -757,7 +757,7 @@ export function LandingPage() {
       {(!settings || settings.upcoming_tracks_enabled) && (
         <section
           id="courses-preview"
-          className="relative py-24 sm:py-32 bg-[#030712] border-t border-cyan-500/20 overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Inter',sans-serif]"
+          className="relative py-24 sm:py-32 bg-gradient-to-b from-[#f8fafc] via-white to-[#f1f5f9] text-slate-900 border-t border-slate-200 overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Inter',sans-serif]"
         >
           {/* Ambient atmospheric backdrop glow */}
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-cyan-500/5 rounded-full blur-[140px] pointer-events-none" />
@@ -765,21 +765,21 @@ export function LandingPage() {
           <div className="max-w-6xl mx-auto px-6 relative z-10">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 gap-6">
               <div>
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#070E20]/90/10 border border-white/20 text-zinc-200 text-[11px] font-medium tracking-wide uppercase mb-3 sm:mb-4 shadow-sm backdrop-blur-md">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-[11px] font-semibold tracking-wide uppercase mb-3 sm:mb-4 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-600" />
                   <span>{settings?.upcoming_tracks_tag || 'Upcoming Announcements'}</span>
                 </div>
-                <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-[-0.025em] leading-[1.08] text-white">
+                <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-[-0.025em] leading-[1.08] text-slate-900">
                   {settings?.upcoming_tracks_title || 'Specialized Earth Sciences Tracks.'}
                 </h2>
-                <p className="text-base sm:text-xl md:text-2xl font-normal text-slate-200 tracking-[-0.015em] leading-snug mt-2 sm:mt-3 max-w-2xl">
+                <p className="text-base sm:text-xl md:text-2xl font-normal text-slate-600 tracking-[-0.015em] leading-snug mt-2 sm:mt-3 max-w-2xl">
                   {settings?.upcoming_tracks_subtitle || 'Pre-register for next-generation cohorts and masterclasses.'}
                 </p>
               </div>
               <Link to="/courses">
                 <Button
                   variant="outline"
-                  className="border-white/20 bg-[#070E20]/90/5 hover:bg-[#070E20]/90 text-zinc-200 hover:text-black rounded-full shadow-sm transition-all duration-300 tracking-[-0.01em] group h-11 px-6 font-medium text-sm"
+                  className="border-slate-300 bg-white hover:bg-slate-50 text-slate-800 rounded-full shadow-sm transition-all duration-300 tracking-[-0.01em] group h-11 px-6 font-semibold text-sm"
                 >
                   <span>{settings?.upcoming_tracks_btn_text || 'View Complete Catalog'}</span>
                   <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
@@ -795,13 +795,13 @@ export function LandingPage() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className={`relative p-5 sm:p-6 rounded-2xl bg-gradient-to-b ${c.color} border ${c.border} backdrop-blur-xl flex flex-col justify-between group transition-all duration-300 shadow-xl shadow-black/70 hover:shadow-[0_0_30px_rgba(0,210,255,0.12)] hover:-translate-y-1 overflow-hidden`}
+                className={`relative p-5 sm:p-6 rounded-2xl bg-gradient-to-b ${c.color} border ${c.border} backdrop-blur-xl flex flex-col justify-between group transition-all duration-300 shadow-2xl shadow-black/70 hover:shadow-[0_0_30px_rgba(0,210,255,0.16)] hover:-translate-y-1 overflow-hidden`}
               >
                 {/* Glow effect on hover */}
                 <div
                   className={`absolute inset-0 bg-gradient-to-br ${c.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}
                 />
-                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10">
                   {/* Top Header: Icon + Single Clean Tag */}
@@ -809,7 +809,7 @@ export function LandingPage() {
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.iconBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
                       <c.icon className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-[#070E20]/90/10 border border-white/15 text-slate-200 tracking-wide">
+                    <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-slate-200 tracking-wide">
                       {c.level}
                     </span>
                   </div>
@@ -827,7 +827,7 @@ export function LandingPage() {
                     {c.keySkills.map((skill) => (
                       <span
                         key={skill}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#070E20]/90/5 border border-white/10 text-slate-300 group-hover:border-cyan-500/30 transition-colors"
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-slate-300 group-hover:border-cyan-500/30 transition-colors"
                       >
                         {skill}
                       </span>
@@ -849,7 +849,7 @@ export function LandingPage() {
 
                   <Link
                     to={c.link || '/register'}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-cyan-950/70 hover:bg-gradient-to-r hover:from-cyan-500 hover:via-blue-600 hover:to-amber-500 border border-cyan-500/30 hover:border-transparent text-cyan-200 hover:text-white font-semibold text-xs tracking-wide transition-all duration-300 shadow-none hover:shadow-lg hover:shadow-cyan-500/20 group/btn"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-cyan-950/80 hover:bg-gradient-to-r hover:from-cyan-500 hover:via-blue-600 hover:to-amber-500 border border-cyan-500/30 hover:border-transparent text-cyan-200 hover:text-white font-semibold text-xs tracking-wide transition-all duration-300 shadow-none hover:shadow-lg hover:shadow-cyan-500/20 group/btn"
                   >
                     <span>{c.btnText || 'Pre-Register Cohort'}</span>
                     <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:translate-x-1" />
@@ -921,14 +921,14 @@ export function LandingPage() {
       {/* ========================================================================= */}
       {/* 8. TESTIMONIALS & TRUST BAND                                              */}
       {/* ========================================================================= */}
-      <section className="relative py-24 bg-[#040814] border-t border-cyan-500/20">
+      <section className="relative py-24 bg-gradient-to-b from-[#f8fafc] via-white to-[#f1f5f9] text-slate-900 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/70 border border-cyan-500/30 text-cyan-300 text-xs font-semibold uppercase tracking-wider mb-4 shadow-sm">
-              <Quote className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs font-semibold uppercase tracking-wider mb-4 shadow-sm">
+              <Quote className="w-3.5 h-3.5 text-cyan-600" />
               Field Impact
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold font-display text-white tracking-[-0.02em] mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold font-display text-slate-900 tracking-[-0.02em] mb-4">
               Trusted by Meteorological Centres Across India
             </h2>
           </div>
@@ -941,16 +941,16 @@ export function LandingPage() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className="p-8 rounded-3xl bg-[#070E20]/90 border border-cyan-500/20 shadow-2xl shadow-cyan-950/60 hover:border-cyan-400/40 flex flex-col justify-between relative overflow-hidden transition-all duration-300"
+                className="p-8 rounded-3xl bg-white border border-slate-200/90 shadow-xl shadow-slate-200/60 hover:shadow-2xl hover:border-cyan-500/40 flex flex-col justify-between relative overflow-hidden transition-all duration-300"
               >
-                <div className="text-cyan-400/30 mb-4">
+                <div className="text-cyan-600/30 mb-4">
                   <Quote className="w-8 h-8" />
                 </div>
-                <p className="text-slate-300 text-sm leading-relaxed mb-6 italic tracking-[-0.01em]">&ldquo;{t.quote}&rdquo;</p>
-                <div className="pt-4 border-t border-cyan-500/20">
-                  <div className="text-sm font-bold text-white tracking-[-0.01em]">{t.author}</div>
-                  <div className="text-xs text-cyan-400 font-semibold">{t.role}</div>
-                  <div className="text-[11px] font-mono text-slate-400 mt-1">{t.division}</div>
+                <p className="text-slate-700 text-sm leading-relaxed mb-6 italic tracking-[-0.01em]">&ldquo;{t.quote}&rdquo;</p>
+                <div className="pt-4 border-t border-slate-100">
+                  <div className="text-sm font-bold text-slate-900 tracking-[-0.01em]">{t.author}</div>
+                  <div className="text-xs text-cyan-700 font-semibold">{t.role}</div>
+                  <div className="text-[11px] font-medium text-slate-500 mt-1">{t.division}</div>
                 </div>
               </motion.div>
             ))}
