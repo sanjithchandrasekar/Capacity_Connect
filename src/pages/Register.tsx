@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import * as z from 'zod'
-import { Loader2, ArrowRight, CheckCircle, Mail, ShieldCheck } from 'lucide-react'
+import { Loader2, ArrowRight, CheckCircle, Mail, ShieldCheck, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/useAuth'
 
 const countryCodes = [
   { code: '+91', flag: '🇮🇳', name: 'India' },
@@ -52,10 +53,17 @@ type TraineeFormValues = z.infer<typeof traineeSchema>
 type TrainerFormValues = z.infer<typeof trainerSchema>
 
 export function Register() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [role, setRole] = useState<'trainee' | 'trainer'>('trainee')
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
+
+  React.useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, navigate])
   
   // Verification states
   const [countryCode, setCountryCode] = useState('+91')
@@ -335,6 +343,14 @@ export function Register() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
+        <Link 
+          to="/" 
+          className="absolute -top-12 left-0 text-sm font-medium text-midnight/60 hover:text-pink-600 transition-colors flex items-center gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Link>
+
         <div className="text-center mb-6 md:mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">
             <img src="/logo.png" alt="Logo" className="w-9 h-9 md:w-10 md:h-10 object-contain" />

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { StarfieldCanvas } from '@/components/space/StarfieldCanvas';
 import { StickyScrollFeatures } from '@/components/landing/StickyScrollFeatures';
+import { DynamicUpdatesSection } from '@/components/landing/DynamicUpdatesSection';
 import { MissionExplodedView } from '@/components/landing/MissionExplodedView';
 import {
   BookOpen,
@@ -577,6 +578,11 @@ export function LandingPage() {
           </div>
         </button>
       </section>
+
+      {/* ========================================================================= */}
+      {/* 1.5 DYNAMIC UPDATES (Announcements & New Courses)                         */}
+      {/* ========================================================================= */}
+      <DynamicUpdatesSection />
 
       {/* ========================================================================= */}
       {/* 2. CORE PLATFORM ARCHITECTURE (Sticky Scroll Scrollytelling)              */}

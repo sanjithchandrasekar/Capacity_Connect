@@ -49,11 +49,11 @@ export function TraineeAssessmentTest() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessments')
-        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, created_by, course_id, instructions, created_at')
+        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, created_by, course_id, instructions, created_at, results_publish_date')
         .eq('id', assessmentId!)
         .single()
       if (error) { console.error('Assessment fetch error:', error); return null; }
-      return data
+      return data as any
     },
     enabled: !!assessmentId,
   })
@@ -328,8 +328,40 @@ export function TraineeAssessmentTest() {
       return
     }
 
-    const shuffled = [...questions].sort(() => Math.random() - 0.5)
-    setRandomizedQuestions(shuffled)
+    const shuffleArray = <T,>(array: T[]): T[] => {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+
+    const randomizedQs = shuffleArray(questions).map(q => {
+       if (q.options && typeof q.options === 'object') {
+           const optionEntries = Object.entries(q.options);
+           const correctText = (q.options as Record<string, string>)[q.correct_answer];
+           
+           const shuffledEntries = shuffleArray(optionEntries);
+           
+           const newOptions: Record<string, string> = {};
+           let newCorrectAnswer = q.correct_answer;
+           
+           const labels = ['A', 'B', 'C', 'D', 'E', 'F'];
+           shuffledEntries.forEach((entry: any, index) => {
+               const label = labels[index] || String.fromCharCode(65 + index);
+               newOptions[label] = entry[1];
+               if (entry[1] === correctText) {
+                   newCorrectAnswer = label;
+               }
+           });
+           
+           return { ...q, options: newOptions, correct_answer: newCorrectAnswer };
+       }
+       return q;
+    });
+
+    setRandomizedQuestions(randomizedQs)
 
     if (assessment?.duration_minutes) {
       setTimeLeft(assessment.duration_minutes * 60)
@@ -348,6 +380,7 @@ export function TraineeAssessmentTest() {
         score: results.score,
         passed: results.score >= (assessment?.passing_score ?? 60),
         answers: answers,
+        grade_status: results.hasOpenEnded ? 'pending_manual' : 'graded',
         submitted_at: new Date().toISOString()
       }).select().single()
 
@@ -397,11 +430,16 @@ export function TraineeAssessmentTest() {
     // Calculate score locally
     setTimeout(() => {
       let correct = 0
+      let hasOpenEnded = false
       questions.forEach(q => {
-        if (answers[q.id] === q.correct_answer) correct++
+        if ((q as any).question_type === 'open_ended') {
+          hasOpenEnded = true
+        } else if (answers[q.id] === q.correct_answer) {
+          correct++
+        }
       })
       const score = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0
-      submitMutation.mutate({ score })
+      submitMutation.mutate({ score, hasOpenEnded })
       setIsAiGrading(false)
     }, 2500)
   }
@@ -427,11 +465,24 @@ export function TraineeAssessmentTest() {
     return <DashboardShell title="Assessment" icon={Target} navLinks={[]}><div className="text-center py-20">Assessment not found.</div></DashboardShell>
   }
 
+  // Strip file extensions & underscores from titles set to raw filenames
+  const cleanTitle = (raw: string) =>
+    raw
+      .replace(/\.[a-zA-Z0-9]{2,5}(\s|$)/g, '$1') // remove .pdf .docx etc
+      .replace(/_/g, ' ')                            // underscores → spaces
+      .replace(/\s+/g, ' ')                          // collapse multiple spaces
+      .trim()
+
+  const displayTitle = cleanTitle(assessment.title)
+
+  // Check if results are hidden
+  const areResultsHidden = assessment.results_publish_date && new Date(assessment.results_publish_date) > new Date();
+
   // Completed State
   if (previousAttempt) {
     const attemptData = previousAttempt as any
     return (
-      <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
+      <DashboardShell title={displayTitle} icon={Target} navLinks={[]}>
         <div className="max-w-4xl mx-auto space-y-6">
           <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-midnight/60 hover:text-purple-700 transition-colors mb-2 font-semibold">
             <ArrowLeft className="w-4 h-4" /> Back to Course
@@ -441,7 +492,14 @@ export function TraineeAssessmentTest() {
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
             <h2 className="text-2xl font-bold text-midnight mb-2">Assessment Completed</h2>
-            <p className="text-midnight/60 mb-6">You scored <span className="font-bold text-purple-600">{attemptData.score}%</span>.</p>
+            {areResultsHidden ? (
+                <p className="text-midnight/60 mb-6 bg-purple-50 p-3 rounded-lg border border-purple-100 max-w-sm mx-auto">
+                   Your results are currently hidden and will be published on <br/>
+                   <span className="font-bold text-purple-700">{assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a later date'}</span>.
+                </p>
+            ) : (
+                <p className="text-midnight/60 mb-6">You scored <span className="font-bold text-purple-600">{attemptData.score}%</span>.</p>
+            )}
             <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl">Return to Course</Button>
           </div>
         </div>
@@ -451,15 +509,38 @@ export function TraineeAssessmentTest() {
 
   // Pre-Start State
   if (!hasStarted) {
+    let gating = { allowed: true, message: '' };
+    if (assessment.scheduled_date) {
+      const now = new Date();
+      const scheduledDate = new Date(assessment.scheduled_date);
+      
+      if (now.toDateString() !== scheduledDate.toDateString()) {
+        if (now < scheduledDate) gating = { allowed: false, message: `This assessment is scheduled for ${scheduledDate.toLocaleDateString()}` };
+        else gating = { allowed: false, message: 'This assessment has expired.' };
+      } else {
+        if (assessment.start_time) {
+          const [startH, startM] = assessment.start_time.split(':').map(Number);
+          const startTime = new Date(scheduledDate);
+          startTime.setHours(startH, startM, 0);
+          if (now < startTime) gating = { allowed: false, message: `This assessment opens at ${assessment.start_time}` };
+        }
+        if (assessment.end_time) {
+          const [endH, endM] = assessment.end_time.split(':').map(Number);
+          const endTime = new Date(scheduledDate);
+          endTime.setHours(endH, endM, 0);
+          if (now > endTime) gating = { allowed: false, message: 'This assessment has expired and is now closed.' };
+        }
+      }
+    }
     return (
-      <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
+      <DashboardShell title={displayTitle} icon={Target} navLinks={[]}>
         <div className="max-w-4xl mx-auto">
           <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-midnight/60 hover:text-purple-700 transition-colors mb-6 font-semibold">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
           <div className="bg-white border border-purple-500/10 rounded-3xl p-10 shadow-lg text-center max-w-2xl mx-auto">
             <Target className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-midnight mb-4">{assessment.title}</h1>
+            <h1 className="text-3xl font-bold text-midnight mb-4">{displayTitle}</h1>
             <p className="text-midnight/60 mb-8 max-w-lg mx-auto">{assessment.instructions || 'Please read each question carefully before answering. Good luck!'}</p>
             
             <div className="flex justify-center gap-8 mb-10">
@@ -488,9 +569,16 @@ export function TraineeAssessmentTest() {
               </div>
             )}
 
-            <Button onClick={startTest} className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl px-10 py-6 text-lg w-full sm:w-auto shadow-lg shadow-purple-500/30 transition-all hover:scale-105 active:scale-95">
-              Start Assessment
-            </Button>
+            {!gating.allowed ? (
+              <div className="bg-orange-50 border border-orange-200 text-orange-800 p-6 rounded-2xl flex flex-col items-center gap-3">
+                <AlertCircle className="w-8 h-8 text-orange-500" />
+                <p className="font-bold">{gating.message}</p>
+              </div>
+            ) : (
+              <Button onClick={startTest} className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl px-10 py-6 text-lg w-full sm:w-auto shadow-lg shadow-purple-500/30 transition-all hover:scale-105 active:scale-95">
+                Start Assessment
+              </Button>
+            )}
           </div>
         </div>
       </DashboardShell>
@@ -516,11 +604,31 @@ export function TraineeAssessmentTest() {
     )
   }
 
-  // Review State (after submit mutation finishes, before redirect or if we want to show it)
-  // Actually, wait, if submitMutation is successful, previousAttempt becomes true, and it shows "Assessment Completed".
-  // The user wanted: "both the correct answers and wrong answers should have explanations".
-  // So I need a state to show the review screen immediately after grading.
+  // Review State
   if (submitMutation.isSuccess) {
+    const attemptData = submitMutation.data as any;
+    const now = new Date();
+    const areResultsHidden = assessment.results_publish_date && new Date(assessment.results_publish_date) > now;
+    const isPendingManual = attemptData?.grade_status === 'pending_manual';
+
+    if (areResultsHidden || isPendingManual) {
+       return (
+        <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
+            <div className="max-w-4xl mx-auto space-y-6 text-center py-20">
+              <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+              <h2 className="text-3xl font-bold text-midnight mb-2">Submitted Successfully!</h2>
+              <p className="text-midnight/60 mb-8 max-w-md mx-auto">
+                 {isPendingManual 
+                   ? "Your assessment contains open-ended questions that require manual grading. Please check back later."
+                   : `Your assessment has been submitted. The results are hidden by your trainer until ${assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a future date'}.`
+                 }
+              </p>
+              <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-8 py-6 font-bold">Return to Course</Button>
+            </div>
+        </DashboardShell>
+       )
+    }
+
     return (
       <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
         <div className="max-w-4xl mx-auto space-y-6">
@@ -533,6 +641,7 @@ export function TraineeAssessmentTest() {
 
           <div className="space-y-6">
             {questions.map((q, idx) => {
+              const opts = q.options as Record<string, string>
               const isCorrect = answers[q.id] === q.correct_answer
               const isUnanswered = !answers[q.id]
               return (
@@ -544,16 +653,16 @@ export function TraineeAssessmentTest() {
                     <div className="flex-1">
                       <p className="font-bold text-midnight mb-4"><span className="opacity-50 mr-2">{idx + 1}.</span>{q.question_text}</p>
                       <div className="grid sm:grid-cols-2 gap-3 mb-4">
-                        {(q.options as string[]).map((opt, i) => {
-                          const isSelected = answers[q.id] === opt
-                          const isActuallyCorrect = q.correct_answer === opt
+                        {Object.entries(q.options as Record<string, string>).map(([key, opt]) => {
+                          const isSelected = answers[q.id] === key
+                          const isActuallyCorrect = q.correct_answer === key
                           let style = 'bg-white border-slate-200 opacity-60'
                           if (isActuallyCorrect) style = 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold shadow-sm'
                           else if (isSelected && !isActuallyCorrect) style = 'bg-rose-100 border-rose-300 text-rose-900 font-bold'
 
                           return (
-                            <div key={i} className={`p-3 rounded-xl border text-sm flex items-center justify-between ${style}`}>
-                              <span>{opt}</span>
+                            <div key={key} className={`p-3 rounded-xl border text-sm flex items-center justify-between ${style}`}>
+                              <span><span className="font-bold mr-1">{key}.</span>{opt}</span>
                               {isActuallyCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
                               {isSelected && !isActuallyCorrect && <XCircle className="w-4 h-4 text-rose-600" />}
                             </div>
@@ -662,25 +771,34 @@ export function TraineeAssessmentTest() {
             <h2 className="text-xl font-bold text-midnight mb-8 leading-snug">{currentQ?.question_text}</h2>
             
             <div className="space-y-3">
-              {(currentQ?.options as string[])?.map((opt, i) => {
-                const isSelected = answers[currentQ.id] === opt
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setAnswers(prev => ({ ...prev, [currentQ.id]: opt }))}
-                    className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between ${
-                      isSelected 
-                        ? 'border-purple-600 bg-purple-50' 
-                        : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className={`font-medium ${isSelected ? 'text-purple-900' : 'text-midnight/70'}`}>{opt}</span>
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-purple-600' : 'border-slate-300'}`}>
-                      {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-purple-600" />}
-                    </div>
-                  </button>
-                )
-              })}
+              {(currentQ as any)?.question_type === 'open_ended' ? (
+                <textarea
+                  value={answers[currentQ.id] || ''}
+                  onChange={(e) => setAnswers(prev => ({ ...prev, [currentQ.id]: e.target.value }))}
+                  placeholder="Type your answer here..."
+                  className="w-full min-h-[150px] p-4 rounded-2xl border-2 border-slate-200 focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 transition-all outline-none text-midnight resize-y"
+                />
+              ) : (
+                Object.entries((currentQ?.options as Record<string, string>) || {}).map(([key, opt]) => {
+                  const isSelected = answers[currentQ.id] === key
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setAnswers(prev => ({ ...prev, [currentQ.id]: key }))}
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between ${
+                        isSelected 
+                          ? 'border-purple-600 bg-purple-50' 
+                          : 'border-slate-100 hover:border-purple-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className={`font-medium ${isSelected ? 'text-purple-900' : 'text-midnight/70'}`}><span className="font-bold mr-1">{key}.</span>{opt}</span>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-purple-600' : 'border-slate-300'}`}>
+                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-purple-600" />}
+                      </div>
+                    </button>
+                  )
+                })
+              )}
             </div>
           </motion.div>
         </AnimatePresence>

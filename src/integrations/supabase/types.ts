@@ -65,6 +65,8 @@ export interface Database {
           password: string | null
           created_at: string
           updated_at: string
+          work_experience: string | null
+          interests: string | null
         }
         Insert: {
           id: string
@@ -127,6 +129,9 @@ export interface Database {
           password: string | null
           created_at: string
           updated_at: string
+          qualifications: string | null
+          work_experience: string | null
+          interests: string | null
         }
         Insert: {
           id: string
@@ -708,6 +713,60 @@ export interface Database {
           entity_type?: string
           entity_id?: string | null
           metadata?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      announcements: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          author_id: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          author_id: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          author_id?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      course_feedback: {
+        Row: {
+          id: string
+          course_id: string
+          user_id: string
+          rating: number
+          comments: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          user_id: string
+          rating: number
+          comments?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          user_id?: string
+          rating?: number
+          comments?: string | null
           created_at?: string
         }
         Relationships: []

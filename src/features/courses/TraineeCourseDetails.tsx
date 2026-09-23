@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
+import { CourseFeedback } from './CourseFeedback'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -685,11 +686,11 @@ export function TraineeCourseDetails() {
                     </h2>
                     <div className="space-y-3">
                       {course.assessments.map((assessment: any) => (
-                        <div key={assessment.id} className="p-4 rounded-2xl border border-purple-100 bg-purple-50/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-purple-300 transition-colors">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold text-midnight">{assessment.title}</h3>
-                              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                        <div key={assessment.id} className="p-4 rounded-2xl border border-purple-100 bg-purple-50/50 flex items-center justify-between gap-4 hover:border-purple-300 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <h3 className="font-bold text-midnight text-sm truncate max-w-xs">{assessment.title}</h3>
+                              <span className={`shrink-0 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
                                 assessment.assessment_type === 'daily_test' ? 'bg-blue-100 text-blue-700' :
                                 assessment.assessment_type === 'mock_test' ? 'bg-orange-100 text-orange-700' :
                                 'bg-rose-100 text-rose-700'
@@ -698,17 +699,17 @@ export function TraineeCourseDetails() {
                               </span>
                             </div>
                             <p className="text-xs text-midnight/60">
-                              {assessment.assessment_type === 'daily_test' 
+                              {assessment.assessment_type === 'daily_test'
                                 ? 'Optional practice test. Take at any time.'
                                 : `Strictly timed: ${assessment.duration_minutes || 30} mins. Contributes to internal marks.`}
                             </p>
                             {assessment.scheduled_date && (
-                              <p className="text-xs text-purple-700 mt-2 font-medium flex items-center gap-1">
+                              <p className="text-xs text-purple-700 mt-1 font-medium flex items-center gap-1">
                                 <Calendar className="w-3.5 h-3.5" /> Scheduled for {new Date(assessment.scheduled_date).toLocaleDateString()}
                               </p>
                             )}
                           </div>
-                          <Button 
+                          <Button
                             onClick={() => navigate(`/trainee/courses/${course.id}/assessments/${assessment.id}`)}
                             className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold"
                           >
@@ -1105,6 +1106,13 @@ export function TraineeCourseDetails() {
                 )}
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {/* Course Feedback Section */}
+        {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'completed') && (
+          <motion.div variants={fadeUp} className="mt-8">
+            <CourseFeedback courseId={courseId!} />
           </motion.div>
         )}
       </div>

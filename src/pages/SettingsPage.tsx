@@ -25,6 +25,9 @@ export function SettingsPage() {
   // Form states
   const [loading, setLoading] = useState(false)
   const [fullName, setFullName] = useState(profile?.full_name || '')
+  const [qualifications, setQualifications] = useState((profile as any)?.qualifications || '')
+  const [workExperience, setWorkExperience] = useState((profile as any)?.work_experience || '')
+  const [interests, setInterests] = useState((profile as any)?.interests || '')
   const [newPassword, setNewPassword] = useState('')
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -33,14 +36,23 @@ export function SettingsPage() {
     setLoading(true)
     try {
       let error = null
+      const updateData = {
+        full_name: fullName,
+        ...(profile.role !== 'admin' && profile.role !== 'super_admin' ? {
+          qualifications: qualifications,
+          work_experience: workExperience,
+          interests: interests
+        } : {})
+      }
+
       if (profile.role === 'admin' || profile.role === 'super_admin') {
         const { error: err } = await supabase.from('admins').update({ full_name: fullName }).eq('id', profile.id)
         error = err
       } else if (profile.role === 'trainer') {
-        const { error: err } = await supabase.from('trainers').update({ full_name: fullName }).eq('id', profile.id)
+        const { error: err } = await supabase.from('trainers').update(updateData as any).eq('id', profile.id)
         error = err
       } else if (profile.role === 'trainee') {
-        const { error: err } = await supabase.from('trainees').update({ full_name: fullName }).eq('id', profile.id)
+        const { error: err } = await supabase.from('trainees').update(updateData as any).eq('id', profile.id)
         error = err
       }
       if (error) throw error
@@ -99,6 +111,22 @@ export function SettingsPage() {
                       <label className="text-sm font-medium text-ink/80">Full Name</label>
                       <Input value={fullName} onChange={e => setFullName(e.target.value)} className="max-w-md bg-purple-50/30" />
                     </div>
+                    {profile?.role !== 'admin' && profile?.role !== 'super_admin' && (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-ink/80">Qualifications</label>
+                          <Input value={qualifications} onChange={e => setQualifications(e.target.value)} placeholder="e.g. B.Tech, Meteorology Certifications" className="max-w-md bg-purple-50/30" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-ink/80">Work Experience</label>
+                          <Input value={workExperience} onChange={e => setWorkExperience(e.target.value)} placeholder="e.g. 5 years as Forecaster" className="max-w-md bg-purple-50/30" />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-ink/80">Professional Interests</label>
+                          <Input value={interests} onChange={e => setInterests(e.target.value)} placeholder="e.g. Climate Modeling, Data Science" className="max-w-md bg-purple-50/30" />
+                        </div>
+                      </>
+                    )}
                     <Button type="submit" disabled={loading} className="bg-purple-600 hover:bg-purple-700 text-white">
                       {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} Save Changes
                     </Button>

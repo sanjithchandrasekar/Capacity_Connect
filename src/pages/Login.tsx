@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import * as z from 'zod'
-import { Eye, EyeOff, Loader2, Globe, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Globe, ArrowRight, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,10 +19,16 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>
 
 export function Login() {
-  const { signIn } = useAuth()
+  const { user, signIn } = useAuth()
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  React.useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, navigate])
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -32,7 +38,7 @@ export function Login() {
     setIsLoading(true)
     try {
       await signIn(data.email, data.password)
-      navigate('/dashboard')
+      navigate('/dashboard', { replace: true })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Your email or password is incorrect.'
       toast.error(msg)
@@ -53,6 +59,14 @@ export function Login() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
+        <Link 
+          to="/" 
+          className="absolute -top-12 left-0 text-sm font-medium text-midnight/60 hover:text-pink-600 transition-colors flex items-center gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Link>
+
         {/* Logo */}
         <div className="text-center mb-6 md:mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">

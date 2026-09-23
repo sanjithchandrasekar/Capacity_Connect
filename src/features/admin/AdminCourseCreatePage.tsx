@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   ArrowLeft, ArrowRight, CheckCircle, Loader2, BookOpen, Settings,
-  Target, Eye, AlertCircle, Image, UserCheck, Megaphone
+  Target, Eye, AlertCircle, Image, UserCheck, Megaphone, Zap, Sparkles, TrendingUp
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
@@ -67,10 +67,10 @@ type SettingsData = z.infer<typeof settingsSchema>
 type ObjectivesData = z.infer<typeof objectivesSchema>
 
 const STEPS = [
-  { id: 1, label: 'Assign Trainer', icon: UserCheck },
-  { id: 2, label: 'Course Details', icon: BookOpen },
+  { id: 1, label: 'Course Details', icon: BookOpen },
+  { id: 2, label: 'Objectives & Skills', icon: Target },
   { id: 3, label: 'Configuration', icon: Settings },
-  { id: 4, label: 'Objectives', icon: Target },
+  { id: 4, label: 'Assign Trainer', icon: UserCheck },
   { id: 5, label: 'Review', icon: Eye },
 ]
 
@@ -104,10 +104,10 @@ export function AdminCourseCreatePage() {
   }, [])
 
   const validateStep = async () => {
-    if (step === 1) return trainerForm.trigger()
-    if (step === 2) return detailsForm.trigger()
+    if (step === 1) return detailsForm.trigger()
+    if (step === 2) return objectivesForm.trigger()
     if (step === 3) return settingsForm.trigger()
-    if (step === 4) return objectivesForm.trigger()
+    if (step === 4) return trainerForm.trigger()
     return true
   }
 
@@ -115,6 +115,33 @@ export function AdminCourseCreatePage() {
   const handleBack = () => setStep(s => Math.max(s - 1, 1))
   const toggleSkill = (id: string) => setSelectedSkills(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id])
   const selectedTrainer = trainers.find(t => t.id === trainerForm.watch('trainer_id'))
+
+  // Competency Mapping Engine (Heuristic matching based on skills & qualifications)
+  const scoredTrainers = React.useMemo(() => {
+    if (selectedSkills.length === 0) return [];
+    const requiredSkillNames = skills.filter(s => selectedSkills.includes(s.id)).map(s => s.name.toLowerCase());
+    
+    return trainers.map(t => {
+      let score = 35; // Base score
+      const qual = (t.qualifications || '').toLowerCase();
+      
+      let matchedSkills = 0;
+      requiredSkillNames.forEach(skill => {
+        if (qual.includes(skill)) matchedSkills++;
+      });
+      
+      if (requiredSkillNames.length > 0) {
+         score += (matchedSkills / requiredSkillNames.length) * 45;
+      }
+      
+      if (t.years_of_experience) {
+         score += Math.min(t.years_of_experience * 3, 18);
+      }
+      
+      const matchPercentage = Math.round(Math.min(Math.max(score, 15), 98));
+      return { ...t, matchPercentage };
+    }).sort((a, b) => b.matchPercentage - a.matchPercentage).slice(0, 3);
+  }, [selectedSkills, trainers, skills]);
 
   const handlePublish = async (status: 'draft' | 'published') => {
     const t = trainerForm.getValues()
@@ -196,9 +223,56 @@ export function AdminCourseCreatePage() {
           <Card className="bg-white border-purple-500/15 shadow-xl shadow-purple-500/5 rounded-3xl overflow-hidden">
             <CardContent className="p-8">
 
-              {step === 1 && (
+              {step === 4 && (
                 <div className="space-y-6">
-                  <div><h2 className="text-xl font-bold text-slate-900 mb-1">Assign a Trainer</h2><p className="text-sm text-slate-500">The trainer will receive a course assignment announcement.</p></div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+                      Assign Course Trainer
+                    </h2>
+                    <p className="text-sm text-slate-500">The trainer will receive a course assignment announcement.</p>
+                  </div>
+
+                  {/* Competency Mapping Suggestions */}
+                  {selectedSkills.length > 0 && scoredTrainers.length > 0 && (
+                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-5 rounded-2xl border border-indigo-100 space-y-4 shadow-inner">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-indigo-700 font-bold uppercase tracking-wider text-xs">
+                          <Sparkles className="w-4 h-4 text-indigo-500" />
+                          AI Competency Matcher
+                        </div>
+                        <span className="text-[10px] text-indigo-400 font-medium">Based on required skills</span>
+                      </div>
+                      
+                      <div className="grid sm:grid-cols-3 gap-3">
+                        {scoredTrainers.map((t, idx) => (
+                          <div 
+                            key={t.id} 
+                            onClick={() => trainerForm.setValue('trainer_id', t.id, { shouldValidate: true })}
+                            className={`p-3 rounded-xl border cursor-pointer transition-all ${trainerForm.watch('trainer_id') === t.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200 scale-[1.02]' : 'bg-white border-indigo-100 hover:border-indigo-300 hover:shadow-sm'}`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${trainerForm.watch('trainer_id') === t.id ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-700'}`}>
+                                {t.full_name.charAt(0)}
+                              </div>
+                              <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${trainerForm.watch('trainer_id') === t.id ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700'}`}>
+                                <TrendingUp className="w-3 h-3" /> {t.matchPercentage}% Match
+                              </div>
+                            </div>
+                            <p className="font-bold text-sm truncate">{t.full_name}</p>
+                            <p className={`text-[10px] mt-0.5 truncate ${trainerForm.watch('trainer_id') === t.id ? 'text-indigo-100' : 'text-slate-500'}`}>
+                              {t.years_of_experience || 0} yrs exp
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedSkills.length === 0 && (
+                     <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
+                        <p className="text-xs text-slate-500 italic">Select required skills in Step 2 to view AI Trainer Suggestions.</p>
+                     </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-slate-700">Trainer *</Label>
                     {loadingTrainers ? <div className="flex items-center gap-2 text-slate-400 text-sm py-3"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</div> : (
@@ -251,7 +325,7 @@ export function AdminCourseCreatePage() {
                 </div>
               )}
 
-              {step === 2 && (
+              {step === 1 && (
                 <div className="space-y-6">
                   <div><h2 className="text-xl font-bold text-slate-900 mb-1">Course Details</h2></div>
                   <div className="space-y-2">
@@ -350,7 +424,7 @@ export function AdminCourseCreatePage() {
                 </div>
               )}
 
-              {step === 4 && (
+              {step === 2 && (
                 <div className="space-y-6">
                   <div><h2 className="text-xl font-bold text-slate-900 mb-1">Learning Objectives & Skills</h2></div>
                   {(['understand', 'able_to_do', 'competencies_built'] as const).map((field, i) => (

@@ -7,8 +7,9 @@ import { supabase } from '@/lib/supabase'
 import { Database } from '@/integrations/supabase/types'
 import { AdminCourses } from '@/features/courses/AdminCourses'
 import { TrainerAssignmentBanner } from '@/features/admin/TrainerAssignmentBanner'
+import { AdminAnnouncements } from '@/features/admin/AdminAnnouncements'
 import { Button } from '@/components/ui/button'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import {
   Globe, LogOut, Users, BookOpen, BarChart3, Shield,
@@ -16,7 +17,7 @@ import {
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
   Award, Target, FileText, Settings,
   ChevronDown, RefreshCw, Star, MessageSquare, Crown,
-  Menu, X, Trash2, Loader2, LayoutDashboard
+  Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNotifications, getNotificationRedirectUrl } from '@/hooks/useNotifications'
@@ -450,6 +451,16 @@ function ProgressBar({ value, max = 100, color = 'from-purple-600 via-pink-500 t
 export function TraineeDashboard() {
   const { profile } = useAuth()
 
+  // Mock IMD-specific competency data for Digital Twin
+  const competencyData = [
+    { subject: 'Forecasting', A: 85, B: 90, fullMark: 100 },
+    { subject: 'Radar Ops', A: 60, B: 85, fullMark: 100 },
+    { subject: 'Climate Mod', A: 90, B: 80, fullMark: 100 },
+    { subject: 'Aviation Met', A: 75, B: 80, fullMark: 100 },
+    { subject: 'Marine Met', A: 45, B: 75, fullMark: 100 },
+    { subject: 'Data Analysis', A: 80, B: 85, fullMark: 100 },
+  ];
+
   const handleResetPassword = async () => {
     if (!profile?.email) return;
     try {
@@ -750,6 +761,43 @@ export function TraineeDashboard() {
           </motion.div>
         </div>
 
+        {/* Trainee Digital Twin */}
+        <motion.div variants={fadeUp} className="bg-white border border-purple-500/15 rounded-3xl p-6 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 flex flex-col lg:flex-row gap-8 items-center">
+            <div className="lg:w-1/3 space-y-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60 text-xs font-bold mb-1">
+                <Target className="w-3.5 h-3.5" />
+                <span>AI Competency Mapping</span>
+              </div>
+              <h3 className="text-xl font-bold text-midnight leading-tight">Your Digital Twin</h3>
+              <p className="text-sm text-midnight/60 leading-relaxed">
+                Compare your current meteorological skills against the required competencies for your role. Focus your learning on <strong>Marine Met</strong> and <strong>Radar Ops</strong> to close the gap.
+              </p>
+              <div className="space-y-2 mt-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-midnight/70">
+                  <div className="w-3 h-3 rounded-full bg-purple-500 opacity-70" /> Your Current Skill Level
+                </div>
+                <div className="flex items-center gap-2 text-xs font-medium text-midnight/70">
+                  <div className="w-3 h-3 rounded-full bg-orange-400 opacity-40" /> Role Requirement
+                </div>
+              </div>
+            </div>
+            <div className="lg:w-2/3 h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={competencyData}>
+                  <PolarGrid stroke="#e2e8f0" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar name="Your Score" dataKey="A" stroke="#9333ea" strokeWidth={2} fill="#a855f7" fillOpacity={0.4} />
+                  <Radar name="Required" dataKey="B" stroke="#f97316" strokeWidth={2} fill="#fb923c" fillOpacity={0.15} />
+                  <Tooltip wrapperStyle={{ borderRadius: '12px' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Quick Actions */}
         <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
@@ -998,7 +1046,7 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<Profile[]>([])
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended' | 'rejected'>('all')
 
@@ -1199,6 +1247,7 @@ export function AdminDashboard() {
     { key: 'trainers', label: 'Trainers', icon: Users },
     ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins', icon: Shield }] : []),
     { key: 'courses', label: 'Courses', icon: BookOpen },
+    { key: 'announcements', label: 'Announcements', icon: Megaphone },
     ...(isSuperAdmin ? [{ key: 'logs', label: 'Audit Logs', icon: BarChart3 }] : []),
   ] as const
 
@@ -1692,6 +1741,13 @@ export function AdminDashboard() {
               {activeTab === 'courses' && (
                 <motion.div key="courses" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
                   <AdminCourses />
+                </motion.div>
+              )}
+
+              {/* Tab: Announcements */}
+              {activeTab === 'announcements' && (
+                <motion.div key="announcements" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
+                  <AdminAnnouncements />
                 </motion.div>
               )}
 
