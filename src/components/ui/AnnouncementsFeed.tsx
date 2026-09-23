@@ -34,7 +34,7 @@ export function AnnouncementsFeed() {
           const adminMap = admins?.reduce((acc: Record<string, string>, admin) => {
             acc[admin.id] = admin.full_name
             return acc
-          }, {}) || {}
+          }, {} as Record<string, string>) || {}
 
           setAnnouncements(data.map(a => ({
             ...a,
@@ -71,7 +71,7 @@ export function AnnouncementsFeed() {
           <p className="text-xs text-zinc-200/50">Important updates and news</p>
         </div>
       </div>
-      
+
       <div className="space-y-3">
         {announcements.map((ann) => (
           <div key={ann.id} className="p-4 bg-cyan-950/30 border border-cyan-500/30 rounded-2xl flex flex-col gap-2">

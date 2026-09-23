@@ -807,6 +807,7 @@ export interface Database {
           title: string
           content: string
           author_id: string
+          target_audience: string
           is_active: boolean
           target_audience: string
           created_at: string
@@ -816,6 +817,7 @@ export interface Database {
           title: string
           content: string
           author_id: string
+          target_audience?: string
           is_active?: boolean
           target_audience?: string
           created_at?: string
@@ -825,6 +827,7 @@ export interface Database {
           title?: string
           content?: string
           author_id?: string
+          target_audience?: string
           is_active?: boolean
           target_audience?: string
           created_at?: string
@@ -884,6 +887,93 @@ export interface Database {
           created_at?: string
         }
         Relationships: []
+      }
+      course_announcements: {
+        Row: {
+          id: string
+          course_id: string
+          trainer_id: string
+          title: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          trainer_id: string
+          title: string
+          content: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          trainer_id?: string
+          title?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_announcements_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_announcements_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      course_messages: {
+        Row: {
+          id: string
+          course_id: string
+          sender_id: string
+          content: string
+          is_private: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          sender_id: string
+          content: string
+          is_private?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          sender_id?: string
+          content?: string
+          is_private?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_messages_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       course_feedback: {
         Row: {
