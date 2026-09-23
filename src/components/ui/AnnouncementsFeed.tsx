@@ -31,7 +31,7 @@ export function AnnouncementsFeed() {
             .select('id, full_name')
             .in('id', authorIds)
 
-          const adminMap = admins?.reduce((acc, admin) => {
+          const adminMap = admins?.reduce((acc: Record<string, string>, admin) => {
             acc[admin.id] = admin.full_name
             return acc
           }, {}) || {}
