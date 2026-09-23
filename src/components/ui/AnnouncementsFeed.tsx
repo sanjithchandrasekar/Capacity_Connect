@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Megaphone, Loader2 } from 'lucide-react'
+import { Megaphone, Loader2, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
 export function AnnouncementsFeed() {
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const [announcements, setAnnouncements] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function fetchAnnouncements() {
-      if (!profile) return
+      if (!profile || !user) return
       setLoading(true)
       try {
         const { data, error } = await supabase
@@ -19,29 +19,26 @@ export function AnnouncementsFeed() {
           .eq('is_active', true)
           .in('target_audience', ['all', profile.role])
           .order('created_at', { ascending: false })
-          .limit(5)
+          .limit(20) // Fetch a bit more to account for cleared ones
 
         if (error) throw error
 
         if (data) {
-          // Fetch author names manually since we can't join admins directly if author_id references auth.users
-          const authorIds = [...new Set(data.map(a => a.author_id).filter(Boolean))]
-          const { data: admins } = await supabase
-            .from('admins')
-            .select('id, full_name')
-            .in('id', authorIds)
+          // Filter out cleared announcements
+          const activeAnnouncements = data.filter(a => {
+            return !localStorage.getItem(`cleared_announcement_${a.id}_${user.id}`)
+          }).slice(0, 5) // Keep only top 5
 
-          const adminMap = admins?.reduce((acc: Record<string, string>, admin) => {
-            if (admin.full_name) {
-              acc[admin.id] = admin.full_name
+          setAnnouncements(activeAnnouncements.map(a => {
+            const authorMatch = a.content.match(/<!--AUTHOR:(.*?)-->/)
+            const authorName = authorMatch ? authorMatch[1] : 'System Administrator'
+            const cleanContent = a.content.replace(/\n\n<!--AUTHOR:.*?-->/g, '')
+            return {
+              ...a,
+              content: cleanContent,
+              authorName
             }
-            return acc
-          }, {} as Record<string, string>) || {}
-
-          setAnnouncements(data.map(a => ({
-            ...a,
-            authorName: a.author_id ? adminMap[a.author_id] : 'System Administrator'
-          })))
+          }))
         }
       } catch (err) {
         console.error('Failed to fetch announcements feed:', err)
@@ -50,7 +47,13 @@ export function AnnouncementsFeed() {
       }
     }
     fetchAnnouncements()
-  }, [profile])
+  }, [profile, user])
+
+  const handleClear = (id: string) => {
+    if (!user) return;
+    localStorage.setItem(`cleared_announcement_${id}_${user.id}`, 'true');
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
+  }
 
   if (loading) {
     return (
@@ -76,8 +79,15 @@ export function AnnouncementsFeed() {
       
       <div className="space-y-3">
         {announcements.map((ann) => (
-          <div key={ann.id} className="p-4 bg-cyan-950/30 border border-cyan-500/30 rounded-2xl flex flex-col gap-2">
-            <div className="flex items-center justify-between">
+          <div key={ann.id} className="group p-4 bg-cyan-950/30 border border-cyan-500/30 rounded-2xl flex flex-col gap-2 relative transition-all hover:bg-cyan-950/40">
+            <button 
+              onClick={() => handleClear(ann.id)}
+              className="absolute top-3 right-3 p-1.5 rounded-lg text-zinc-200/40 hover:text-rose-400 hover:bg-rose-400/10 opacity-0 group-hover:opacity-100 transition-all"
+              title="Clear announcement"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center justify-between pr-8">
               <h4 className="text-sm font-bold text-zinc-200">{ann.title}</h4>
               <span className="text-[10px] text-zinc-200/50 bg-black/20 px-2 py-0.5 rounded-full border border-cyan-500/10 uppercase">
                 {ann.target_audience}

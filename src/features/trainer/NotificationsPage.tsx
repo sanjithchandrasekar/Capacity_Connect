@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Loader2, Inbox, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useConfirm } from '@/hooks/useConfirm'
 
 export function NotificationsPage() {
   const { notifications, loading, markAsRead, markAllAsRead, unreadCount, deleteNotification, clearAllNotifications } = useNotifications()
@@ -16,6 +17,7 @@ export function NotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all')
   const navigate = useNavigate()
   const { profile } = useAuth()
+  const [ConfirmDialog, confirm] = useConfirm()
 
   const handleMarkAsRead = async (id: string) => {
     setMarkingId(id)
@@ -31,7 +33,8 @@ export function NotificationsPage() {
   }
 
   const handleClearAll = async () => {
-    if (window.confirm('Are you sure you want to delete all notifications?')) {
+    const isConfirmed = await confirm('Are you sure you want to delete all notifications?', 'Clear All')
+    if (isConfirmed) {
       await clearAllNotifications()
     }
   }
@@ -48,6 +51,7 @@ export function NotificationsPage() {
 
   return (
     <TrainerLayout>
+      <ConfirmDialog />
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-3xl mx-auto space-y-6">
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>

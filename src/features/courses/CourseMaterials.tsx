@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { formatDistanceToNow } from 'date-fns'
+import { useConfirm } from '@/hooks/useConfirm'
 
 type Course = Database['public']['Tables']['courses']['Row']
 type Material = Database['public']['Tables']['materials']['Row']
@@ -79,6 +80,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
   const [selectedQuestions, setSelectedQuestions] = useState<Set<number>>(new Set())
   const [savingQuestions, setSavingQuestions] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [ConfirmDialog, confirm] = useConfirm()
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
@@ -384,7 +386,9 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
   }
 
   const handleDelete = async (material: Material) => {
-    if (!confirm(`Delete "${material.file_name}"?`)) return
+    const isConfirmed = await confirm(`Are you sure you want to delete "${material.file_name}"?`, 'Delete Material')
+    if (!isConfirmed) return
+    
     setDeletingId(material.id)
     try {
       if (material.material_type === 'file') {
@@ -658,6 +662,8 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
   return (
     <>
       {embedded ? content : <TrainerLayout>{content}</TrainerLayout>}
+
+      <ConfirmDialog />
 
       {/* AI Question Review Dialog */}
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>

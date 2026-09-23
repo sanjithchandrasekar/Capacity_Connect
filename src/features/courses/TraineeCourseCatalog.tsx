@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { DashboardShell } from '@/pages/Dashboards'
-import { Compass, BookOpen, Clock, Search, BookMarked, User, ArrowRight, Sparkles, Filter, CheckCircle2 } from 'lucide-react'
+import { Compass, BookOpen, Clock, Search, BookMarked, User, ArrowRight, Sparkles, Filter, CheckCircle2, FileCheck } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 
 const fadeUp = {
@@ -62,6 +62,7 @@ export function TraineeCourseCatalog() {
         { to: '/trainee', label: 'Overview', icon: BookMarked },
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
+        { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
       ]}
     >
       <div className="max-w-6xl space-y-6">

@@ -20,11 +20,12 @@ import {
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
   Award, Target, FileText, Settings,
   ChevronDown, RefreshCw, Star, MessageSquare, Crown,
-  Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone
+  Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone, FileCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNotifications, getNotificationRedirectUrl } from '@/hooks/useNotifications'
 import { formatDistanceToNow } from 'date-fns'
+import { useConfirm } from '@/hooks/useConfirm'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -279,7 +280,7 @@ export function DashboardShell({
                 ) : notifications.length === 0 ? (
                   <div className="p-4 text-center text-xs text-zinc-200/50">No new notifications</div>
                 ) : (
-                  notifications.map((notif) => (
+                  notifications.map((notif: any) => (
                     <React.Fragment key={notif.id}>
                       <DropdownMenuItem 
                         className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notif.read_at ? 'bg-cyan-950/40' : ''}`}
@@ -617,6 +618,7 @@ export function TraineeDashboard() {
         { to: '/trainee', label: 'Overview', icon: BarChart3 },
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
+        { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
       ]}
     >
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-full">
@@ -1045,6 +1047,7 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements' | 'home_page'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended' | 'rejected'>('all')
+  const [ConfirmDialog, confirm] = useConfirm()
 
   const [previewMaterial, setPreviewMaterial] = useState<{file_name: string, storage_path: string} | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -1136,7 +1139,8 @@ export function AdminDashboard() {
 
 
   const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) return;
+    const isConfirmed = await confirm("Are you sure you want to permanently delete this user? This action cannot be undone.", "Delete User")
+    if (!isConfirmed) return;
     try {
       const { error } = await supabase.rpc('admin_delete_user', {
         target_user_id: userId,
@@ -1284,6 +1288,7 @@ export function AdminDashboard() {
         onClick: () => setActiveTab(tab.key as any)
       }))}
     >
+      <ConfirmDialog />
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-full">
         {/* Welcome Banner */}
         <motion.div 

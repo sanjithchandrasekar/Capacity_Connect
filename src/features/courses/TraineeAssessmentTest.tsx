@@ -74,7 +74,7 @@ export function TraineeAssessmentTest() {
     queryKey: ['assessment-attempt', assessmentId, profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase.from('assessment_attempts' as any)
-        .select('id, assessment_id, user_id, score, created_at')
+        .select('id, assessment_id, user_id, score, created_at, answers')
         .eq('assessment_id', assessmentId!)
         .eq('user_id', profile!.id)
         .maybeSingle()
@@ -640,19 +640,89 @@ export function TraineeAssessmentTest() {
 
     return (
       <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-zinc-200">Assessment Results</h2>
-            <div className="px-4 py-2 bg-purple-100 text-purple-800 rounded-xl font-bold">
-              Score: {(submitMutation.data as any)?.score}%
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="flex items-center justify-between border-b border-cyan-500/30 pb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-zinc-200">Assessment Results</h2>
+              <p className="text-sm text-zinc-400 mt-1">{assessment.title} - Completed on {previousAttempt?.created_at ? new Date(previousAttempt.created_at).toLocaleString() : new Date().toLocaleString()}</p>
             </div>
           </div>
 
-          <div className="space-y-6">
+          {(() => {
+            const resultAnswers = previousAttempt?.answers || answers;
+            const totalQuestions = questions.length;
+            let correct = 0;
+            let incorrect = 0;
+            let skipped = 0;
+            let pending = 0;
+            
+            questions.forEach(q => {
+              const ans = resultAnswers[q.id];
+              if (!ans) {
+                skipped++;
+              } else if ((q as any).question_type === 'open_ended') {
+                pending++;
+              } else if (ans === q.correct_answer) {
+                correct++;
+              } else {
+                incorrect++;
+              }
+            });
+
+            const attempted = totalQuestions - skipped;
+            // Simplified scoring: assume 1 mark per question for display if not specified, but the actual score is calculated differently
+            // We use the recorded percentage score from previousAttempt or submitMutation
+            const finalScore = previousAttempt?.score ?? (submitMutation.data as any)?.score ?? 0;
+            const totalMarks = totalQuestions * 10; // Placeholder if we don't have per-question marks
+            const marksScored = Math.round((finalScore / 100) * totalMarks);
+
+            return (
+              <div className="space-y-4">
+                {/* Top Stats Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 flex flex-col items-center justify-center">
+                    <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-bold mb-1">Marks Scored</span>
+                    <span className="text-2xl font-black text-zinc-200">{marksScored} <span className="text-sm text-zinc-500 font-bold">/ {totalMarks}</span></span>
+                  </div>
+                  <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 flex flex-col items-center justify-center">
+                    <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-bold mb-1">Total Questions</span>
+                    <span className="text-2xl font-black text-zinc-200">{totalQuestions}</span>
+                  </div>
+                  <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 flex flex-col items-center justify-center">
+                    <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-bold mb-1">Attempted Questions</span>
+                    <span className="text-2xl font-black text-zinc-200">{attempted}</span>
+                  </div>
+                </div>
+
+                {/* Secondary Stats Row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-3 flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-1">Correct</span>
+                    <span className="text-xl font-bold text-emerald-400">{correct}</span>
+                  </div>
+                  <div className="bg-rose-950/20 border border-rose-500/30 rounded-xl p-3 flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-rose-500 font-bold mb-1">Incorrect</span>
+                    <span className="text-xl font-bold text-rose-400">{incorrect}</span>
+                  </div>
+                  <div className="bg-orange-950/20 border border-orange-500/30 rounded-xl p-3 flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-orange-500 font-bold mb-1">Skipped</span>
+                    <span className="text-xl font-bold text-orange-400">{skipped}</span>
+                  </div>
+                  <div className="bg-purple-950/20 border border-purple-500/30 rounded-xl p-3 flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-purple-500 font-bold mb-1">Pending Eval</span>
+                    <span className="text-xl font-bold text-purple-400">{pending}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="space-y-6 mt-8">
             {questions.map((q, idx) => {
+              const resultAnswers = previousAttempt?.answers || answers;
               const opts = q.options as Record<string, string>
-              const isCorrect = answers[q.id] === q.correct_answer
-              const isUnanswered = !answers[q.id]
+              const isCorrect = resultAnswers[q.id] === q.correct_answer
+              const isUnanswered = !resultAnswers[q.id]
               return (
                 <div key={q.id} className={`p-6 rounded-3xl border ${isCorrect ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'}`}>
                   <div className="flex gap-4">
@@ -663,7 +733,7 @@ export function TraineeAssessmentTest() {
                       <p className="font-bold text-zinc-200 mb-4"><span className="opacity-50 mr-2">{idx + 1}.</span>{q.question_text}</p>
                       <div className="grid sm:grid-cols-2 gap-3 mb-4">
                         {Object.entries(q.options as Record<string, string>).map(([key, opt]) => {
-                          const isSelected = answers[q.id] === key
+                          const isSelected = resultAnswers[q.id] === key
                           const isActuallyCorrect = q.correct_answer === key
                           let style = 'bg-[#070E20]/90 border-slate-200 opacity-60'
                           if (isActuallyCorrect) style = 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold shadow-sm'

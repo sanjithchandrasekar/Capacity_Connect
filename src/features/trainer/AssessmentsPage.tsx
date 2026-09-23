@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { useConfirm } from '@/hooks/useConfirm'
 
 type Course = Database['public']['Tables']['courses']['Row']
 type Assessment = Database['public']['Tables']['assessments']['Row']
@@ -68,6 +69,8 @@ export function AssessmentsPage() {
   
   const [assessmentDialogOpen, setAssessmentDialogOpen] = useState(false)
   const [editingAssessmentId, setEditingAssessmentId] = useState<string | null>(null)
+  const [ConfirmDialog, confirm] = useConfirm()
+
   const [assessmentForm, setAssessmentForm] = useState({
     title: '',
     assessment_type: 'final' as 'daily' | 'mock' | 'final' | 'assessment',
@@ -217,7 +220,9 @@ export function AssessmentsPage() {
   }
 
   const handleDeleteAssessment = async (id: string) => {
-    if (!confirm('Delete this assessment and all its questions?')) return
+    const isConfirmed = await confirm('Are you sure you want to delete this assessment and all its questions?', 'Delete Assessment')
+    if (!isConfirmed) return
+
     try {
       await supabase.from('assessments').delete().eq('id', id)
       toast.success('Assessment deleted')
@@ -263,7 +268,9 @@ export function AssessmentsPage() {
   }
 
   const handleDeleteQuestion = async (id: string) => {
-    if (!confirm('Delete this question?')) return
+    const isConfirmed = await confirm('Are you sure you want to delete this question?', 'Delete Question')
+    if (!isConfirmed) return
+
     try {
       await supabase.from('questions').delete().eq('id', id)
       toast.success('Question deleted')
@@ -555,6 +562,7 @@ export function AssessmentsPage() {
 
   return (
     <TrainerLayout>
+      <ConfirmDialog />
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-4xl mx-auto space-y-6">
         
         {/* LIST VIEW */}

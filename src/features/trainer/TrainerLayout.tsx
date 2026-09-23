@@ -101,7 +101,6 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="flex items-center gap-2 px-3">
           <span className="text-xs px-2 py-0.5 rounded-full border bg-orange-50 text-orange-700 border-orange-200 capitalize">Trainer</span>
-          <span className="text-xs px-2 py-0.5 rounded-full border bg-cyan-950/30 text-cyan-400 border-cyan-500/30 capitalize">{profile?.approval_status}</span>
         </div>
         <button onClick={handleSignOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-zinc-200/60 hover:text-red-600 hover:bg-red-50 transition-all text-sm">
           <LogOut className="w-4 h-4" />

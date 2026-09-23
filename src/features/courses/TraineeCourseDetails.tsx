@@ -681,13 +681,17 @@ export function TraineeCourseDetails() {
                 )}
 
                 {/* Announcements & Assessments */}
-                {enrollment && enrollment.status === 'enrolled' && course.assessments?.length > 0 && (
+                {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'in_progress' || enrollment.status === 'completed') && (
                   <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-6 shadow-sm">
                     <h2 className="text-sm font-bold text-zinc-200 mb-4 flex items-center gap-2">
                       <Target className="w-4 h-4 text-rose-500" /> Announcements & Assessments
                     </h2>
-                    <div className="space-y-3">
-                      {course.assessments.map((assessment: any) => (
+                    <div className="space-y-6">
+                      <CourseAnnouncements courseId={courseId!} isTrainer={false} />
+                      
+                      {course.assessments?.length > 0 && (
+                        <div className="space-y-3">
+                          {course.assessments.map((assessment: any) => (
                         <div key={assessment.id} className="p-4 rounded-2xl border border-cyan-500/30 bg-cyan-950/40 flex items-center justify-between gap-4 hover:border-cyan-500/30 transition-colors">
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -718,7 +722,9 @@ export function TraineeCourseDetails() {
                             Start Test
                           </Button>
                         </div>
-                      ))}
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -945,10 +951,9 @@ export function TraineeCourseDetails() {
                   </div>
                 )}
 
-                {/* Course Announcements & Chat */}
+                {/* Course Chat */}
                 {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'completed' || enrollment.status === 'in_progress') && (
                   <div className="space-y-6 mt-6 pt-6 border-t border-cyan-500/30">
-                    <CourseAnnouncements courseId={courseId!} isTrainer={false} />
                     <CourseChat courseId={courseId!} isTrainer={false} />
                   </div>
                 )}

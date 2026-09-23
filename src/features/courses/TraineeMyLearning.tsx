@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
-import { BookOpen, Compass, BookMarked, PlayCircle, CheckCircle2, Clock, Sparkles, ArrowRight } from 'lucide-react'
+import { BookOpen, Compass, BookMarked, PlayCircle, CheckCircle2, Clock, Sparkles, ArrowRight, FileCheck } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 
 const fadeUp = {
@@ -56,6 +56,7 @@ export function TraineeMyLearning() {
         { to: '/trainee', label: 'Overview', icon: BookMarked },
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
+        { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
       ]}
     >
       <div className="max-w-6xl space-y-6">

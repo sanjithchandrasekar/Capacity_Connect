@@ -4,6 +4,8 @@ import { toast } from 'sonner'
 import { motion, Variants } from 'framer-motion'
 import { Plus, Megaphone, Trash2, Edit2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/hooks/useAuth'
+import { useConfirm } from '@/hooks/useConfirm'
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 15 },
@@ -20,10 +22,12 @@ interface Announcement {
 }
 
 export function AdminAnnouncements() {
+  const { profile } = useAuth()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [ConfirmDialog, confirm] = useConfirm()
   
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
@@ -61,17 +65,20 @@ export function AdminAnnouncements() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      const authorName = profile?.full_name || 'System Administrator'
+      const contentWithAuthor = `${content}\n\n<!--AUTHOR:${authorName}-->`
+
       if (editingId) {
         const { error } = await supabase
           .from('announcements')
-          .update({ title, content, target_audience: targetAudience, is_active: isActive })
+          .update({ title, content: contentWithAuthor, target_audience: targetAudience, is_active: isActive })
           .eq('id', editingId)
         if (error) throw error
         toast.success('Announcement updated')
       } else {
         const { error } = await supabase
           .from('announcements')
-          .insert([{ title, content, target_audience: targetAudience, is_active: isActive, author_id: user.id }])
+          .insert([{ title, content: contentWithAuthor, target_audience: targetAudience, is_active: isActive, author_id: user.id }])
         if (error) throw error
         toast.success('Announcement published')
       }
@@ -84,7 +91,9 @@ export function AdminAnnouncements() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this announcement?')) return
+    const isConfirmed = await confirm('Are you sure you want to delete this announcement?', 'Delete Announcement')
+    if (!isConfirmed) return
+
     try {
       const { error } = await supabase.from('announcements').delete().eq('id', id)
       if (error) throw error
@@ -98,7 +107,7 @@ export function AdminAnnouncements() {
   const handleEdit = (announcement: Announcement) => {
     setEditingId(announcement.id)
     setTitle(announcement.title)
-    setContent(announcement.content)
+    setContent(announcement.content.replace(/\n\n<!--AUTHOR:.*?-->/g, ''))
     setTargetAudience(announcement.target_audience || 'all')
     setIsActive(announcement.is_active)
     setIsFormOpen(true)
@@ -135,6 +144,8 @@ export function AdminAnnouncements() {
         )}
       </div>
 
+      <ConfirmDialog />
+
       {isFormOpen && (
         <motion.form variants={fadeUp} initial="hidden" animate="visible" onSubmit={handleSubmit} className="bg-cyan-950/40 border border-cyan-500/30 rounded-3xl p-6 shadow-inner mb-6 space-y-4">
           <div>
@@ -167,7 +178,7 @@ export function AdminAnnouncements() {
       )}
 
       <div className="grid gap-4">
-        {announcements.map((ann, i) => (
+        {announcements.filter(ann => ann.id !== editingId).map((ann, i) => (
           <motion.div key={ann.id} variants={fadeUp} custom={i} className={`bg-[#070E20]/90 border ${ann.is_active ? 'border-cyan-500/30' : 'border-gray-200 opacity-70'} rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-start justify-between gap-4`}>
             <div className="flex gap-4">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${ann.is_active ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>
@@ -182,7 +193,7 @@ export function AdminAnnouncements() {
                   {!ann.is_active && <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold border border-gray-200">DRAFT</span>}
                 </h4>
                 <p className="text-xs text-zinc-200/60 mt-1 mb-2">Published: {new Date(ann.created_at).toLocaleDateString()}</p>
-                <p className="text-sm text-zinc-200/80 whitespace-pre-wrap">{ann.content}</p>
+                <p className="text-sm text-zinc-200/80 whitespace-pre-wrap">{ann.content.replace(/\n\n<!--AUTHOR:.*?-->/g, '')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 md:self-start">

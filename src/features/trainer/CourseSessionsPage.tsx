@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { useConfirm } from '@/hooks/useConfirm'
 
 type Course = Database['public']['Tables']['courses']['Row']
 type Session = Database['public']['Tables']['course_sessions']['Row']
@@ -37,6 +38,7 @@ export function CourseSessionsPage() {
   const [saving, setSaving] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingSession, setEditingSession] = useState<Partial<Session> | null>(null)
+  const [ConfirmDialog, confirm] = useConfirm()
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
@@ -103,7 +105,8 @@ export function CourseSessionsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this session?')) return
+    const isConfirmed = await confirm('Are you sure you want to delete this session?', 'Delete Session')
+    if (!isConfirmed) return
     try {
       await supabase.from('course_sessions').delete().eq('id', id)
       toast.success('Session deleted')
@@ -122,6 +125,7 @@ export function CourseSessionsPage() {
 
   return (
     <TrainerLayout>
+      <ConfirmDialog />
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-4xl mx-auto space-y-6">
         <motion.div variants={fadeUp} className="flex items-center justify-between">
           <div>
@@ -252,14 +256,46 @@ export function CourseSessionsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-zinc-200/80">Session Date</Label>
+              <Input 
+                className="bg-ink/5 border-cyan-500/30 text-zinc-200" 
+                type="date" 
+                value={editingSession?.start_time ? editingSession.start_time.split('T')[0] : ''} 
+                onChange={e => {
+                  const date = e.target.value;
+                  const start_time = editingSession?.start_time ? `${date}T${editingSession.start_time.split('T')[1] || '00:00'}` : `${date}T00:00`;
+                  const end_time = editingSession?.end_time ? `${date}T${editingSession.end_time.split('T')[1] || '00:00'}` : `${date}T00:00`;
+                  setEditingSession({ ...editingSession, start_time, end_time });
+                }} 
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-zinc-200/80">Start Time</Label>
-                <Input className="bg-ink/5 border-cyan-500/30 text-zinc-200" type="datetime-local" value={editingSession?.start_time || ''} onChange={e => setEditingSession({ ...editingSession, start_time: e.target.value })} />
+                <Input 
+                  className="bg-ink/5 border-cyan-500/30 text-zinc-200" 
+                  type="time" 
+                  value={editingSession?.start_time ? editingSession.start_time.split('T')[1]?.substring(0,5) : ''} 
+                  onChange={e => {
+                    const time = e.target.value;
+                    const date = editingSession?.start_time ? editingSession.start_time.split('T')[0] : new Date().toISOString().split('T')[0];
+                    setEditingSession({ ...editingSession, start_time: `${date}T${time}` });
+                  }} 
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-zinc-200/80">End Time</Label>
-                <Input className="bg-ink/5 border-cyan-500/30 text-zinc-200" type="datetime-local" value={editingSession?.end_time || ''} onChange={e => setEditingSession({ ...editingSession, end_time: e.target.value })} />
+                <Input 
+                  className="bg-ink/5 border-cyan-500/30 text-zinc-200" 
+                  type="time" 
+                  value={editingSession?.end_time ? editingSession.end_time.split('T')[1]?.substring(0,5) : ''} 
+                  onChange={e => {
+                    const time = e.target.value;
+                    const date = editingSession?.end_time ? editingSession.end_time.split('T')[0] : (editingSession?.start_time ? editingSession.start_time.split('T')[0] : new Date().toISOString().split('T')[0]);
+                    setEditingSession({ ...editingSession, end_time: `${date}T${time}` });
+                  }} 
+                />
               </div>
             </div>
             {(editingSession?.session_type === 'live' || editingSession?.session_type === 'hybrid') && (
