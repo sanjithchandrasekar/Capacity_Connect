@@ -82,7 +82,7 @@ export function TraineeAssessmentTest() {
         console.error('Attempt fetch error:', error)
         return null // Don't block the test if this fails
       }
-      return data
+      return data as any
     },
     enabled: !!assessmentId && !!profile?.id,
   })

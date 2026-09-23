@@ -809,7 +809,6 @@ export interface Database {
           author_id: string
           target_audience: string
           is_active: boolean
-          target_audience: string
           created_at: string
         }
         Insert: {
@@ -819,7 +818,6 @@ export interface Database {
           author_id: string
           target_audience?: string
           is_active?: boolean
-          target_audience?: string
           created_at?: string
         }
         Update: {
@@ -829,65 +827,11 @@ export interface Database {
           author_id?: string
           target_audience?: string
           is_active?: boolean
-          target_audience?: string
           created_at?: string
         }
         Relationships: []
       }
-      course_announcements: {
-        Row: {
-          id: string
-          course_id: string
-          title: string
-          content: string
-          trainer_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          course_id: string
-          title: string
-          content: string
-          trainer_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          course_id?: string
-          title?: string
-          content?: string
-          trainer_id?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
-      course_messages: {
-        Row: {
-          id: string
-          course_id: string
-          sender_id: string
-          content: string
-          is_private: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          course_id: string
-          sender_id: string
-          content: string
-          is_private?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          course_id?: string
-          sender_id?: string
-          content?: string
-          is_private?: boolean
-          created_at?: string
-        }
-        Relationships: []
-      }
+
       course_announcements: {
         Row: {
           id: string

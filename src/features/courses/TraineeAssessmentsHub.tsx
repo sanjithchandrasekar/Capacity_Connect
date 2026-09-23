@@ -74,7 +74,7 @@ export function TraineeAssessmentsHub() {
         .select('id, assessment_id, score, created_at')
         .eq('user_id', profile!.id)
       if (error) throw error
-      return data || []
+      return (data || []) as any[]
     },
     enabled: !!profile?.id
   })
