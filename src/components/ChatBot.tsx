@@ -5,6 +5,28 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ChatBotLogo } from './ChatBotLogo'
 
+function BotMessage({ content }: { content: string }) {
+  const lines = content.split('\n')
+  return (
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        const trimmed = line.trim()
+        if (!trimmed) return null
+        const isBullet = /^[-*•]\s+/.test(trimmed)
+        const text = isBullet ? trimmed.replace(/^[-*•]\s+/, '') : trimmed
+        return isBullet ? (
+          <div key={i} className="flex gap-1.5 items-start">
+            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0" />
+            <span>{text}</span>
+          </div>
+        ) : (
+          <p key={i}>{text}</p>
+        )
+      })}
+    </div>
+  )
+}
+
 interface Message {
   role: 'bot' | 'user'
   content: string
@@ -104,7 +126,7 @@ export function ChatBot() {
       if (reply) {
         setMessages((prev) => [...prev, { role: 'bot', content: reply }])
       } else {
-        setMessages((prev) => [...prev, { role: 'bot', content: result }])
+        setMessages((prev) => [...prev, { role: 'bot', content: 'I could not understand that. Could you please try again?' }])
       }
     } catch (err: any) {
       console.error('Chatbot error:', err)
