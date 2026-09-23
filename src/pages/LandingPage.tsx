@@ -241,8 +241,6 @@ const upcomingCourses = [
     format: 'Live Radar Labs',
     seatsLeft: '24 Seats Left',
     level: 'Advanced Specialist',
-    department: 'IMD Radar Operations Division',
-    badge: 'IMD-ROD',
     desc: "Go deep on polarimetric radar and real-time storm tracking, with live radar feeds you'll actually use in the field.",
     keySkills: ['Polarimetric Refl.', 'Hydrometeor Class.', 'Mesocyclone Detection'],
     icon: Radio,
@@ -251,27 +249,6 @@ const upcomingCourses = [
     glow: 'from-cyan-500/20 via-sky-500/10 to-transparent',
     iconBg: 'bg-gradient-to-br from-cyan-950 to-blue-950 border border-cyan-500/40 text-cyan-400',
     accentColor: 'text-cyan-400',
-  },
-  {
-    title: 'AI & Deep Learning in Numerical Weather Prediction',
-    status: 'Limited Cohort',
-    statusColor: 'text-sky-300 bg-sky-950/80 border-sky-500/40',
-    dotColor: 'bg-sky-400',
-    date: 'Starts Nov 02, 2026',
-    duration: '6 Weeks',
-    format: 'HPC Supercomputing',
-    seatsLeft: '18 Seats Left',
-    level: 'Specialized Track',
-    department: 'MoES High Performance Computing',
-    badge: 'MoES-HPC',
-    desc: 'Hands-on machine learning for weather models and ensemble forecasts, built for real computational pipelines.',
-    keySkills: ['Graph Neural Nets', 'Ensemble Prediction', 'CUDA Acceleration'],
-    icon: Cpu,
-    color: 'from-[#081226] via-[#060D1E] to-[#040814]',
-    border: 'border-sky-500/30 hover:border-sky-400',
-    glow: 'from-sky-500/20 via-blue-500/10 to-transparent',
-    iconBg: 'bg-gradient-to-br from-sky-950 to-indigo-950 border border-sky-500/40 text-sky-400',
-    accentColor: 'text-sky-400',
   },
   {
     title: 'Coastal Early Warning & Ocean Telemetry Protocol',
@@ -283,8 +260,6 @@ const upcomingCourses = [
     format: 'Field Buoy & In-Situ',
     seatsLeft: '12 Seats Left',
     level: 'Executive Protocol',
-    department: 'INCOIS & IMD Cyclone Center',
-    badge: 'INCOIS-MoES',
     desc: 'Master storm surge alerting and ocean buoy data workflows alongside joint INCOIS and IMD teams.',
     keySkills: ['Tsunami Sensor Array', 'Storm Surge Modeling', 'In-Situ Buoy QC'],
     icon: Satellite,
@@ -293,6 +268,25 @@ const upcomingCourses = [
     glow: 'from-amber-500/20 via-orange-500/10 to-transparent',
     iconBg: 'bg-gradient-to-br from-amber-950 to-orange-950 border border-amber-500/40 text-amber-400',
     accentColor: 'text-amber-400',
+  },
+  {
+    title: 'AI & Deep Learning in Numerical Weather Prediction',
+    status: 'Limited Cohort',
+    statusColor: 'text-sky-300 bg-sky-950/80 border-sky-500/40',
+    dotColor: 'bg-sky-400',
+    date: 'Starts Nov 02, 2026',
+    duration: '6 Weeks',
+    format: 'HPC Supercomputing',
+    seatsLeft: '18 Seats Left',
+    level: 'Specialized Track',
+    desc: 'Hands-on machine learning for weather models and ensemble forecasts, built for real computational pipelines.',
+    keySkills: ['Graph Neural Nets', 'Ensemble Prediction', 'CUDA Acceleration'],
+    icon: Cpu,
+    color: 'from-[#081226] via-[#060D1E] to-[#040814]',
+    border: 'border-sky-500/30 hover:border-sky-400',
+    glow: 'from-sky-500/20 via-blue-500/10 to-transparent',
+    iconBg: 'bg-gradient-to-br from-sky-950 to-indigo-950 border border-sky-500/40 text-sky-400',
+    accentColor: 'text-sky-400',
   },
 ];
 
@@ -404,7 +398,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           {/* Brand Logo & Name */}
           <Link to="/" onClick={scrollToTop} className="flex items-center gap-3 group cursor-pointer shrink-0">
-            <img src="/logo.png" alt="Capacity Connect Logo" className="w-8 h-8 object-contain shrink-0 group-hover:scale-105 transition-transform" />
+            <img src="/logo.webp" alt="Capacity Connect Logo" width={32} height={32} className="w-8 h-8 object-contain shrink-0 group-hover:scale-105 transition-transform" />
             <span className="text-lg font-bold font-display tracking-tight leading-tight">
               <span className="text-white">Capacity</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-400">
@@ -512,8 +506,13 @@ export function LandingPage() {
         {/* Background Image: Spacecraft & Satellite in Earth Orbit with Cinematic Dark Contrast */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-black">
           <img
-            src="/home%20page/astronauts-flying-spaceship-explore-galactic-planets-generated-by-ai.jpg"
+            src="/home%20page/hero-spacecraft.webp"
             alt="Spacecraft and satellite in Earth orbit"
+            width={1920}
+            height={1080}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             className="w-full h-full object-cover object-center brightness-[0.52] contrast-[1.15] saturate-[1.1] scale-[1.01]"
           />
         </div>
@@ -812,22 +811,14 @@ export function LandingPage() {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10">
-                  {/* Top Header: Icon + Badge + Department */}
-                  <div className="flex items-center gap-3 mb-4">
+                  {/* Top Header: Icon + Single Clean Tag */}
+                  <div className="flex items-center justify-between gap-3 mb-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.iconBg} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
                       <c.icon className="w-5 h-5" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-block text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-white/10 border border-white/15 text-slate-200 tracking-wider font-semibold">
-                          {c.badge}
-                        </span>
-                        <span className="text-[11px] font-mono text-cyan-400 font-medium truncate">{c.level}</span>
-                      </div>
-                      <div className="text-xs font-mono text-slate-400 truncate mt-0.5">
-                        {c.department}
-                      </div>
-                    </div>
+                    <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-slate-200 tracking-wide">
+                      {c.level}
+                    </span>
                   </div>
 
                   {/* Title & Desc */}

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from '@/components/ui/sonner'
@@ -6,39 +6,51 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/query-client'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { ProtectedRoute, ApprovedRoute, RoleRoute } from './components/ProtectedRoute'
-import { Login } from './pages/Login'
-import { Register } from './pages/Register'
-import { SetupPassword } from './pages/SetupPassword'
-import { ForgotPassword } from './pages/ForgotPassword'
-import { PendingApprovalPage } from './pages/PendingApprovalPage'
-import { AccountSuspendedPage } from './pages/AccountSuspendedPage'
-import { AccessDeniedPage } from './pages/AccessDeniedPage'
-import { NotFoundPage } from './pages/NotFoundPage'
-import { SupabaseTest } from './pages/SupabaseTest'
-import { TraineeDashboard, AdminDashboard, SuperAdminDashboard } from './pages/Dashboards'
-import { TraineeCourseCatalog } from './features/courses/TraineeCourseCatalog'
-import { TraineeCourseDetails } from './features/courses/TraineeCourseDetails'
-import { TraineeAssessmentTest } from './features/courses/TraineeAssessmentTest'
-import { TraineeMyLearning } from './features/courses/TraineeMyLearning'
-import { CourseMaterials } from './features/courses/CourseMaterials'
-import { TrainerDashboard } from './features/trainer/TrainerDashboard'
-import { CourseListPage } from './features/trainer/CourseListPage'
-import { CourseCreatePage } from './features/trainer/CourseCreatePage'
-import { CourseEditPage } from './features/trainer/CourseEditPage'
-import { AssessmentsPage } from './features/trainer/AssessmentsPage'
-import { PerformancePage } from './features/trainer/PerformancePage'
-import { CourseSessionsPage } from './features/trainer/CourseSessionsPage'
-import { TrainerProfile } from './features/trainer/TrainerProfile'
-import { TrainerSkills } from './features/trainer/TrainerSkills'
-import { NotificationsPage } from './features/trainer/NotificationsPage'
-import { CourseDetailPage } from './features/trainer/CourseDetailPage'
-import { SettingsPage } from './pages/SettingsPage'
 import { LandingPage } from './pages/LandingPage'
-import { PublicCourseCatalog } from './pages/PublicCourseCatalog'
-import { PublicCourseDetails } from './pages/PublicCourseDetails'
-import { ChatBot } from './components/ChatBot'
-import { AdminCourseCreatePage } from './features/admin/AdminCourseCreatePage'
-import { AdminCourseEditPage } from './features/admin/AdminCourseEditPage'
+
+// Lazy loaded page components to drastically reduce initial bundle size and TBT
+const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })))
+const Register = lazy(() => import('./pages/Register').then((m) => ({ default: m.Register })))
+const SetupPassword = lazy(() => import('./pages/SetupPassword').then((m) => ({ default: m.SetupPassword })))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })))
+const PendingApprovalPage = lazy(() => import('./pages/PendingApprovalPage').then((m) => ({ default: m.PendingApprovalPage })))
+const AccountSuspendedPage = lazy(() => import('./pages/AccountSuspendedPage').then((m) => ({ default: m.AccountSuspendedPage })))
+const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage').then((m) => ({ default: m.AccessDeniedPage })))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
+const SupabaseTest = lazy(() => import('./pages/SupabaseTest').then((m) => ({ default: m.SupabaseTest })))
+
+// Dashboards (heavy Recharts & Supabase admin logic)
+const TraineeDashboard = lazy(() => import('./pages/Dashboards').then((m) => ({ default: m.TraineeDashboard })))
+const AdminDashboard = lazy(() => import('./pages/Dashboards').then((m) => ({ default: m.AdminDashboard })))
+const SuperAdminDashboard = lazy(() => import('./pages/Dashboards').then((m) => ({ default: m.SuperAdminDashboard })))
+
+// Course & Trainee features
+const TraineeCourseCatalog = lazy(() => import('./features/courses/TraineeCourseCatalog').then((m) => ({ default: m.TraineeCourseCatalog })))
+const TraineeCourseDetails = lazy(() => import('./features/courses/TraineeCourseDetails').then((m) => ({ default: m.TraineeCourseDetails })))
+const TraineeAssessmentTest = lazy(() => import('./features/courses/TraineeAssessmentTest').then((m) => ({ default: m.TraineeAssessmentTest })))
+const TraineeMyLearning = lazy(() => import('./features/courses/TraineeMyLearning').then((m) => ({ default: m.TraineeMyLearning })))
+const CourseMaterials = lazy(() => import('./features/courses/CourseMaterials').then((m) => ({ default: m.CourseMaterials })))
+
+// Trainer features
+const TrainerDashboard = lazy(() => import('./features/trainer/TrainerDashboard').then((m) => ({ default: m.TrainerDashboard })))
+const CourseListPage = lazy(() => import('./features/trainer/CourseListPage').then((m) => ({ default: m.CourseListPage })))
+const CourseCreatePage = lazy(() => import('./features/trainer/CourseCreatePage').then((m) => ({ default: m.CourseCreatePage })))
+const CourseEditPage = lazy(() => import('./features/trainer/CourseEditPage').then((m) => ({ default: m.CourseEditPage })))
+const AssessmentsPage = lazy(() => import('./features/trainer/AssessmentsPage').then((m) => ({ default: m.AssessmentsPage })))
+const PerformancePage = lazy(() => import('./features/trainer/PerformancePage').then((m) => ({ default: m.PerformancePage })))
+const CourseSessionsPage = lazy(() => import('./features/trainer/CourseSessionsPage').then((m) => ({ default: m.CourseSessionsPage })))
+const TrainerProfile = lazy(() => import('./features/trainer/TrainerProfile').then((m) => ({ default: m.TrainerProfile })))
+const TrainerSkills = lazy(() => import('./features/trainer/TrainerSkills').then((m) => ({ default: m.TrainerSkills })))
+const NotificationsPage = lazy(() => import('./features/trainer/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
+const CourseDetailPage = lazy(() => import('./features/trainer/CourseDetailPage').then((m) => ({ default: m.CourseDetailPage })))
+
+// Public & Settings pages
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const PublicCourseCatalog = lazy(() => import('./pages/PublicCourseCatalog').then((m) => ({ default: m.PublicCourseCatalog })))
+const PublicCourseDetails = lazy(() => import('./pages/PublicCourseDetails').then((m) => ({ default: m.PublicCourseDetails })))
+const AdminCourseCreatePage = lazy(() => import('./features/admin/AdminCourseCreatePage').then((m) => ({ default: m.AdminCourseCreatePage })))
+const AdminCourseEditPage = lazy(() => import('./features/admin/AdminCourseEditPage').then((m) => ({ default: m.AdminCourseEditPage })))
+const ChatBot = lazy(() => import('./components/ChatBot').then((m) => ({ default: m.ChatBot })))
 
 function RouteThemeManager() {
   const location = useLocation()
@@ -119,75 +131,83 @@ function AnimatedAppRoutes() {
           transition={{ duration: 0.35, ease: 'easeInOut' }}
           className="min-h-screen w-full"
         >
-          <Routes location={location}>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<DashboardRedirect />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/setup-password" element={<SetupPassword />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/supabase-test" element={<SupabaseTest />} />
-            <Route path="/db" element={<SupabaseTest />} />
-            
-            {/* Public Course Pages */}
-            <Route path="/courses" element={<PublicCourseCatalog />} />
-            <Route path="/courses/:courseId" element={<PublicCourseDetails />} />
-            
-            {/* Auth Fallbacks */}
-            <Route path="/pending-approval" element={<PendingApprovalPage />} />
-            <Route path="/account-suspended" element={<AccountSuspendedPage />} />
-            <Route path="/access-denied" element={<AccessDeniedPage />} />
+          <Suspense
+            fallback={
+              <div className="min-h-screen bg-[#030712] flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            }
+          >
+            <Routes location={location}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/dashboard" element={<DashboardRedirect />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/setup-password" element={<SetupPassword />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/supabase-test" element={<SupabaseTest />} />
+              <Route path="/db" element={<SupabaseTest />} />
+              
+              {/* Public Course Pages */}
+              <Route path="/courses" element={<PublicCourseCatalog />} />
+              <Route path="/courses/:courseId" element={<PublicCourseDetails />} />
+              
+              {/* Auth Fallbacks */}
+              <Route path="/pending-approval" element={<PendingApprovalPage />} />
+              <Route path="/account-suspended" element={<AccountSuspendedPage />} />
+              <Route path="/access-denied" element={<AccessDeniedPage />} />
 
-            {/* Base Protected Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<ApprovedRoute />}>
-                
-                {/* Trainee routes */}
-                <Route element={<RoleRoute allowedRoles={['trainee']} />}>
-                  <Route path="/trainee" element={<TraineeDashboard />} />
-                  <Route path="/trainee/courses" element={<TraineeCourseCatalog />} />
-                  <Route path="/trainee/courses/:courseId" element={<TraineeCourseDetails />} />
-                  <Route path="/trainee/courses/:courseId/assessments/:assessmentId" element={<TraineeAssessmentTest />} />
-                  <Route path="/trainee/my-learning" element={<TraineeMyLearning />} />
-                  <Route path="/trainee/settings" element={<SettingsPage />} />
+              {/* Base Protected Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<ApprovedRoute />}>
+                  
+                  {/* Trainee routes */}
+                  <Route element={<RoleRoute allowedRoles={['trainee']} />}>
+                    <Route path="/trainee" element={<TraineeDashboard />} />
+                    <Route path="/trainee/courses" element={<TraineeCourseCatalog />} />
+                    <Route path="/trainee/courses/:courseId" element={<TraineeCourseDetails />} />
+                    <Route path="/trainee/courses/:courseId/assessments/:assessmentId" element={<TraineeAssessmentTest />} />
+                    <Route path="/trainee/my-learning" element={<TraineeMyLearning />} />
+                    <Route path="/trainee/settings" element={<SettingsPage />} />
+                  </Route>
+
+                  {/* Trainer routes */}
+                  <Route element={<RoleRoute allowedRoles={['trainer']} />}>
+                    <Route path="/trainer" element={<TrainerDashboard />} />
+                    <Route path="/trainer/courses" element={<CourseListPage />} />
+                    <Route path="/trainer/courses/new" element={<CourseCreatePage />} />
+                    <Route path="/trainer/courses/:courseId" element={<CourseDetailPage />} />
+                    <Route path="/trainer/courses/:courseId/edit" element={<CourseEditPage />} />
+                    <Route path="/trainer/courses/:courseId/sessions" element={<CourseSessionsPage />} />
+                    <Route path="/trainer/courses/:courseId/materials" element={<CourseMaterials />} />
+                    <Route path="/trainer/courses/:courseId/assessments" element={<AssessmentsPage />} />
+                    <Route path="/trainer/courses/:courseId/performance" element={<PerformancePage />} />
+                    <Route path="/trainer/notifications" element={<NotificationsPage />} />
+                    <Route path="/trainer/settings" element={<SettingsPage />} />
+                    <Route path="/trainer/profile" element={<TrainerProfile />} />
+                    <Route path="/trainer/skills" element={<TrainerSkills />} />
+                  </Route>
+
+                  {/* Admin routes */}
+                  <Route element={<RoleRoute allowedRoles={['admin', 'super_admin']} />}>
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/courses/new" element={<AdminCourseCreatePage />} />
+                    <Route path="/admin/courses/:courseId/edit" element={<AdminCourseEditPage />} />
+                    <Route path="/admin/settings" element={<SettingsPage />} />
+                  </Route>
+
+                  {/* Super Admin routes */}
+                  <Route element={<RoleRoute allowedRoles={['super_admin']} />}>
+                    <Route path="/super-admin" element={<SuperAdminDashboard />} />
+                    <Route path="/super-admin/settings" element={<SettingsPage />} />
+                  </Route>
+
                 </Route>
-
-                {/* Trainer routes */}
-                <Route element={<RoleRoute allowedRoles={['trainer']} />}>
-                  <Route path="/trainer" element={<TrainerDashboard />} />
-                  <Route path="/trainer/courses" element={<CourseListPage />} />
-                  <Route path="/trainer/courses/new" element={<CourseCreatePage />} />
-                  <Route path="/trainer/courses/:courseId" element={<CourseDetailPage />} />
-                  <Route path="/trainer/courses/:courseId/edit" element={<CourseEditPage />} />
-                  <Route path="/trainer/courses/:courseId/sessions" element={<CourseSessionsPage />} />
-                  <Route path="/trainer/courses/:courseId/materials" element={<CourseMaterials />} />
-                  <Route path="/trainer/courses/:courseId/assessments" element={<AssessmentsPage />} />
-                  <Route path="/trainer/courses/:courseId/performance" element={<PerformancePage />} />
-                  <Route path="/trainer/notifications" element={<NotificationsPage />} />
-                  <Route path="/trainer/settings" element={<SettingsPage />} />
-                  <Route path="/trainer/profile" element={<TrainerProfile />} />
-                  <Route path="/trainer/skills" element={<TrainerSkills />} />
-                </Route>
-
-                {/* Admin routes */}
-                <Route element={<RoleRoute allowedRoles={['admin', 'super_admin']} />}>
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/admin/courses/new" element={<AdminCourseCreatePage />} />
-                  <Route path="/admin/courses/:courseId/edit" element={<AdminCourseEditPage />} />
-                  <Route path="/admin/settings" element={<SettingsPage />} />
-                </Route>
-
-                {/* Super Admin routes */}
-                <Route element={<RoleRoute allowedRoles={['super_admin']} />}>
-                  <Route path="/super-admin" element={<SuperAdminDashboard />} />
-                  <Route path="/super-admin/settings" element={<SettingsPage />} />
-                </Route>
-
               </Route>
-            </Route>
 
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
         </motion.div>
       </AnimatePresence>
     </>
@@ -200,10 +220,13 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <AnimatedAppRoutes />
-          <ChatBot />
+          <Suspense fallback={null}>
+            <ChatBot />
+          </Suspense>
           <Toaster position="top-right" richColors />
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
   )
 }
+

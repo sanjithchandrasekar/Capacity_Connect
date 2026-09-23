@@ -110,23 +110,32 @@ export function MissionExplodedView({
 
     const ctx = gsap.context(() => {
       if (!isReducedMotion) {
-        // Master ScrollTrigger Timeline pinned for expanded 650% scroll distance with smooth damping
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        let rafId: number | null = null;
+
+        // Master ScrollTrigger Timeline pinned for smooth, natural scroll speed
         ScrollTrigger.create({
           trigger: section,
           pin: pinWrapper,
           pinSpacing: true,
           start: 'top top',
-          end: '+=650%',
-          scrub: 1.5,
+          end: () => (isMobile ? '+=180%' : '+=260%'),
+          scrub: isMobile ? 0.4 : 0.6,
           anticipatePin: 1,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             const p = self.progress;
 
-            // Synchronize video time directly with scroll progress
-            if (video && video.duration && !isNaN(video.duration)) {
-              video.currentTime = p * video.duration;
-            }
+            // Throttled RAF video time sync to eliminate stutter on mobile / laptops
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+              if (video && video.duration && !isNaN(video.duration)) {
+                const targetTime = p * video.duration;
+                if (Math.abs(video.currentTime - targetTime) > 0.02) {
+                  video.currentTime = targetTime;
+                }
+              }
+            });
 
             // Dynamically calculate and transition active phase
             let nextPhase = 0;
@@ -194,7 +203,7 @@ export function MissionExplodedView({
             ref={videoRef}
             muted
             playsInline
-            preload="auto"
+            preload="metadata"
             onLoadedMetadata={handleLoadedMetadata}
             className={`w-full h-full object-cover object-center brightness-[0.95] contrast-[1.10] saturate-[1.15] transition-opacity duration-700 ${
               isVideoLoaded ? 'opacity-100' : 'opacity-0'
@@ -228,10 +237,10 @@ export function MissionExplodedView({
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentPhase.id}
-                initial={{ opacity: 0, x: 70, filter: 'blur(6px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, x: -70, filter: 'blur(6px)' }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="w-full flex flex-col items-center justify-center text-center max-w-4xl mx-auto px-4"
               >
                 <div className="flex flex-col items-center max-w-3xl mx-auto">

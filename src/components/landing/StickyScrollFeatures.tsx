@@ -31,7 +31,7 @@ const steps: Step[] = [
     subtitle: 'Practice on live-feeling telemetry safely with strict role separation.',
     description:
       'Interactive capacity building modules stream realistic satellite and radar telemetry into simulated forecasting labs with granular role-based access.',
-    image: '/home page/pexels-giantasparagus-37968049.png',
+    image: '/home page/feature-earth-orbit.webp',
     imageAlt: 'High-resolution space view of Earth with atmospheric clouds and satellite orbit',
     imagePosition: 'object-top',
     icon: Lock,
@@ -59,7 +59,7 @@ const steps: Step[] = [
     subtitle: "One unified training standard for India's entire observation grid.",
     description:
       'Engineered for meteorologists and technical officers maintaining India’s weather network. Master AWS sensor calibration, Doppler radar diagnostics, and standard reporting.',
-    image: '/home page/pexels-raulling-27644974.png',
+    image: '/home page/feature-ground-station.webp',
     imageAlt: 'Meteorological ground station and telescope tracking system under night sky',
     icon: Radio,
     highlights: [
@@ -86,7 +86,7 @@ const steps: Step[] = [
     subtitle: 'Adaptive learning paths built around official MoES and WMO benchmarks.',
     description:
       'Diagnostic AI assessments map technical proficiency against Ministry benchmarks, delivering tailored modules for cyclone tracking and climate modeling.',
-    image: '/home page/satellite-orbit-with-planet-earth-background.png',
+    image: '/home page/feature-satellite-orbit.webp',
     imageAlt: 'Detailed rendering of Earth with glowing orbital satellites and solar panels',
     icon: Cpu,
     highlights: [
@@ -125,15 +125,17 @@ export function StickyScrollFeatures() {
       const panelsCount = steps.length;
       // Total horizontal shift to reveal the last panel: (panelsCount - 1) / panelsCount * 100%
       const totalXPercent = -((panelsCount - 1) / panelsCount) * 100;
-      const getScrollDistance = () => Math.max(window.innerHeight * 3.2, 2800);
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const getScrollDistance = () => (isMobile ? window.innerHeight * 1.4 : window.innerHeight * 2.0);
 
       gsap.to(trackRef.current, {
         xPercent: totalXPercent,
         ease: 'none',
+        force3D: true,
         scrollTrigger: {
           trigger: pinWrapperRef.current,
           pin: true,
-          scrub: 1.2,
+          scrub: isMobile ? 0.4 : 0.6,
           start: 'top top',
           end: () => `+=${getScrollDistance()}`,
           invalidateOnRefresh: true,
@@ -186,7 +188,8 @@ export function StickyScrollFeatures() {
       {/* Horizontal Scroll Panels Track */}
       <div
         ref={trackRef}
-        className="pin-track flex flex-row w-[300%] h-full items-center z-10 flex-1 min-h-0 py-1 overflow-hidden"
+        style={{ willChange: 'transform', transform: 'translateZ(0)' }}
+        className="pin-track flex flex-row w-[300%] h-full items-center z-10 flex-1 min-h-0 py-1 overflow-hidden will-change-transform"
       >
         {steps.map((step, idx) => {
           const isEven = idx % 2 === 1;
