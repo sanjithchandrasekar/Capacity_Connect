@@ -133,6 +133,10 @@ export function getNotificationRedirectUrl(type: string, role: string | undefine
     const courseId = type.split(':')[1]
     return `/trainee/courses/${courseId}`
   }
+  if (type.startsWith('course_message:')) {
+    const courseId = type.split(':')[1]
+    return role === 'trainer' ? `/trainer/courses/${courseId}` : `/trainee/courses/${courseId}`
+  }
 
   switch (type) {
     case 'user_registration':

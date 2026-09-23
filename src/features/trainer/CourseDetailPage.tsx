@@ -35,7 +35,7 @@ export function CourseDetailPage() {
   const [courseSkills, setCourseSkills] = useState<CourseSkill[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
-  const [assessment, setAssessment] = useState<Assessment | null>(null)
+  const [assessmentCount, setAssessmentCount] = useState(0)
   const [enrollmentCount, setEnrollmentCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
@@ -56,7 +56,7 @@ export function CourseDetailPage() {
         supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single(),
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', courseId),
         supabase.from('materials').select('*').eq('course_id', courseId),
-        supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).single(),
+        supabase.from('assessments').select('id', { count: 'exact', head: true }).eq('course_id', courseId).eq('created_by', user.id),
         supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId).in('status', ['enrolled', 'in_progress', 'completed']),
         supabase.from('course_sessions').select('*').eq('course_id', courseId).order('order_index'),
         supabase.from('enrollments').select('*').eq('course_id', courseId).order('enrolled_at', { ascending: false }),
@@ -79,7 +79,7 @@ export function CourseDetailPage() {
       if (cRes.data) setCourse(cRes.data)
       if (csRes.data) setCourseSkills(csRes.data as any)
       if (mRes.data) setMaterials(mRes.data)
-      if (aRes.data) setAssessment(aRes.data)
+      if (aRes.count !== null) setAssessmentCount(aRes.count)
       setEnrollmentCount(eRes.count ?? 0)
       if (sRes.data) setSessions(sRes.data)
       setAllEnrollments(mergedEnrollments)
@@ -506,7 +506,7 @@ export function CourseDetailPage() {
               <Card className="bg-[#070E20]/90 border-cyan-500/30 hover:border-cyan-500/30 transition-all cursor-pointer h-full">
                 <CardContent className="p-5 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-ink/10 flex items-center justify-center"><Target className="w-5 h-5 text-zinc-200" /></div>
-                  <div><p className="text-sm font-medium text-zinc-200">Assessment</p><p className="text-xs text-zinc-200/50">{assessment ? 'Created' : 'Not created'}</p></div>
+                  <div><p className="text-sm font-medium text-zinc-200">Assessments</p><p className="text-xs text-zinc-200/50">{assessmentCount > 0 ? `${assessmentCount} created` : 'Not created'}</p></div>
                 </CardContent>
               </Card>
             </RouterLink>

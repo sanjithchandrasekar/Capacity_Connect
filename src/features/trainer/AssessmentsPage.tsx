@@ -105,7 +105,7 @@ export function AssessmentsPage() {
       const { data: c } = await supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single()
       if (c) setCourse(c)
 
-      const { data: aList } = await supabase.from('assessments').select('*').eq('course_id', courseId).order('created_at')
+      const { data: aList } = await supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).order('created_at')
       if (aList) setAssessments(aList)
       
       if (selectedAssessmentId) {
@@ -224,11 +224,19 @@ export function AssessmentsPage() {
     if (!isConfirmed) return
 
     try {
-      await supabase.from('assessments').delete().eq('id', id)
+      // Clean up dependencies first to satisfy foreign key constraints
+      await supabase.from('assessment_attempts').delete().eq('assessment_id', id)
+      await supabase.from('questions').delete().eq('assessment_id', id)
+      
+      const { error } = await supabase.from('assessments').delete().eq('id', id)
+      if (error) throw error
+      
       toast.success('Assessment deleted')
+      setAssessments(prev => prev.filter(a => a.id !== id))
       fetchData()
-    } catch (err) {
-      toast.error('Failed to delete assessment')
+    } catch (err: any) {
+      console.error('Delete error:', err)
+      toast.error(err.message || 'Failed to delete assessment')
     }
   }
 
@@ -390,7 +398,7 @@ export function AssessmentsPage() {
       // Try each key, with a 2-second delay if we hit a rate limit (429) to let the API recover
       for (const currentKey of shuffledKeys) {
         try {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${currentKey}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${currentKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -430,18 +438,23 @@ export function AssessmentsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${groqKey}`,
+            Authorization: `Bearer ${groqKey.trim()}`,
           },
           body: JSON.stringify({
-            model: 'llama3-70b-8192',
-            messages: [{ role: 'system', content: prompt }],
-            temperature: 0.7
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: 'You are an expert educator that generates multiple choice quiz questions in strict JSON format.' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 4096,
           }),
         });
         
         if (!groqResponse.ok) {
             const groqErr = await groqResponse.text();
-            throw new Error(`AI Generation failed on both Gemini and Groq. Groq error: ${groqResponse.status}`);
+            console.error('Groq API error:', groqErr);
+            throw new Error(`AI Generation failed on both Gemini and Groq. Groq error: ${groqResponse.status} - ${groqErr.substring(0, 150)}`);
         }
         
         const groqData = await groqResponse.json();
