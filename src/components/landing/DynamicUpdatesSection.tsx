@@ -139,31 +139,31 @@ export function DynamicUpdatesSection() {
   const btnLink = settings?.featured_programs_btn_link || '/courses';
 
   return (
-    <section className="relative py-20 sm:py-28 bg-[#030712] border-t border-cyan-500/20 overflow-hidden">
-      {/* Decorative ambient radial lighting */}
-      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-60" />
-      <div className="pointer-events-none absolute -top-40 left-1/3 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[140px]" />
-      <div className="pointer-events-none absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/10 blur-[130px]" />
+    <section className="relative py-20 sm:py-28 bg-gradient-to-b from-[#f8fafc] via-white to-[#f1f5f9] text-slate-900 border-t border-slate-200 overflow-hidden">
+      {/* Decorative ambient subtle radial lighting */}
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent opacity-60" />
+      <div className="pointer-events-none absolute top-20 left-1/4 w-[500px] h-[500px] rounded-full bg-cyan-500/5 blur-[140px]" />
+      <div className="pointer-events-none absolute bottom-10 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/5 blur-[130px]" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10 space-y-16">
         
         {/* Optional Active Announcements Banner / Section */}
         {announcements && announcements.length > 0 && (
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="p-6 rounded-3xl bg-[#070E20]/90 border border-cyan-500/30 shadow-xl shadow-cyan-950/40">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-xl shadow-slate-200/60">
             <div className="flex items-center gap-2 mb-4">
-              <span className="px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                <Megaphone className="w-3.5 h-3.5 text-cyan-400" /> Latest Announcements
+              <span className="px-3 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                <Megaphone className="w-3.5 h-3.5 text-cyan-600" /> Latest Announcements
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {announcements.map((ann: any) => (
-                <div key={ann.id} className="p-4 rounded-2xl bg-[#040814]/80 border border-white/5 hover:border-cyan-500/30 transition-all">
+                <div key={ann.id} className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60 hover:border-cyan-500/40 hover:bg-white transition-all shadow-sm">
                   <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                    <Calendar className="w-3 h-3 text-cyan-400" />
+                    <Calendar className="w-3 h-3 text-cyan-600" />
                     <span>{new Date(ann.created_at).toLocaleDateString()}</span>
                   </div>
-                  <h4 className="font-bold text-white text-sm line-clamp-1 mb-1">{ann.title}</h4>
-                  <p className="text-xs text-slate-400 line-clamp-2">{ann.content}</p>
+                  <h4 className="font-bold text-slate-900 text-sm line-clamp-1 mb-1">{ann.title}</h4>
+                  <p className="text-xs text-slate-600 line-clamp-2">{ann.content}</p>
                 </div>
               ))}
             </div>
@@ -175,21 +175,21 @@ export function DynamicUpdatesSection() {
           {/* Section Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-950/70 border border-amber-500/40 text-amber-300 text-xs font-semibold tracking-wider uppercase mb-4 shadow-lg shadow-amber-950/40">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> {sectionTag}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold tracking-wider uppercase mb-4 shadow-sm">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" /> {sectionTag}
               </div>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display text-white tracking-[-0.02em] leading-tight mb-3">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display text-slate-900 tracking-[-0.02em] leading-tight mb-3">
                 {sectionTitle}
               </h2>
-              <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+              <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
                 {sectionSubtitle}
               </p>
             </motion.div>
 
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
               <Link to={btnLink}>
-                <button className="h-11 px-6 rounded-full border border-cyan-500/40 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 hover:text-white text-sm font-semibold transition-all duration-300 flex items-center gap-2 shadow-sm hover:border-cyan-400 group">
-                  <Compass className="w-4 h-4 text-cyan-400 group-hover:rotate-45 transition-transform" />
+                <button className="h-11 px-6 rounded-full border border-cyan-600/30 bg-cyan-600 text-white hover:bg-cyan-700 text-sm font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg shadow-cyan-600/20 group">
+                  <Compass className="w-4 h-4 text-cyan-200 group-hover:rotate-45 transition-transform" />
                   <span>{btnText}</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -215,7 +215,7 @@ export function DynamicUpdatesSection() {
                 <motion.div
                   key={course.id || idx}
                   variants={fadeUp}
-                  className="group flex flex-col bg-[#070E20]/90 border border-white/10 hover:border-cyan-500/40 rounded-3xl overflow-hidden shadow-2xl shadow-black/60 hover:shadow-cyan-500/10 transition-all duration-500 hover:-translate-y-1.5"
+                  className="group flex flex-col bg-white border border-slate-200/90 hover:border-cyan-500/50 rounded-3xl overflow-hidden shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-cyan-500/10 transition-all duration-500 hover:-translate-y-1.5"
                 >
                   {/* Thumbnail Banner */}
                   <div className="h-48 relative overflow-hidden bg-slate-900">
@@ -235,16 +235,16 @@ export function DynamicUpdatesSection() {
                     )}
 
                     {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#070E20] via-transparent to-black/30 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-black/30 pointer-events-none" />
 
                     {/* Top Badges */}
                     <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/70 backdrop-blur-md text-amber-400 border border-amber-500/30 flex items-center gap-1 shadow-sm">
-                        <Award className="w-3 h-3 text-amber-400" />
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/75 backdrop-blur-md text-amber-300 border border-amber-500/30 flex items-center gap-1 shadow-sm">
+                        <Award className="w-3 h-3 text-amber-300" />
                         {course.badge || (idx === 0 ? 'Top Rated' : idx === 1 ? 'Featured' : 'Certified')}
                       </span>
 
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold text-slate-200 bg-black/70 backdrop-blur-md border border-white/10 flex items-center gap-1 shadow-sm">
+                      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold text-slate-100 bg-black/75 backdrop-blur-md border border-white/15 flex items-center gap-1 shadow-sm">
                         <Clock className="w-3 h-3 text-cyan-400" />
                         <span>{durationHours}h Track</span>
                       </span>
@@ -259,31 +259,31 @@ export function DynamicUpdatesSection() {
                   </div>
 
                   {/* Card Body */}
-                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4 bg-white">
                     <div className="space-y-2">
-                      <h3 className="font-bold text-lg sm:text-xl text-white group-hover:text-cyan-400 transition-colors line-clamp-2 leading-snug tracking-[-0.01em]">
+                      <h3 className="font-bold text-lg sm:text-xl text-slate-900 group-hover:text-cyan-600 transition-colors line-clamp-2 leading-snug tracking-[-0.01em]">
                         {course.title}
                       </h3>
 
-                      <p className="text-xs sm:text-sm text-slate-400 line-clamp-2 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 leading-relaxed">
                         {course.description || 'Comprehensive government curriculum designed for operational forecasting and earth science excellence.'}
                       </p>
                     </div>
 
                     {/* Footer Row */}
-                    <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-2 mt-auto">
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
                       <div className="flex items-center gap-2 truncate max-w-[150px]">
                         <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
                           {trainerName.charAt(0).toUpperCase()}
                         </div>
-                        <span className="text-xs text-slate-400 truncate">
+                        <span className="text-xs text-slate-500 truncate font-medium">
                           {trainerName}
                         </span>
                       </div>
 
                       <Link
                         to={courseLink}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 group-hover:gap-1.5 transition-all"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-cyan-600 hover:text-cyan-700 group-hover:gap-1.5 transition-all"
                       >
                         <span>{isDatabaseCourse ? 'View Details' : 'Enroll Now'}</span>
                         <ArrowRight className="w-3.5 h-3.5" />

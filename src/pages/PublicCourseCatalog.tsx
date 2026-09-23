@@ -54,49 +54,48 @@ export function PublicCourseCatalog() {
   }, [courses, searchQuery, selectedCategory])
 
   return (
-    <div className="min-h-screen bg-[#040814] text-zinc-200 font-sans relative">
-      {/* Decorative ambient gradients */}
-      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent blur-[100px] -z-10" />
-
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-cyan-500/30 bg-[#070E20]/90/80 backdrop-blur-2xl">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans flex flex-col">
+      {/* Dark Shell Topbar */}
+      <header className="sticky top-0 z-50 border-b border-slate-800 bg-[#040814] text-white">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="w-8 h-8 flex items-center justify-center shrink-0">
               <img src="/logo.png" alt="Capacity Connect" className="w-full h-full object-contain" />
             </div>
             <span className="text-lg font-bold tracking-tight">
-              <span className="text-cyan-300">Capacity</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-coral-500 to-orange-500"> Connect</span>
+              <span className="text-white">Capacity</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-sky-400"> Connect</span>
             </span>
           </Link>
-          <Link to="/login" className="text-sm font-semibold text-cyan-400 hover:text-pink-600 transition-colors flex items-center gap-1.5">
+          <Link to="/login" className="text-sm font-semibold text-cyan-400 hover:text-white transition-colors flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/20 px-3.5 py-1.5 rounded-xl">
             <LogIn className="w-4 h-4" /> Login
           </Link>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-12 space-y-8">
-        {/* Header & Search Bar */}
-        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[#070E20]/90/80 backdrop-blur-md p-8 rounded-3xl border border-cyan-500/30 shadow-sm">
-          <div>
+      <main className="max-w-7xl mx-auto px-6 py-10 space-y-8 flex-1 w-full">
+        {/* Header & Search Bar in Midnight Dark Banner */}
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-[#040814] via-[#07132a] to-[#0a1e3f] text-white p-8 rounded-3xl border border-cyan-500/30 shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-orange-500" /> Catalog
+              <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-amber-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1 border border-white/15">
+                <Sparkles className="w-3 h-3 text-amber-300" /> Catalog
               </span>
             </div>
-            <h1 className="text-3xl font-extrabold text-zinc-200 tracking-tight mb-2">Explore Courses</h1>
-            <p className="text-zinc-200/60 text-sm max-w-md">Discover high-impact MoES competency tracks available on the Capacity Connect platform.</p>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">Explore Courses</h1>
+            <p className="text-slate-300 text-sm max-w-md">Discover high-impact MoES competency tracks available on the Capacity Connect platform.</p>
           </div>
           
-          <div className="relative w-full md:w-80 shrink-0">
-            <Search className="w-5 h-5 text-purple-600/60 absolute left-4 top-1/2 -translate-y-1/2" />
+          <div className="relative w-full md:w-80 shrink-0 z-10">
+            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
               placeholder="Search courses, trainers..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-cyan-950/40 border border-cyan-500/30 rounded-2xl pl-12 pr-4 py-3 text-sm text-zinc-200 placeholder-midnight/40 focus:outline-none focus:border-pink-500 focus:bg-[#070E20]/90 focus:ring-2 focus:ring-pink-500/20 transition-all shadow-sm"
+              className="w-full bg-slate-900/80 border border-slate-700/80 rounded-2xl pl-12 pr-4 py-3 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-slate-900 focus:ring-2 focus:ring-cyan-500/20 transition-all shadow-xs"
             />
           </div>
         </motion.div>
@@ -111,8 +110,8 @@ export function PublicCourseCatalog() {
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                   isSelected
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-md shadow-pink-500/25 scale-105'
-                    : 'bg-[#070E20]/90 border border-cyan-500/30 text-zinc-200/70 hover:text-cyan-400 hover:bg-cyan-950/30'
+                    ? 'bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white shadow-md shadow-cyan-600/20 scale-105'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 shadow-xs'
                 }`}
               >
                 {cat === 'All' ? 'All Courses' : `${cat} Courses`}
@@ -125,16 +124,16 @@ export function PublicCourseCatalog() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-80 bg-purple-500/5 animate-pulse rounded-3xl border border-cyan-500/30" />
+              <div key={i} className="h-80 bg-white animate-pulse rounded-3xl border border-slate-200" />
             ))}
           </div>
         ) : filteredCourses.length === 0 ? (
-          <div className="p-16 text-center bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl shadow-sm">
-            <div className="w-16 h-16 bg-cyan-950/30 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-cyan-500/30">
-              <Compass className="w-8 h-8 text-purple-600" />
+          <div className="p-16 text-center bg-white border border-slate-200 rounded-3xl shadow-sm">
+            <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-cyan-200">
+              <Compass className="w-8 h-8 text-cyan-600" />
             </div>
-            <h3 className="text-lg font-bold text-zinc-200 mb-1">{searchQuery ? 'No Matching Courses Found' : 'No Courses Available'}</h3>
-            <p className="text-zinc-200/60 text-sm max-w-sm mx-auto">{searchQuery ? 'Try clearing your filters or searching for different keywords.' : 'Check back shortly for newly published training programs.'}</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">{searchQuery ? 'No Matching Courses Found' : 'No Courses Available'}</h3>
+            <p className="text-slate-500 text-sm max-w-sm mx-auto">{searchQuery ? 'Try clearing your filters or searching for different keywords.' : 'Check back shortly for newly published training programs.'}</p>
           </div>
         ) : (
           <motion.div variants={stagger} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -142,19 +141,19 @@ export function PublicCourseCatalog() {
               <motion.div 
                 key={course.id} 
                 variants={fadeUp} 
-                className="group flex flex-col bg-[#070E20]/90 hover:bg-gradient-to-b hover:from-white hover:to-purple-50/30 border border-cyan-500/30 hover:border-cyan-400/50 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 hover:-translate-y-1.5"
+                className="group flex flex-col bg-white border border-slate-200/90 hover:border-cyan-300 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-slate-200/60 transition-all duration-300 hover:-translate-y-1.5"
               >
                 {/* Thumbnail Header */}
-                <div className="h-44 relative overflow-hidden bg-purple-100">
+                <div className="h-44 relative overflow-hidden bg-slate-100">
                   <Thumbnail path={course.thumbnail_path} alt={course.title} type={course.course_type} />
                   
                   {/* Top Badges Overlay */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                    <span className="bg-[#070E20]/90/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-cyan-300 uppercase tracking-wider border border-white/40 shadow-sm">
+                    <span className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider border border-white/20 shadow-sm">
                       {course.course_type || 'Standard'}
                     </span>
-                    <span className="bg-midnight/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-medium text-white flex items-center gap-1 shadow-sm">
-                      <Clock className="w-3 h-3 text-orange-400" />
+                    <span className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-medium text-white flex items-center gap-1 shadow-sm">
+                      <Clock className="w-3 h-3 text-amber-400" />
                       <span>{course.duration_minutes ? `${course.duration_minutes}m` : 'Self-paced'}</span>
                     </span>
                   </div>
@@ -162,26 +161,26 @@ export function PublicCourseCatalog() {
 
                 {/* Card Content */}
                 <div className="p-6 flex-1 flex flex-col">
-                  <div className="flex items-center gap-2 text-xs text-purple-600 font-semibold mb-2">
-                    <span className="inline-block w-2 h-2 rounded-full bg-pink-500" />
+                  <div className="flex items-center gap-2 text-xs text-cyan-700 font-bold mb-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-cyan-500" />
                     <span>MoES Training Module</span>
                   </div>
 
-                  <h3 className="text-lg font-bold text-zinc-200 mb-2 group-hover:text-cyan-400 transition-colors line-clamp-1">
+                  <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-cyan-600 transition-colors line-clamp-1">
                     {course.title}
                   </h3>
                   
-                  <p className="text-xs text-zinc-200/60 mb-5 line-clamp-2 leading-relaxed flex-1">
+                  <p className="text-xs text-slate-500 mb-5 line-clamp-2 leading-relaxed flex-1">
                     {course.description || 'Comprehensive training module designed to enhance core competencies.'}
                   </p>
                   
                   {/* Instructor row */}
-                  <div className="flex items-center justify-between pt-3 border-t border-cyan-500/30 text-xs text-zinc-200/70 mb-5">
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-600 mb-5">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
                         {course.trainer?.full_name?.[0]?.toUpperCase() ?? 'T'}
                       </div>
-                      <span className="truncate max-w-[130px] font-medium text-zinc-200/80">
+                      <span className="truncate max-w-[130px] font-medium text-slate-700">
                         {course.trainer?.full_name || 'Assigned Trainer'}
                       </span>
                     </div>
@@ -189,7 +188,7 @@ export function PublicCourseCatalog() {
 
                   {/* Action Button */}
                   <Link to={`/courses/${course.id}`} className="w-full">
-                    <button className="w-full py-2.5 rounded-2xl bg-cyan-950/30 group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:via-pink-500 group-hover:to-orange-500 text-cyan-300 group-hover:text-white border border-cyan-500/30 group-hover:border-transparent text-sm font-semibold transition-all duration-300 shadow-none group-hover:shadow-md group-hover:shadow-cyan-500/10 flex items-center justify-center gap-1.5">
+                    <button className="w-full py-2.5 rounded-2xl bg-cyan-50 group-hover:bg-gradient-to-r group-hover:from-cyan-600 group-hover:via-sky-600 group-hover:to-blue-600 text-cyan-700 group-hover:text-white border border-cyan-200 group-hover:border-transparent text-sm font-bold transition-all duration-300 shadow-xs group-hover:shadow-md group-hover:shadow-cyan-600/20 flex items-center justify-center gap-1.5">
                       <span>View Details</span>
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </button>

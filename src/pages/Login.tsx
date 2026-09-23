@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import * as z from 'zod'
-import { Eye, EyeOff, Loader2, Globe, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, Loader2, ArrowRight, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -48,10 +48,10 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070E20]/90 text-zinc-200 flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#040814] text-white flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
       {/* Decorative ambient gradients */}
-      <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-purple-500/15 via-pink-500/15 to-orange-500/10 blur-[100px]" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-orange-500/15 via-pink-500/15 to-purple-500/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-transparent blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-sky-500/20 via-indigo-500/15 to-transparent blur-[120px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -61,45 +61,45 @@ export function Login() {
       >
         <Link 
           to="/" 
-          className="absolute -top-12 left-0 text-sm font-medium text-zinc-200/60 hover:text-pink-600 transition-colors flex items-center gap-1.5"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-300 hover:text-white transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Home
         </Link>
 
         {/* Logo */}
-        <div className="text-center mb-6 md:mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-5 md:mb-6">
-            <img src="/logo.png" alt="Logo" className="w-9 h-9 md:w-10 md:h-10 object-contain" />
-            <span className="text-base md:text-lg font-bold">
-              <span className="text-cyan-300">Capacity</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500"> Connect</span>
+        <div className="text-center mb-6">
+          <Link to="/" className="inline-flex items-center gap-2.5 mb-4">
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
+            <span className="text-lg font-bold">
+              <span className="text-white">Capacity</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-sky-400"> Connect</span>
             </span>
           </Link>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-zinc-200 tracking-tight">Welcome Back</h1>
-          <p className="text-zinc-200/60 mt-2 text-sm">Sign in to continue to your dashboard</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Welcome Back</h1>
+          <p className="text-slate-400 mt-1.5 text-sm">Sign in to continue to your dashboard</p>
         </div>
 
-        {/* Card */}
-        <div className="bg-[#070E20]/90/90 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-6 md:p-8 shadow-2xl shadow-cyan-950/50">
+        {/* Card (Elevated Pure White) */}
+        <div className="bg-white text-slate-900 border border-slate-200/90 rounded-3xl p-6 md:p-8 shadow-2xl shadow-black/40">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-zinc-200/80 text-sm font-medium">Email Address</Label>
+              <Label htmlFor="email" className="text-slate-700 text-sm font-semibold">Email Address</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="name@example.com"
                 {...register('email')}
-                className={`bg-purple-500/[0.03] border-cyan-500/30 text-zinc-200 placeholder:text-zinc-200/40 focus:border-pink-500 h-11 ${errors.email ? 'border-red-500/60' : ''}`}
+                className={`bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-cyan-500 h-11 rounded-xl ${errors.email ? 'border-rose-500' : ''}`}
                 disabled={isLoading}
               />
-              {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
+              {errors.email && <p className="text-xs text-rose-600 font-medium">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-zinc-200/80 text-sm font-medium">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-zinc-200/60 hover:text-pink-600 transition-colors font-medium">
+                <Label htmlFor="password" className="text-slate-700 text-sm font-semibold">Password</Label>
+                <Link to="/forgot-password" className="text-xs text-cyan-700 hover:text-cyan-800 transition-colors font-semibold">
                   Forgot password?
                 </Link>
               </div>
@@ -109,24 +109,24 @@ export function Login() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   {...register('password')}
-                  className={`bg-purple-500/[0.03] border-cyan-500/30 text-zinc-200 placeholder:text-zinc-200/40 focus:border-pink-500 h-11 pr-10 ${errors.password ? 'border-red-500/60' : ''}`}
+                  className={`bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-cyan-500 h-11 pr-10 rounded-xl ${errors.password ? 'border-rose-500' : ''}`}
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-zinc-200/50 hover:text-zinc-200 transition-colors"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-700 transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errors.password && <p className="text-xs text-red-600">{errors.password.message}</p>}
+              {errors.password && <p className="text-xs text-rose-600 font-medium">{errors.password.message}</p>}
             </div>
 
             <Button
               type="submit"
-              className="w-full h-11 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 hover:opacity-95 text-white shadow-lg shadow-pink-500/25 border-0 transition-all font-semibold"
+              className="w-full h-11 bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-md shadow-cyan-600/20 border-0 transition-all font-bold rounded-xl"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -137,18 +137,18 @@ export function Login() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-zinc-200/60">
+          <div className="mt-6 text-center pt-4 border-t border-slate-100">
+            <p className="text-sm text-slate-600 font-medium">
               Don't have an account?{' '}
-              <Link to="/register" className="text-pink-600 hover:text-pink-700 font-semibold transition-colors">
+              <Link to="/register" className="text-cyan-700 hover:text-cyan-800 font-bold transition-colors">
                 Create one
               </Link>
             </p>
           </div>
         </div>
 
-        <p className="text-center text-xs text-zinc-200/40 mt-6">
-          Ministry of Earth Sciences — SIH 2026 &nbsp;•&nbsp; Secure Platform
+        <p className="text-center text-xs text-slate-500 mt-6">
+          Ministry of Earth Sciences &nbsp;•&nbsp; Capacity Connect
         </p>
       </motion.div>
     </div>

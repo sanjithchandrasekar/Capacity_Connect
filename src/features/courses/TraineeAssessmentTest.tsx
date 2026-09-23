@@ -500,16 +500,16 @@ export function TraineeAssessmentTest() {
             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
             </div>
-            <h2 className="text-2xl font-bold text-zinc-200 mb-2">Assessment Completed</h2>
+            <h2 className="text-2xl font-black text-slate-900 mb-2">Assessment Completed</h2>
             {areResultsHidden ? (
-                <p className="text-zinc-200/60 mb-6 bg-cyan-950/30 p-3 rounded-lg border border-cyan-500/30 max-w-sm mx-auto">
+                <p className="text-slate-600 mb-6 bg-cyan-50 p-4 rounded-2xl border border-cyan-200 max-w-sm mx-auto text-sm font-medium">
                    Your results are currently hidden and will be published on <br/>
-                   <span className="font-bold text-cyan-400">{assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a later date'}</span>.
+                   <span className="font-bold text-cyan-700">{assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a later date'}</span>.
                 </p>
             ) : (
-                <p className="text-zinc-200/60 mb-6">You scored <span className="font-bold text-purple-600">{attemptData.score}%</span>.</p>
+                <p className="text-slate-600 mb-6 font-medium">You scored <span className="font-bold text-cyan-600">{attemptData.score}%</span>.</p>
             )}
-            <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl">Return to Course</Button>
+            <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">Return to Course</Button>
           </div>
         </div>
       </DashboardShell>
@@ -544,32 +544,34 @@ export function TraineeAssessmentTest() {
     return (
       <DashboardShell title={displayTitle} icon={Target} navLinks={[]}>
         <div className="max-w-4xl mx-auto">
-          <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-zinc-200/60 hover:text-cyan-400 transition-colors mb-6 font-semibold">
+          <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-6 font-semibold">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
-          <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-10 shadow-lg text-center max-w-2xl mx-auto">
-            <Target className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-zinc-200 mb-4">{displayTitle}</h1>
-            <p className="text-zinc-200/60 mb-8 max-w-lg mx-auto">{assessment.instructions || 'Please read each question carefully before answering. Good luck!'}</p>
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-10 shadow-sm text-center max-w-2xl mx-auto">
+            <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-cyan-200 text-cyan-600 shadow-sm">
+              <Target className="w-8 h-8" />
+            </div>
+            <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">{displayTitle}</h1>
+            <p className="text-slate-600 mb-8 max-w-lg mx-auto leading-relaxed font-medium">{assessment.instructions || 'Please read each question carefully before answering. Good luck!'}</p>
             
             <div className="flex justify-center gap-8 mb-10">
               <div className="text-center">
-                <p className="text-[10px] uppercase font-bold text-zinc-200/40 mb-1">Duration</p>
-                <p className="font-bold text-zinc-200 flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-500" /> {assessment.duration_minutes || 30} mins</p>
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Duration</p>
+                <p className="font-bold text-slate-900 flex items-center gap-1.5"><Clock className="w-4 h-4 text-amber-600" /> {assessment.duration_minutes || 30} mins</p>
               </div>
               <div className="text-center">
-                <p className="text-[10px] uppercase font-bold text-zinc-200/40 mb-1">Questions</p>
-                <p className="font-bold text-zinc-200 flex items-center gap-1.5"><Target className="w-4 h-4 text-blue-500" /> {questions.length}</p>
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Questions</p>
+                <p className="font-bold text-slate-900 flex items-center gap-1.5"><Target className="w-4 h-4 text-cyan-600" /> {questions.length}</p>
               </div>
             </div>
 
             {assessment.requires_sea && (
-              <div className="bg-rose-50/50 border border-rose-200 rounded-xl p-4 mb-8 text-left">
-                <div className="flex items-center gap-2 mb-2 text-rose-700">
-                  <ShieldAlert className="w-5 h-5" />
+              <div className="bg-rose-50/80 border border-rose-200 rounded-2xl p-4 mb-8 text-left">
+                <div className="flex items-center gap-2 mb-2 text-rose-800">
+                  <ShieldAlert className="w-5 h-5 text-rose-600" />
                   <h3 className="font-bold text-sm">Secure Exam Mode (SEA) is enabled</h3>
                 </div>
-                <ul className="text-xs text-rose-600/80 list-disc list-inside space-y-1">
+                <ul className="text-xs text-rose-700 list-disc list-inside space-y-1 font-medium">
                   <li>You will be forced into <b>full-screen mode</b>.</li>
                   <li>Do not minimize the browser or switch tabs.</li>
                   <li>Copy-pasting is disabled.</li>
@@ -579,12 +581,12 @@ export function TraineeAssessmentTest() {
             )}
 
             {!gating.allowed ? (
-              <div className="bg-orange-50 border border-orange-200 text-orange-800 p-6 rounded-2xl flex flex-col items-center gap-3">
-                <AlertCircle className="w-8 h-8 text-orange-500" />
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 p-6 rounded-2xl flex flex-col items-center gap-3">
+                <AlertCircle className="w-8 h-8 text-amber-600" />
                 <p className="font-bold">{gating.message}</p>
               </div>
             ) : (
-              <Button onClick={startTest} className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl px-10 py-6 text-lg w-full sm:w-auto shadow-lg shadow-cyan-950/50 transition-all hover:scale-105 active:scale-95">
+              <Button onClick={startTest} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-2xl px-10 py-6 text-lg w-full sm:w-auto shadow-lg shadow-cyan-600/20 transition-all hover:scale-105 active:scale-95">
                 Start Assessment
               </Button>
             )}
@@ -600,14 +602,14 @@ export function TraineeAssessmentTest() {
       <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
         <div className="max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[50vh] text-center">
           <motion.div 
-            animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }} 
+            animate={{ scale: [1, 1.08, 1], rotate: [0, 4, -4, 0] }} 
             transition={{ repeat: Infinity, duration: 2 }}
-            className="w-24 h-24 bg-gradient-to-br from-purple-600 to-pink-500 rounded-2xl shadow-xl shadow-pink-500/20 flex items-center justify-center mb-6"
+            className="w-24 h-24 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-3xl shadow-xl shadow-cyan-600/20 flex items-center justify-center mb-6 text-white"
           >
-            <Brain className="w-12 h-12 text-white" />
+            <Brain className="w-12 h-12" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-zinc-200 mb-2">AI is evaluating your answers...</h2>
-          <p className="text-zinc-200/50">Analyzing responses and generating feedback</p>
+          <h2 className="text-2xl font-black text-slate-900 mb-2">AI is evaluating your answers...</h2>
+          <p className="text-slate-500 font-medium">Analyzing responses and generating feedback</p>
         </div>
       </DashboardShell>
     )
@@ -625,14 +627,14 @@ export function TraineeAssessmentTest() {
         <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
             <div className="max-w-4xl mx-auto space-y-6 text-center py-20">
               <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold text-zinc-200 mb-2">Submitted Successfully!</h2>
-              <p className="text-zinc-200/60 mb-8 max-w-md mx-auto">
+              <h2 className="text-3xl font-black text-slate-900 mb-2">Submitted Successfully!</h2>
+              <p className="text-slate-600 mb-8 max-w-md mx-auto font-medium">
                  {isPendingManual 
                    ? "Your assessment contains open-ended questions that require manual grading. Please check back later."
                    : `Your assessment has been submitted. The results are hidden by your trainer until ${assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a future date'}.`
                  }
               </p>
-              <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-8 py-6 font-bold">Return to Course</Button>
+              <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white rounded-xl px-8 py-6 font-bold shadow-md shadow-cyan-600/10">Return to Course</Button>
             </div>
         </DashboardShell>
        )
@@ -641,10 +643,10 @@ export function TraineeAssessmentTest() {
     return (
       <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
         <div className="max-w-6xl mx-auto space-y-8">
-          <div className="flex items-center justify-between border-b border-cyan-500/30 pb-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
             <div>
-              <h2 className="text-2xl font-bold text-zinc-200">Assessment Results</h2>
-              <p className="text-sm text-zinc-400 mt-1">{assessment.title} - Completed on {previousAttempt?.created_at ? new Date(previousAttempt.created_at).toLocaleString() : new Date().toLocaleString()}</p>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Assessment Results</h2>
+              <p className="text-sm text-slate-500 mt-1 font-medium">{assessment.title} - Completed on {previousAttempt?.created_at ? new Date(previousAttempt.created_at).toLocaleString() : new Date().toLocaleString()}</p>
             </div>
           </div>
 
@@ -670,47 +672,45 @@ export function TraineeAssessmentTest() {
             });
 
             const attempted = totalQuestions - skipped;
-            // Simplified scoring: assume 1 mark per question for display if not specified, but the actual score is calculated differently
-            // We use the recorded percentage score from previousAttempt or submitMutation
             const finalScore = previousAttempt?.score ?? (submitMutation.data as any)?.score ?? 0;
-            const totalMarks = totalQuestions * 10; // Placeholder if we don't have per-question marks
+            const totalMarks = totalQuestions * 10;
             const marksScored = Math.round((finalScore / 100) * totalMarks);
 
             return (
               <div className="space-y-4">
                 {/* Top Stats Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 flex flex-col items-center justify-center">
-                    <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-bold mb-1">Marks Scored</span>
-                    <span className="text-2xl font-black text-zinc-200">{marksScored} <span className="text-sm text-zinc-500 font-bold">/ {totalMarks}</span></span>
+                  <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col items-center justify-center">
+                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Marks Scored</span>
+                    <span className="text-2xl font-black text-cyan-600">{marksScored} <span className="text-sm text-slate-400 font-bold">/ {totalMarks}</span></span>
                   </div>
-                  <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 flex flex-col items-center justify-center">
-                    <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-bold mb-1">Total Questions</span>
-                    <span className="text-2xl font-black text-zinc-200">{totalQuestions}</span>
+                  <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col items-center justify-center">
+                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Total Questions</span>
+                    <span className="text-2xl font-black text-slate-900">{totalQuestions}</span>
                   </div>
-                  <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 flex flex-col items-center justify-center">
-                    <span className="text-[10px] uppercase tracking-widest text-cyan-500 font-bold mb-1">Attempted Questions</span>
-                    <span className="text-2xl font-black text-zinc-200">{attempted}</span>
+                  <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col items-center justify-center">
+                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Attempted Questions</span>
+                    <span className="text-2xl font-black text-slate-900">{attempted}</span>
                   </div>
                 </div>
 
                 {/* Secondary Stats Row */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-3 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-1">Correct</span>
-                    <span className="text-xl font-bold text-emerald-400">{correct}</span>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold mb-1">Correct</span>
+                    <span className="text-xl font-black text-emerald-700">{correct}</span>
                   </div>
-                  <div className="bg-rose-950/20 border border-rose-500/30 rounded-xl p-3 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-widest text-rose-500 font-bold mb-1">Incorrect</span>
-                    <span className="text-xl font-bold text-rose-400">{incorrect}</span>
+                  <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-rose-700 font-bold mb-1">Incorrect</span>
+                    <span className="text-xl font-black text-rose-700">{incorrect}</span>
                   </div>
-                  <div className="bg-orange-950/20 border border-orange-500/30 rounded-xl p-3 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-widest text-orange-500 font-bold mb-1">Skipped</span>
-                    <span className="text-xl font-bold text-orange-400">{skipped}</span>
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-amber-700 font-bold mb-1">Skipped</span>
+                    <span className="text-xl font-black text-amber-700">{skipped}</span>
                   </div>
-                  <div className="bg-purple-950/20 border border-purple-500/30 rounded-xl p-3 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-widest text-purple-500 font-bold mb-1">Pending Eval</span>
-                    <span className="text-xl font-bold text-purple-400">{pending}</span>
+                  <div className="bg-cyan-50 border border-cyan-200 rounded-2xl p-3 flex flex-col items-center">
+                    <span className="text-[10px] uppercase tracking-widest text-cyan-700 font-bold mb-1">Pending Eval</span>
+                    <span className="text-xl font-black text-cyan-700">{pending}</span>
                   </div>
                 </div>
               </div>
@@ -720,27 +720,25 @@ export function TraineeAssessmentTest() {
           <div className="space-y-6 mt-8">
             {questions.map((q, idx) => {
               const resultAnswers = previousAttempt?.answers || answers;
-              const opts = q.options as Record<string, string>
               const isCorrect = resultAnswers[q.id] === q.correct_answer
-              const isUnanswered = !resultAnswers[q.id]
               return (
-                <div key={q.id} className={`p-6 rounded-3xl border ${isCorrect ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'}`}>
+                <div key={q.id} className={`p-6 rounded-3xl border shadow-sm ${isCorrect ? 'bg-white border-emerald-200' : 'bg-white border-rose-200'}`}>
                   <div className="flex gap-4">
                     <div className="shrink-0 mt-1">
-                      {isCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <XCircle className="w-6 h-6 text-rose-500" />}
+                      {isCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-600" /> : <XCircle className="w-6 h-6 text-rose-600" />}
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-zinc-200 mb-4"><span className="opacity-50 mr-2">{idx + 1}.</span>{q.question_text}</p>
+                      <p className="font-bold text-slate-900 mb-4 text-base"><span className="text-slate-400 mr-2">{idx + 1}.</span>{q.question_text}</p>
                       <div className="grid sm:grid-cols-2 gap-3 mb-4">
                         {Object.entries(q.options as Record<string, string>).map(([key, opt]) => {
                           const isSelected = resultAnswers[q.id] === key
                           const isActuallyCorrect = q.correct_answer === key
-                          let style = 'bg-[#070E20]/90 border-slate-200 opacity-60'
-                          if (isActuallyCorrect) style = 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold shadow-sm'
-                          else if (isSelected && !isActuallyCorrect) style = 'bg-rose-100 border-rose-300 text-rose-900 font-bold'
+                          let style = 'bg-slate-50 border-slate-200 text-slate-600'
+                          if (isActuallyCorrect) style = 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold shadow-sm'
+                          else if (isSelected && !isActuallyCorrect) style = 'bg-rose-50 border-rose-300 text-rose-900 font-bold'
 
                           return (
-                            <div key={key} className={`p-3 rounded-xl border text-sm flex items-center justify-between ${style}`}>
+                            <div key={key} className={`p-3.5 rounded-xl border text-sm flex items-center justify-between ${style}`}>
                               <span><span className="font-bold mr-1">{key}.</span>{opt}</span>
                               {isActuallyCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
                               {isSelected && !isActuallyCorrect && <XCircle className="w-4 h-4 text-rose-600" />}
@@ -750,12 +748,12 @@ export function TraineeAssessmentTest() {
                       </div>
                       
                       {/* AI Explanation Box */}
-                      <div className="bg-[#070E20]/90/80 rounded-2xl p-4 border border-cyan-500/30 shadow-sm">
+                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm">
                         <div className="flex items-center gap-2 mb-2">
-                          <Brain className="w-4 h-4 text-purple-600" />
-                          <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wide">AI Feedback</h4>
+                          <Brain className="w-4 h-4 text-cyan-600" />
+                          <h4 className="text-xs font-bold text-cyan-800 uppercase tracking-wide">Explanation / Feedback</h4>
                         </div>
-                        <p className="text-sm text-zinc-200/80 leading-relaxed">
+                        <p className="text-sm text-slate-700 leading-relaxed font-medium">
                           {q.explanation || 'No explanation provided.'}
                         </p>
                       </div>
@@ -767,7 +765,7 @@ export function TraineeAssessmentTest() {
           </div>
 
           <div className="flex justify-center pt-6 pb-20">
-            <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-8 py-6 font-bold">Return to Course</Button>
+            <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl px-8 py-6 shadow-md shadow-cyan-600/10">Return to Course</Button>
           </div>
         </div>
       </DashboardShell>
@@ -796,9 +794,8 @@ export function TraineeAssessmentTest() {
           </div>
         )}
 
-
         {assessment.requires_sea && (
-          <div className="fixed bottom-4 right-4 w-48 h-36 bg-black rounded-lg overflow-hidden shadow-2xl border-2 border-rose-500 z-50">
+          <div className="fixed bottom-4 right-4 w-48 h-36 bg-black rounded-2xl overflow-hidden shadow-2xl border-2 border-rose-500 z-50">
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
             <div className="absolute top-2 left-2 flex gap-1">
               <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
@@ -811,43 +808,43 @@ export function TraineeAssessmentTest() {
         <canvas ref={canvasRef} width="160" height="120" style={{ display: 'none' }} />
 
         {isScanningRoom && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-midnight/90 backdrop-blur-sm">
-            <div className="bg-[#070E20]/90 p-8 rounded-3xl max-w-md w-full shadow-2xl text-center">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="bg-white p-8 rounded-3xl max-w-md w-full shadow-2xl text-center">
               <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <ShieldAlert className="w-8 h-8" />
               </div>
-              <h2 className="text-2xl font-bold text-zinc-200 mb-2">Random Room Scan</h2>
-              <p className="text-sm text-zinc-200/70 mb-6">
+              <h2 className="text-2xl font-black text-slate-900 mb-2">Random Room Scan</h2>
+              <p className="text-sm text-slate-600 mb-6 font-medium leading-relaxed">
                 Please pick up your webcam or laptop and slowly pan 360 degrees to show your entire workspace. The test timer is paused.
               </p>
               <Progress value={roomScanProgress} className="h-3 mb-4" />
-              <p className="text-xs font-bold text-zinc-200/50 uppercase tracking-widest animate-pulse">Scanning Environment...</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Scanning Environment...</p>
             </div>
           </div>
         )}
 
         {/* Header Bar */}
-        <div className={`flex items-center justify-between mb-8 bg-[#070E20]/90 p-4 rounded-2xl shadow-sm border border-slate-100 sticky top-4 z-10 ${isScanningRoom ? 'opacity-20 pointer-events-none' : ''}`}>
+        <div className={`flex items-center justify-between mb-8 bg-white p-5 rounded-3xl shadow-sm border border-slate-200/90 sticky top-4 z-10 ${isScanningRoom ? 'opacity-20 pointer-events-none' : ''}`}>
           <div className="flex items-center gap-4 w-1/2">
-            <span className="text-sm font-bold text-zinc-200">
+            <span className="text-sm font-bold text-slate-900 whitespace-nowrap">
               {assessment.is_adaptive 
-                 ? `Adaptive Question ${adaptiveHistory.length + 1} / ${questions.length}`
+                 ? `Adaptive Q ${adaptiveHistory.length + 1} / ${questions.length}`
                  : `Question ${currentQuestionIndex + 1} of ${questions.length}`
               }
             </span>
             <Progress value={progressPercent} className="h-2 flex-1" />
           </div>
-          <div className={`flex items-center gap-2 font-mono font-bold text-lg px-4 py-2 rounded-xl ${timeLeft && timeLeft < 300 ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-slate-100 text-slate-700'}`}>
-            <Clock className="w-5 h-5" />
+          <div className={`flex items-center gap-2 font-mono font-bold text-base px-4 py-2 rounded-2xl ${timeLeft && timeLeft < 300 ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-slate-100 text-slate-800'}`}>
+            <Clock className="w-4 h-4 text-cyan-600" />
             {timeLeft !== null ? formatTime(timeLeft) : '00:00'}
           </div>
         </div>
 
         <div className={assessment.is_simulation ? 'flex flex-col md:flex-row gap-6' : ''}>
           {assessment.is_simulation && assessment.simulation_dataset_url && (
-            <div className="md:w-1/2 bg-[#070E20]/90 rounded-3xl p-6 shadow-sm border border-slate-100 mb-8 flex flex-col">
-              <h3 className="font-bold text-zinc-200 mb-4 flex items-center gap-2">
-                <Target className="w-5 h-5 text-emerald-600"/> 
+            <div className="md:w-1/2 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/90 mb-8 flex flex-col">
+              <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-cyan-600"/> 
                 Reference Material
               </h3>
               <div className="flex-1 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center min-h-[300px]">
@@ -863,7 +860,6 @@ export function TraineeAssessmentTest() {
           
           <div className={assessment.is_simulation ? 'md:w-1/2 w-full' : 'w-full'}>
 
-
         {/* Question Card */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -873,9 +869,9 @@ export function TraineeAssessmentTest() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
-            className="bg-[#070E20]/90 rounded-3xl p-8 shadow-sm border border-slate-100 mb-8"
+            className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/90 mb-8"
           >
-            <h2 className="text-xl font-bold text-zinc-200 mb-8 leading-snug">{currentQ?.question_text}</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-8 leading-snug">{currentQ?.question_text}</h2>
             
             <div className="space-y-3">
               {(currentQ as any)?.question_type === 'open_ended' ? (
@@ -883,7 +879,7 @@ export function TraineeAssessmentTest() {
                   value={answers[currentQ.id] || ''}
                   onChange={(e) => setAnswers(prev => ({ ...prev, [currentQ.id]: e.target.value }))}
                   placeholder="Type your answer here..."
-                  className="w-full min-h-[150px] p-4 rounded-2xl border-2 border-slate-200 focus:border-cyan-500/30 focus:ring-4 focus:ring-purple-600/10 transition-all outline-none text-zinc-200 resize-y"
+                  className="w-full min-h-[150px] p-4 rounded-2xl border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 transition-all outline-none text-slate-900 resize-y font-medium placeholder:text-slate-400 bg-slate-50"
                 />
               ) : (
                 Object.entries((currentQ?.options as Record<string, string>) || {}).map(([key, opt]) => {
@@ -894,13 +890,13 @@ export function TraineeAssessmentTest() {
                       onClick={() => setAnswers(prev => ({ ...prev, [currentQ.id]: key }))}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between ${
                         isSelected 
-                          ? 'border-cyan-500/30 bg-cyan-950/30' 
-                          : 'border-slate-100 hover:border-cyan-500/30 hover:bg-slate-50'
+                          ? 'border-cyan-500 bg-cyan-50/60 shadow-sm' 
+                          : 'border-slate-100 hover:border-cyan-300 hover:bg-slate-50'
                       }`}
                     >
-                      <span className={`font-medium ${isSelected ? 'text-cyan-300' : 'text-zinc-200/70'}`}><span className="font-bold mr-1">{key}.</span>{opt}</span>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-cyan-500/30' : 'border-slate-300'}`}>
-                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-purple-600" />}
+                      <span className={`font-semibold text-sm ${isSelected ? 'text-cyan-950' : 'text-slate-700'}`}><span className="font-bold mr-1.5">{key}.</span>{opt}</span>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-cyan-600' : 'border-slate-300'}`}>
+                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-cyan-600" />}
                       </div>
                     </button>
                   )
@@ -917,7 +913,7 @@ export function TraineeAssessmentTest() {
               variant="outline" 
               onClick={() => setCurrentQuestionIndex(p => Math.max(0, p - 1))}
               disabled={currentQuestionIndex === 0}
-              className="rounded-xl font-bold border-slate-200"
+              className="rounded-xl font-bold border-slate-200 text-slate-700 hover:bg-slate-50"
             >
               Previous
             </Button>
@@ -926,7 +922,7 @@ export function TraineeAssessmentTest() {
           {(!assessment.is_adaptive && currentQuestionIndex === questions.length - 1) || (assessment.is_adaptive && adaptiveHistory.length + 1 >= questions.length) ? (
             <Button 
               onClick={handleSubmit} 
-              className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold px-8"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold px-8 shadow-md shadow-emerald-600/20"
             >
               Submit Assessment
             </Button>
@@ -942,13 +938,11 @@ export function TraineeAssessmentTest() {
                   setCurrentDifficulty(nextDiff);
                   setAdaptiveHistory(prev => [...prev, currentQ.id]);
 
-                  // Find next question of this difficulty that hasn't been answered/shown
                   let nextQIndex = randomizedQuestions.findIndex((q: any, idx: number) => 
                     q.difficulty === nextDiff && !answers[q.id] && idx !== currentQuestionIndex && !adaptiveHistory.includes(q.id)
                   );
 
                   if (nextQIndex === -1) {
-                    // fallback to any unanswered
                     nextQIndex = randomizedQuestions.findIndex((q: any, idx: number) => 
                       !answers[q.id] && idx !== currentQuestionIndex && !adaptiveHistory.includes(q.id)
                     );
@@ -963,7 +957,7 @@ export function TraineeAssessmentTest() {
                   setCurrentQuestionIndex(p => Math.min(questions.length - 1, p + 1));
                 }
               }}
-              className="bg-midnight hover:bg-midnight/90 text-white rounded-xl font-bold"
+              className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white rounded-xl font-bold px-6 shadow-md shadow-cyan-600/10"
             >
               Next Question
             </Button>

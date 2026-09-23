@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import * as z from 'zod'
-import { Eye, EyeOff, Loader2, Globe, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,8 +31,6 @@ export function SetupPassword() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check if we actually have a session to update the password for.
-    // The link from the email should log the user in automatically via the URL fragment.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setHasSession(true)
@@ -58,7 +56,6 @@ export function SetupPassword() {
       const userId = sessionData.session?.user.id
       
       if (userId) {
-        // Warning: Storing plain text passwords is a security risk. Added per user request.
         await Promise.all([
           supabase.from('trainees').update({ password: data.password }).eq('id', userId),
           supabase.from('trainers').update({ password: data.password }).eq('id', userId),
@@ -77,21 +74,21 @@ export function SetupPassword() {
   }
 
   const inputClass = (hasError: boolean) =>
-    `bg-purple-500/[0.03] border-cyan-500/30 text-zinc-200 placeholder:text-zinc-200/40 focus:border-pink-500 h-11 ${hasError ? 'border-red-500/60' : ''}`
+    `bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-cyan-500 h-11 rounded-xl ${hasError ? 'border-rose-500' : ''}`
 
   if (!hasSession) {
     return (
-      <div className="min-h-screen bg-[#070E20]/90 flex items-center justify-center p-4">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+      <div className="min-h-screen bg-[#040814] flex items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#070E20]/90 text-zinc-200 flex items-center justify-center p-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[#040814] text-white flex items-center justify-center p-4 py-12 relative overflow-hidden">
       {/* Decorative ambient gradients */}
-      <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-purple-500/15 via-pink-500/15 to-orange-500/10 blur-[100px]" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-orange-500/15 via-pink-500/15 to-purple-500/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-transparent blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-sky-500/20 via-indigo-500/15 to-transparent blur-[120px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -99,29 +96,28 @@ export function SetupPassword() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2.5 mb-6">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-2.5 mb-4">
             <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
             <span className="text-lg font-bold">
-              <span className="text-cyan-300">Capacity</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-500"> Connect</span>
+              <span className="text-white">Capacity</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-sky-400"> Connect</span>
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold text-zinc-200 tracking-tight">Set New Password</h1>
-          <p className="text-zinc-200/60 mt-2 text-sm">Please enter a new password for your account.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Set New Password</h1>
+          <p className="text-slate-400 mt-1.5 text-sm">Please enter a new password for your account.</p>
           {userEmail && (
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-sm font-semibold text-cyan-400 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ring-2 ring-emerald-500/20"></span>
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-semibold text-cyan-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               {userEmail}
             </div>
           )}
         </div>
 
-        <div className="bg-[#070E20]/90/90 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-8 shadow-2xl shadow-cyan-950/50">
+        <div className="bg-white text-slate-900 border border-slate-200/90 rounded-3xl p-6 md:p-8 shadow-2xl shadow-black/40">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-zinc-200/70 text-sm">New Password</Label>
+              <Label htmlFor="password" className="text-slate-700 text-sm font-semibold">New Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -131,22 +127,22 @@ export function SetupPassword() {
                   className={`${inputClass(!!errors.password)} pr-10`}
                   disabled={isLoading}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-zinc-200/50 hover:text-zinc-200 transition-colors" tabIndex={-1}>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-700 transition-colors" tabIndex={-1}>
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errors.password && <p className="text-xs text-red-600">{errors.password.message}</p>}
+              {errors.password && <p className="text-xs text-rose-600 font-medium">{errors.password.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword" className="text-zinc-200/70 text-sm">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-slate-700 text-sm font-semibold">Confirm Password</Label>
               <Input id="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...register('confirmPassword')} className={inputClass(!!errors.confirmPassword)} disabled={isLoading} />
-              {errors.confirmPassword && <p className="text-xs text-red-600">{errors.confirmPassword.message}</p>}
+              {errors.confirmPassword && <p className="text-xs text-rose-600 font-medium">{errors.confirmPassword.message}</p>}
             </div>
 
             <Button
               type="submit"
-              className="w-full h-11 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 hover:opacity-95 text-white border-0 transition-all font-semibold mt-4 shadow-lg shadow-pink-500/25"
+              className="w-full h-11 bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white shadow-md shadow-cyan-600/20 border-0 transition-all font-bold rounded-xl mt-4"
               disabled={isLoading}
             >
               {isLoading ? (

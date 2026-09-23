@@ -84,21 +84,21 @@ export function SettingsPage() {
   const content = (
     <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-3xl mx-auto space-y-6">
       <motion.div variants={fadeUp}>
-        <h2 className="text-3xl font-bold tracking-tight text-zinc-200">Settings</h2>
-        <p className="text-zinc-200/60 mt-2">Manage your account settings and preferences.</p>
+        <h2 className="text-3xl font-black tracking-tight text-slate-900">Settings</h2>
+        <p className="text-slate-500 mt-2 font-medium">Manage your account settings and preferences.</p>
       </motion.div>
 
       <motion.div variants={fadeUp} className="space-y-4">
         {/* Profile Settings */}
-        <Card className="bg-[#070E20]/90 border-cyan-500/30 shadow-sm overflow-hidden transition-all duration-300">
-          <CardContent className="p-5">
+        <Card className="bg-white border border-slate-200/90 shadow-sm overflow-hidden transition-all duration-300 rounded-3xl">
+          <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-cyan-950/30 flex items-center justify-center"><User className="w-6 h-6 text-purple-600" /></div>
+              <div className="w-12 h-12 rounded-2xl bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 shadow-sm"><User className="w-6 h-6" /></div>
               <div className="flex-1">
-                <p className="text-base font-semibold text-zinc-200">Account Profile</p>
-                <p className="text-sm text-zinc-200/60">{profile?.email} &middot; Role: <span className="capitalize font-medium text-cyan-400">{profile?.role?.replace('_', ' ')}</span></p>
+                <p className="text-base font-bold text-slate-900">Account Profile</p>
+                <p className="text-sm text-slate-500 font-medium">{profile?.email} &middot; Role: <span className="capitalize font-bold text-cyan-700">{profile?.role?.replace('_', ' ')}</span></p>
               </div>
-              <Button variant="ghost" className="text-purple-600 hover:text-cyan-400 hover:bg-cyan-950/30" onClick={() => setActiveSection(activeSection === 'profile' ? null : 'profile')}>
+              <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-semibold" onClick={() => setActiveSection(activeSection === 'profile' ? null : 'profile')}>
                 {activeSection === 'profile' ? 'Close' : 'Edit'}
               </Button>
             </div>
@@ -106,28 +106,28 @@ export function SettingsPage() {
             <AnimatePresence>
               {activeSection === 'profile' && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <form onSubmit={handleUpdateProfile} className="pt-6 mt-4 border-t border-cyan-500/30 space-y-4">
+                  <form onSubmit={handleUpdateProfile} className="pt-6 mt-4 border-t border-slate-100 space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-200/80">Full Name</label>
-                      <Input value={fullName} onChange={e => setFullName(e.target.value)} className="max-w-md bg-cyan-950/30/30" />
+                      <label className="text-sm font-semibold text-slate-700">Full Name</label>
+                      <Input value={fullName} onChange={e => setFullName(e.target.value)} className="max-w-md bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
                     </div>
                     {profile?.role !== 'admin' && profile?.role !== 'super_admin' && (
                       <>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-zinc-200/80">Qualifications</label>
-                          <Input value={qualifications} onChange={e => setQualifications(e.target.value)} placeholder="e.g. B.Tech, Meteorology Certifications" className="max-w-md bg-cyan-950/30/30" />
+                          <label className="text-sm font-semibold text-slate-700">Qualifications</label>
+                          <Input value={qualifications} onChange={e => setQualifications(e.target.value)} placeholder="e.g. B.Tech, Meteorology Certifications" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-zinc-200/80">Work Experience</label>
-                          <Input value={workExperience} onChange={e => setWorkExperience(e.target.value)} placeholder="e.g. 5 years as Forecaster" className="max-w-md bg-cyan-950/30/30" />
+                          <label className="text-sm font-semibold text-slate-700">Work Experience</label>
+                          <Input value={workExperience} onChange={e => setWorkExperience(e.target.value)} placeholder="e.g. 5 years as Forecaster" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-zinc-200/80">Professional Interests</label>
-                          <Input value={interests} onChange={e => setInterests(e.target.value)} placeholder="e.g. Climate Modeling, Data Science" className="max-w-md bg-cyan-950/30/30" />
+                          <label className="text-sm font-semibold text-slate-700">Professional Interests</label>
+                          <Input value={interests} onChange={e => setInterests(e.target.value)} placeholder="e.g. Climate Modeling, Data Science" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
                         </div>
                       </>
                     )}
-                    <Button type="submit" disabled={loading} className="bg-purple-600 hover:bg-purple-700 text-white">
+                    <Button type="submit" disabled={loading} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
                       {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} Save Changes
                     </Button>
                   </form>
@@ -138,15 +138,15 @@ export function SettingsPage() {
         </Card>
 
         {/* Security Settings */}
-        <Card className="bg-[#070E20]/90 border-cyan-500/30 shadow-sm overflow-hidden transition-all duration-300">
-          <CardContent className="p-5">
+        <Card className="bg-white border border-slate-200/90 shadow-sm overflow-hidden transition-all duration-300 rounded-3xl">
+          <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center"><Shield className="w-6 h-6 text-orange-600" /></div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-sm"><Shield className="w-6 h-6" /></div>
               <div className="flex-1">
-                <p className="text-base font-semibold text-zinc-200">Security & Password</p>
-                <p className="text-sm text-zinc-200/60">Update your password to keep your account secure.</p>
+                <p className="text-base font-bold text-slate-900">Security & Password</p>
+                <p className="text-sm text-slate-500 font-medium">Update your password to keep your account secure.</p>
               </div>
-              <Button variant="ghost" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50" onClick={() => setActiveSection(activeSection === 'security' ? null : 'security')}>
+              <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl font-semibold" onClick={() => setActiveSection(activeSection === 'security' ? null : 'security')}>
                 {activeSection === 'security' ? 'Close' : 'Update'}
               </Button>
             </div>
@@ -154,12 +154,12 @@ export function SettingsPage() {
             <AnimatePresence>
               {activeSection === 'security' && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <form onSubmit={handleUpdatePassword} className="pt-6 mt-4 border-t border-cyan-500/30 space-y-4">
+                  <form onSubmit={handleUpdatePassword} className="pt-6 mt-4 border-t border-slate-100 space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-zinc-200/80">New Password</label>
-                      <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="max-w-md bg-orange-50/30" required minLength={6} />
+                      <label className="text-sm font-semibold text-slate-700">New Password</label>
+                      <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="max-w-md bg-slate-50 border-slate-200 text-slate-900 rounded-xl" required minLength={6} />
                     </div>
-                    <Button type="submit" disabled={loading} className="bg-orange-600 hover:bg-orange-700 text-white">
+                    <Button type="submit" disabled={loading} className="bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-sm">
                       {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />} Update Password
                     </Button>
                   </form>
