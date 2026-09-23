@@ -24,21 +24,22 @@ export function AnnouncementsFeed() {
         if (error) throw error
 
         if (data) {
-          // Filter out cleared announcements
-          const activeAnnouncements = data.filter(a => {
-            return !localStorage.getItem(`cleared_announcement_${a.id}_${user.id}`)
-          }).slice(0, 5) // Keep only top 5
+          // Fetch author names manually since we can't join admins directly if author_id references auth.users
+          const authorIds = [...new Set(data.map(a => a.author_id).filter(Boolean))]
+          const { data: admins } = await supabase
+            .from('admins')
+            .select('id, full_name')
+            .in('id', authorIds)
 
-          setAnnouncements(activeAnnouncements.map(a => {
-            const authorMatch = a.content.match(/<!--AUTHOR:(.*?)-->/)
-            const authorName = authorMatch ? authorMatch[1] : 'System Administrator'
-            const cleanContent = a.content.replace(/\n\n<!--AUTHOR:.*?-->/g, '')
-            return {
-              ...a,
-              content: cleanContent,
-              authorName
-            }
-          }))
+          const adminMap = admins?.reduce((acc: Record<string, string>, admin) => {
+            acc[admin.id] = admin.full_name
+            return acc
+          }, {} as Record<string, string>) || {}
+
+          setAnnouncements(data.map(a => ({
+            ...a,
+            authorName: a.author_id ? adminMap[a.author_id] : 'System Administrator'
+          })))
         }
       } catch (err) {
         console.error('Failed to fetch announcements feed:', err)
@@ -76,7 +77,7 @@ export function AnnouncementsFeed() {
           <p className="text-xs text-zinc-200/50">Important updates and news</p>
         </div>
       </div>
-      
+
       <div className="space-y-3">
         {announcements.map((ann) => (
           <div key={ann.id} className="group p-4 bg-cyan-950/30 border border-cyan-500/30 rounded-2xl flex flex-col gap-2 relative transition-all hover:bg-cyan-950/40">

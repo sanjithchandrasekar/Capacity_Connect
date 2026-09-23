@@ -9,6 +9,75 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      home_page_settings: {
+        Row: {
+          id: string
+          featured_programs_enabled: boolean
+          featured_programs_tag: string
+          featured_programs_title: string
+          featured_programs_subtitle: string
+          featured_programs_btn_text: string
+          featured_programs_btn_link: string
+          featured_programs_items: Json
+          announcements_bar_enabled: boolean
+          announcements_bar_label: string
+          announcements_bar_speed: number
+          announcements_items: Json
+          upcoming_tracks_enabled: boolean
+          upcoming_tracks_tag: string
+          upcoming_tracks_title: string
+          upcoming_tracks_subtitle: string
+          upcoming_tracks_btn_text: string
+          upcoming_tracks_items: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          featured_programs_enabled?: boolean
+          featured_programs_tag?: string
+          featured_programs_title?: string
+          featured_programs_subtitle?: string
+          featured_programs_btn_text?: string
+          featured_programs_btn_link?: string
+          featured_programs_items?: Json
+          announcements_bar_enabled?: boolean
+          announcements_bar_label?: string
+          announcements_bar_speed?: number
+          announcements_items?: Json
+          upcoming_tracks_enabled?: boolean
+          upcoming_tracks_tag?: string
+          upcoming_tracks_title?: string
+          upcoming_tracks_subtitle?: string
+          upcoming_tracks_btn_text?: string
+          upcoming_tracks_items?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          featured_programs_enabled?: boolean
+          featured_programs_tag?: string
+          featured_programs_title?: string
+          featured_programs_subtitle?: string
+          featured_programs_btn_text?: string
+          featured_programs_btn_link?: string
+          featured_programs_items?: Json
+          announcements_bar_enabled?: boolean
+          announcements_bar_label?: string
+          announcements_bar_speed?: number
+          announcements_items?: Json
+          upcoming_tracks_enabled?: boolean
+          upcoming_tracks_tag?: string
+          upcoming_tracks_title?: string
+          upcoming_tracks_subtitle?: string
+          upcoming_tracks_btn_text?: string
+          upcoming_tracks_items?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       admins: {
         Row: {
           id: string
@@ -740,6 +809,7 @@ export interface Database {
           author_id: string
           target_audience: string
           is_active: boolean
+          target_audience: string
           created_at: string
         }
         Insert: {
@@ -749,6 +819,7 @@ export interface Database {
           author_id: string
           target_audience?: string
           is_active?: boolean
+          target_audience?: string
           created_at?: string
         }
         Update: {
@@ -758,6 +829,61 @@ export interface Database {
           author_id?: string
           target_audience?: string
           is_active?: boolean
+          target_audience?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      course_announcements: {
+        Row: {
+          id: string
+          course_id: string
+          title: string
+          content: string
+          trainer_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          title: string
+          content: string
+          trainer_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          title?: string
+          content?: string
+          trainer_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      course_messages: {
+        Row: {
+          id: string
+          course_id: string
+          sender_id: string
+          content: string
+          is_private: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          sender_id: string
+          content: string
+          is_private?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          sender_id?: string
+          content?: string
+          is_private?: boolean
           created_at?: string
         }
         Relationships: []

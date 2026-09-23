@@ -238,8 +238,8 @@ export function useHomePageSettings() {
     queryKey: ['home_page_settings'],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('home_page_settings' as any)
+        const { data, error } = await (supabase as any)
+          .from('home_page_settings')
           .select('*')
           .limit(1)
           .maybeSingle();
@@ -280,18 +280,44 @@ export function useHomePageSettings() {
       // Always save to local cache for instant zero-latency UI update
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
 
+      const payload = {
+        id: 'default_settings',
+        featured_programs_enabled: updated.featured_programs_enabled ?? true,
+        featured_programs_tag: updated.featured_programs_tag || 'Top Certified Tracks',
+        featured_programs_title: updated.featured_programs_title || 'Featured Learning Programs',
+        featured_programs_subtitle: updated.featured_programs_subtitle || '',
+        featured_programs_btn_text: updated.featured_programs_btn_text || 'Explore All Courses',
+        featured_programs_btn_link: updated.featured_programs_btn_link || '/courses',
+        featured_programs_items: updated.featured_programs_items || [],
+
+        announcements_bar_enabled: updated.announcements_bar_enabled ?? true,
+        announcements_bar_label: updated.announcements_bar_label || 'Announcements',
+        announcements_bar_speed: updated.announcements_bar_speed || 24,
+        announcements_items: updated.announcements_items || [],
+
+        upcoming_tracks_enabled: updated.upcoming_tracks_enabled ?? true,
+        upcoming_tracks_tag: updated.upcoming_tracks_tag || 'Upcoming Announcements',
+        upcoming_tracks_title: updated.upcoming_tracks_title || 'Specialized Earth Sciences Tracks.',
+        upcoming_tracks_subtitle: updated.upcoming_tracks_subtitle || '',
+        upcoming_tracks_btn_text: updated.upcoming_tracks_btn_text || 'View Complete Catalog',
+        upcoming_tracks_items: updated.upcoming_tracks_items || [],
+
+        updated_at: new Date().toISOString(),
+      };
+
       // Attempt DB upsert
       try {
-        const { error } = await supabase
-          .from('home_page_settings' as any)
-          .upsert(updated, { onConflict: 'id' });
+        const { error } = await (supabase as any)
+          .from('home_page_settings')
+          .upsert(payload, { onConflict: 'id' });
 
         if (error) {
-          console.warn('Database table home_page_settings not configured yet. Changes saved locally:', error.message);
-          return { ...updated, _dbError: true };
+          console.error('Database upsert error on home_page_settings:', error);
+          return { ...updated, _dbError: error.message };
         }
-      } catch (err) {
-        return { ...updated, _dbError: true };
+      } catch (err: any) {
+        console.error('Database network error:', err);
+        return { ...updated, _dbError: err?.message || 'Database connection error' };
       }
 
       return updated;
@@ -300,9 +326,9 @@ export function useHomePageSettings() {
       queryClient.setQueryData(['home_page_settings'], result);
       queryClient.invalidateQueries({ queryKey: ['home_page_settings'] });
       if (result._dbError) {
-        toast.success('Home page settings updated! (Saved locally. Run the SQL query in Supabase to sync DB)');
+        toast.warning(`Saved locally. Supabase DB returned: ${result._dbError}. Please run the SQL migration in Supabase to sync DB.`);
       } else {
-        toast.success('Home page sections successfully published!');
+        toast.success('Home page sections successfully published to Database and Live Site!');
       }
     },
     onError: (err: any) => {
