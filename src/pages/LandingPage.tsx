@@ -16,7 +16,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { StarfieldCanvas } from '@/components/space/StarfieldCanvas';
 import { StickyScrollFeatures } from '@/components/landing/StickyScrollFeatures';
 import { DynamicUpdatesSection } from '@/components/landing/DynamicUpdatesSection';
+import { HorizontalAnnouncementBar } from '@/components/landing/HorizontalAnnouncementBar';
 import { MissionExplodedView } from '@/components/landing/MissionExplodedView';
+import { useHomePageSettings } from '@/hooks/useHomePageSettings';
 import {
   BookOpen,
   GraduationCap,
@@ -249,6 +251,8 @@ const upcomingCourses = [
     glow: 'from-cyan-500/20 via-sky-500/10 to-transparent',
     iconBg: 'bg-gradient-to-br from-cyan-950 to-blue-950 border border-cyan-500/40 text-cyan-400',
     accentColor: 'text-cyan-400',
+    link: '/register',
+    btnText: 'Pre-Register Cohort',
   },
   {
     title: 'Coastal Early Warning & Ocean Telemetry Protocol',
@@ -268,6 +272,8 @@ const upcomingCourses = [
     glow: 'from-amber-500/20 via-orange-500/10 to-transparent',
     iconBg: 'bg-gradient-to-br from-amber-950 to-orange-950 border border-amber-500/40 text-amber-400',
     accentColor: 'text-amber-400',
+    link: '/register',
+    btnText: 'Pre-Register Cohort',
   },
   {
     title: 'AI & Deep Learning in Numerical Weather Prediction',
@@ -287,6 +293,8 @@ const upcomingCourses = [
     glow: 'from-sky-500/20 via-blue-500/10 to-transparent',
     iconBg: 'bg-gradient-to-br from-sky-950 to-indigo-950 border border-sky-500/40 text-sky-400',
     accentColor: 'text-sky-400',
+    link: '/register',
+    btnText: 'Pre-Register Cohort',
   },
 ];
 
@@ -316,6 +324,7 @@ const testimonials = [
 
 export function LandingPage() {
   const { session, profile, loading } = useAuth();
+  const { settings } = useHomePageSettings();
   const [scrolled, setScrolled] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -334,6 +343,40 @@ export function LandingPage() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const displayedUpcomingTracks = React.useMemo(() => {
+    if (settings?.upcoming_tracks_items && settings.upcoming_tracks_items.length > 0) {
+      return settings.upcoming_tracks_items.map((t, index) => {
+        const fallback = upcomingCourses[index % upcomingCourses.length];
+        const rawSkills = t.key_skills;
+        const skills = Array.isArray(rawSkills)
+          ? rawSkills
+          : typeof rawSkills === 'string'
+          ? rawSkills.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : fallback.keySkills;
+
+        return {
+          title: t.title || fallback.title,
+          status: t.status || fallback.status,
+          level: t.level || fallback.level,
+          date: t.date || fallback.date,
+          duration: t.duration || fallback.duration,
+          format: t.format || fallback.format,
+          desc: t.desc || fallback.desc,
+          keySkills: skills.length > 0 ? skills : fallback.keySkills,
+          link: t.link || '/register',
+          btnText: t.btn_text || 'Pre-Register Cohort',
+          icon: fallback.icon,
+          color: fallback.color,
+          border: fallback.border,
+          glow: fallback.glow,
+          iconBg: fallback.iconBg,
+          accentColor: fallback.accentColor,
+        };
+      });
+    }
+    return upcomingCourses;
+  }, [settings?.upcoming_tracks_items]);
 
   if (!loading && session) {
     if (profile?.approval_status === 'pending') return <Navigate to="/pending-approval" replace />;
@@ -630,6 +673,11 @@ export function LandingPage() {
       </section>
 
       {/* ========================================================================= */}
+      {/* 3.5 HORIZONTAL LIVE ANNOUNCEMENTS TICKER BAR                             */}
+      {/* ========================================================================= */}
+      <HorizontalAnnouncementBar />
+
+      {/* ========================================================================= */}
       {/* 4. "BUILT FOR EVERY ROLE" (Trainees, Trainers, Coordinators)              */}
       {/* ========================================================================= */}
       <section id="roles-section" className="relative py-24 bg-[#040814] border-t border-cyan-500/20">
@@ -704,98 +752,43 @@ export function LandingPage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. "3D LAYER SPLIT / EXPLODED VIEW" MISSION SECTION                        */}
+      {/* 5. UPCOMING COURSES & ANNOUNCEMENTS PREVIEW                               */}
       {/* ========================================================================= */}
-      <MissionExplodedView id="mission-section" />
+      {(!settings || settings.upcoming_tracks_enabled) && (
+        <section
+          id="courses-preview"
+          className="relative py-24 sm:py-32 bg-[#030712] border-t border-cyan-500/20 overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Inter',sans-serif]"
+        >
+          {/* Ambient atmospheric backdrop glow */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-cyan-500/5 rounded-full blur-[140px] pointer-events-none" />
 
-      {/* ========================================================================= */}
-      {/* 6. FINAL CALL TO ACTION (CTA BAND)                                       */}
-      {/* ========================================================================= */}
-      <section className="relative py-28 bg-gradient-to-b from-[#040814] via-[#081226] to-[#030712] border-t border-cyan-500/20 overflow-hidden">
-        {/* Orbital rings background visual */}
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-cyan-500/20 animate-orbit-slow" />
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full border border-amber-500/15 animate-orbit-slow" />
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-cyan-500/15 via-blue-500/15 to-amber-500/15 blur-3xl" />
-
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-950/60 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-6 shadow-lg shadow-amber-950/50">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            Join the Next Generation of Earth Scientists
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display text-white tracking-[-0.02em] leading-tight mb-6">
-            Ready to Build Capacity for a{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-400">
-              Changing Climate?
-            </span>
-          </h2>
-
-          <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10 tracking-[-0.01em]">
-            Join hundreds of field officers, meteorologists, and data analysts across India. Get started
-            today with official government certification tracks.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/register" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto h-14 px-10 text-base font-semibold bg-gradient-to-r from-cyan-500 via-blue-600 to-amber-500 hover:opacity-95 text-white shadow-2xl shadow-cyan-500/25 rounded-xl tracking-[-0.01em]"
-              >
-                Join the Platform
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </Link>
-            <Link to="/courses" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto h-14 px-8 text-base font-semibold border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-white rounded-xl shadow-none hover:border-cyan-400 transition-all duration-300 tracking-[-0.01em]"
-              >
-                Browse All Courses
-                <Compass className="ml-2 w-4 h-4 text-cyan-400" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 7. UPCOMING COURSES & ANNOUNCEMENTS PREVIEW                               */}
-      {/* ========================================================================= */}
-      <section
-        id="courses-preview"
-        className="relative py-24 sm:py-32 bg-[#030712] border-t border-cyan-500/20 overflow-hidden font-['SF_Pro_Display',-apple-system,BlinkMacSystemFont,'Inter',sans-serif]"
-      >
-        {/* Ambient atmospheric backdrop glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-cyan-500/5 rounded-full blur-[140px] pointer-events-none" />
-
-        <div className="max-w-6xl mx-auto px-6 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#070E20]/90/10 border border-white/20 text-zinc-200 text-[11px] font-medium tracking-wide uppercase mb-3 sm:mb-4 shadow-sm backdrop-blur-md">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Upcoming Announcements</span>
+          <div className="max-w-6xl mx-auto px-6 relative z-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 gap-6">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#070E20]/90/10 border border-white/20 text-zinc-200 text-[11px] font-medium tracking-wide uppercase mb-3 sm:mb-4 shadow-sm backdrop-blur-md">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>{settings?.upcoming_tracks_tag || 'Upcoming Announcements'}</span>
+                </div>
+                <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-[-0.025em] leading-[1.08] text-white">
+                  {settings?.upcoming_tracks_title || 'Specialized Earth Sciences Tracks.'}
+                </h2>
+                <p className="text-base sm:text-xl md:text-2xl font-normal text-slate-200 tracking-[-0.015em] leading-snug mt-2 sm:mt-3 max-w-2xl">
+                  {settings?.upcoming_tracks_subtitle || 'Pre-register for next-generation cohorts and masterclasses.'}
+                </p>
               </div>
-              <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-[-0.025em] leading-[1.08] text-white">
-                Specialized Earth Sciences Tracks.
-              </h2>
-              <p className="text-base sm:text-xl md:text-2xl font-normal text-slate-200 tracking-[-0.015em] leading-snug mt-2 sm:mt-3 max-w-2xl">
-                Pre-register for next-generation cohorts and masterclasses.
-              </p>
+              <Link to="/courses">
+                <Button
+                  variant="outline"
+                  className="border-white/20 bg-[#070E20]/90/5 hover:bg-[#070E20]/90 text-zinc-200 hover:text-black rounded-full shadow-sm transition-all duration-300 tracking-[-0.01em] group h-11 px-6 font-medium text-sm"
+                >
+                  <span>{settings?.upcoming_tracks_btn_text || 'View Complete Catalog'}</span>
+                  <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+                </Button>
+              </Link>
             </div>
-            <Link to="/courses">
-              <Button
-                variant="outline"
-                className="border-white/20 bg-[#070E20]/90/5 hover:bg-[#070E20]/90 text-zinc-200 hover:text-black rounded-full shadow-sm transition-all duration-300 tracking-[-0.01em] group h-11 px-6 font-medium text-sm"
-              >
-                <span>View Complete Catalog</span>
-                <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
-              </Button>
-            </Link>
-          </div>
 
           <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
-            {upcomingCourses.map((c) => (
+            {displayedUpcomingTracks.map((c) => (
               <motion.div
                 key={c.title}
                 variants={fadeUp}
@@ -855,15 +848,72 @@ export function LandingPage() {
                   </div>
 
                   <Link
-                    to="/register"
+                    to={c.link || '/register'}
                     className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-cyan-950/70 hover:bg-gradient-to-r hover:from-cyan-500 hover:via-blue-600 hover:to-amber-500 border border-cyan-500/30 hover:border-transparent text-cyan-200 hover:text-white font-semibold text-xs tracking-wide transition-all duration-300 shadow-none hover:shadow-lg hover:shadow-cyan-500/20 group/btn"
                   >
-                    <span>Pre-Register Cohort</span>
+                    <span>{c.btnText || 'Pre-Register Cohort'}</span>
                     <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/btn:translate-x-1" />
                   </Link>
                 </div>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. "3D LAYER SPLIT / EXPLODED VIEW" MISSION SECTION                        */}
+      {/* ========================================================================= */}
+      <MissionExplodedView id="mission-section" />
+
+      {/* ========================================================================= */}
+      {/* 7. FINAL CALL TO ACTION (CTA BAND)                                       */}
+      {/* ========================================================================= */}
+      <section className="relative py-28 bg-gradient-to-b from-[#040814] via-[#081226] to-[#030712] border-t border-cyan-500/20 overflow-hidden">
+        {/* Orbital rings background visual */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full border border-cyan-500/20 animate-orbit-slow" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full border border-amber-500/15 animate-orbit-slow" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-gradient-to-r from-cyan-500/15 via-blue-500/15 to-amber-500/15 blur-3xl" />
+
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-950/60 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-6 shadow-lg shadow-amber-950/50">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            Join the Next Generation of Earth Scientists
+          </div>
+
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display text-white tracking-[-0.02em] leading-tight mb-6">
+            Ready to Build Capacity for a{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-400">
+              Changing Climate?
+            </span>
+          </h2>
+
+          <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-10 tracking-[-0.01em]">
+            Join hundreds of field officers, meteorologists, and data analysts across India. Get started
+            today with official government certification tracks.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/register" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto h-14 px-10 text-base font-semibold bg-gradient-to-r from-cyan-500 via-blue-600 to-amber-500 hover:opacity-95 text-white shadow-2xl shadow-cyan-500/25 rounded-xl tracking-[-0.01em]"
+              >
+                Join the Platform
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </Link>
+            <Link to="/courses" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto h-14 px-8 text-base font-semibold border-cyan-500/40 bg-cyan-950/30 hover:bg-cyan-900/50 text-white rounded-xl shadow-none hover:border-cyan-400 transition-all duration-300 tracking-[-0.01em]"
+              >
+                Browse All Courses
+                <Compass className="ml-2 w-4 h-4 text-cyan-400" />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
