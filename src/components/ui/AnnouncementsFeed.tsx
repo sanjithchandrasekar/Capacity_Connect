@@ -31,10 +31,12 @@ export function AnnouncementsFeed() {
             .select('id, full_name')
             .in('id', authorIds)
 
-          const adminMap = admins?.reduce((acc, admin) => {
-            acc[admin.id] = admin.full_name
+          const adminMap = admins?.reduce((acc: Record<string, string>, admin) => {
+            if (admin.full_name) {
+              acc[admin.id] = admin.full_name
+            }
             return acc
-          }, {}) || {}
+          }, {} as Record<string, string>) || {}
 
           setAnnouncements(data.map(a => ({
             ...a,
