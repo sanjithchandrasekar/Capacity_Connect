@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS public.announcements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   content TEXT NOT NULL,
+  author_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  target_audience TEXT NOT NULL DEFAULT 'all',
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -11,24 +13,26 @@ CREATE TABLE IF NOT EXISTS public.announcements (
 -- Enable RLS
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to active announcements
-CREATE POLICY "Allow public read access to active announcements"
+-- Allow read access to active announcements based on audience
+CREATE POLICY "Allow read access to active announcements"
   ON public.announcements
   FOR SELECT
-  TO public
-  USING (is_active = true);
+  USING (
+    is_active = true 
+    AND (
+      target_audience = 'all' 
+      OR (target_audience = 'trainer' AND EXISTS (SELECT 1 FROM public.trainers WHERE id = auth.uid()))
+      OR (target_audience = 'trainee' AND EXISTS (SELECT 1 FROM public.trainees WHERE id = auth.uid()))
+    )
+  );
 
 -- Allow admins to manage announcements
 CREATE POLICY "Allow admins to manage announcements"
   ON public.announcements
   FOR ALL
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.admins
-      WHERE admins.id = auth.uid()
-    )
-  );
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- Insert a mock announcement for the landing page
 INSERT INTO public.announcements (title, content, is_active)

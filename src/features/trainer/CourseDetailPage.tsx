@@ -12,6 +12,8 @@ import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, C
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { toast } from 'sonner'
+import { CourseAnnouncements } from '../courses/CourseAnnouncements'
+import { CourseChat } from '../courses/CourseChat'
 
 type Course = Database['public']['Tables']['courses']['Row']
 type CourseSkill = Database['public']['Tables']['course_skills']['Row'] & { skills: { name: string } | null }
@@ -188,9 +190,11 @@ export function CourseDetailPage() {
                   <span>Pass: {course.passing_score}%</span>
                   <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {enrollmentCount} {course.max_trainees ? `/ ${course.max_trainees}` : ''} enrolled</span>
                 </div>
+              </div>
+            </div>
 
-                {/* Pending Enrollments Section */}
-                <div className="mb-4">
+            {/* Pending Enrollments Section */}
+            <div className="mb-4">
                   <Card className="bg-orange-50/30 border-orange-200">
                     <CardContent className="p-6">
                       <h3 className="text-sm font-semibold text-orange-900 mb-4 flex items-center gap-2">
@@ -362,8 +366,6 @@ export function CourseDetailPage() {
                     </CardContent>
                   </Card>
                 )}
-              </div>
-            </div>
           </div>
         </motion.div>
 
@@ -520,6 +522,12 @@ export function CourseDetailPage() {
             </RouterLink>
           </motion.div>
         </div>
+
+        {/* Course Announcements & Chat */}
+        <motion.div variants={fadeUp} className="space-y-6">
+          <CourseAnnouncements courseId={courseId!} isTrainer={true} />
+          <CourseChat courseId={courseId!} isTrainer={true} />
+        </motion.div>
       </motion.div>
       <MaterialPreviewDialog
         material={previewMaterial}

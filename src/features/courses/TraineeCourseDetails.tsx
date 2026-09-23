@@ -19,6 +19,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { CourseFeedback } from './CourseFeedback'
+import { CourseAnnouncements } from './CourseAnnouncements'
+import { CourseChat } from './CourseChat'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -940,6 +942,14 @@ export function TraineeCourseDetails() {
                         )
                       })}
                     </div>
+                  </div>
+                )}
+
+                {/* Course Announcements & Chat */}
+                {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'completed' || enrollment.status === 'in_progress') && (
+                  <div className="space-y-6 mt-6 pt-6 border-t border-cyan-500/30">
+                    <CourseAnnouncements courseId={courseId!} isTrainer={false} />
+                    <CourseChat courseId={courseId!} isTrainer={false} />
                   </div>
                 )}
               </div>

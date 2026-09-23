@@ -14,6 +14,7 @@ interface Announcement {
   id: string
   title: string
   content: string
+  target_audience: string
   is_active: boolean
   created_at: string
 }
@@ -26,6 +27,7 @@ export function AdminAnnouncements() {
   
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [targetAudience, setTargetAudience] = useState('all')
   const [isActive, setIsActive] = useState(true)
 
   const fetchAnnouncements = async () => {
@@ -62,14 +64,14 @@ export function AdminAnnouncements() {
       if (editingId) {
         const { error } = await supabase
           .from('announcements')
-          .update({ title, content, is_active: isActive })
+          .update({ title, content, target_audience: targetAudience, is_active: isActive })
           .eq('id', editingId)
         if (error) throw error
         toast.success('Announcement updated')
       } else {
         const { error } = await supabase
           .from('announcements')
-          .insert([{ title, content, is_active: isActive, author_id: user.id }])
+          .insert([{ title, content, target_audience: targetAudience, is_active: isActive, author_id: user.id }])
         if (error) throw error
         toast.success('Announcement published')
       }
@@ -97,6 +99,7 @@ export function AdminAnnouncements() {
     setEditingId(announcement.id)
     setTitle(announcement.title)
     setContent(announcement.content)
+    setTargetAudience(announcement.target_audience || 'all')
     setIsActive(announcement.is_active)
     setIsFormOpen(true)
   }
@@ -105,6 +108,7 @@ export function AdminAnnouncements() {
     setEditingId(null)
     setTitle('')
     setContent('')
+    setTargetAudience('all')
     setIsActive(true)
     setIsFormOpen(false)
   }
@@ -138,6 +142,14 @@ export function AdminAnnouncements() {
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-[#070E20]/90 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none" placeholder="e.g., New Training Module Available" required />
           </div>
           <div>
+            <label className="block text-xs font-semibold text-zinc-200 mb-1">Target Audience</label>
+            <select value={targetAudience} onChange={e => setTargetAudience(e.target.value)} className="w-full bg-[#070E20]/90 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none">
+              <option value="all">All Users (Public & Internal)</option>
+              <option value="trainer">Trainers Only</option>
+              <option value="trainee">Trainees Only</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-xs font-semibold text-zinc-200 mb-1">Content</label>
             <textarea value={content} onChange={e => setContent(e.target.value)} className="w-full bg-[#070E20]/90 border border-cyan-500/30 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all outline-none min-h-[100px]" placeholder="Type your announcement here..." required />
           </div>
@@ -164,6 +176,9 @@ export function AdminAnnouncements() {
               <div>
                 <h4 className="text-sm font-bold text-zinc-200 flex items-center gap-2">
                   {ann.title}
+                  <span className="text-[10px] bg-cyan-950/30 text-cyan-400 px-2 py-0.5 rounded-full font-semibold border border-cyan-500/30 uppercase">
+                    {ann.target_audience || 'ALL'}
+                  </span>
                   {!ann.is_active && <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold border border-gray-200">DRAFT</span>}
                 </h4>
                 <p className="text-xs text-zinc-200/60 mt-1 mb-2">Published: {new Date(ann.created_at).toLocaleDateString()}</p>

@@ -11,6 +11,8 @@ import { AdminAnnouncements } from '@/features/admin/AdminAnnouncements'
 import { Button } from '@/components/ui/button'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
+import { AnnouncementModal } from '@/components/ui/AnnouncementModal'
+import { AnnouncementsFeed } from '@/components/ui/AnnouncementsFeed'
 import {
   Globe, LogOut, Users, BookOpen, BarChart3, Shield,
   GraduationCap, ChevronRight, CheckCircle, Search,
@@ -158,17 +160,7 @@ export function DashboardShell({
         })}
       </nav>
 
-      {/* Quick Search shortcut */}
-      {(!sidebarCollapsed || mobileOpen) && (
-        <div className="p-3 mx-3 mb-2 rounded-xl bg-cyan-950/30/70 border border-cyan-500/30">
-          <div className="flex items-center gap-2 text-xs text-zinc-200/60">
-            <Search className="w-3.5 h-3.5 text-purple-600" />
-            <span>
-              Press <kbd className="px-1 py-0.5 bg-[#070E20]/90 border border-cyan-500/30 rounded text-[10px] font-medium">⌘K</kbd> for search
-            </span>
-          </div>
-        </div>
-      )}
+
 
       {/* Profile summary & logout */}
       <div className="p-3 border-t border-cyan-500/30 space-y-2">
@@ -192,9 +184,6 @@ export function DashboardShell({
             <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${roleColor[profile?.role ?? ''] ?? 'bg-cyan-950/30 text-cyan-400'}`}>
               {profile?.role?.replace('_', ' ')}
             </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full border capitalize ${statusColor[profile?.approval_status ?? ''] ?? 'bg-cyan-950/30 text-cyan-400'}`}>
-              {profile?.approval_status}
-            </span>
           </div>
         )}
         <button
@@ -210,6 +199,7 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-[#070E20]/90 text-zinc-200 flex">
+      <AnnouncementModal />
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-transparent blur-[120px]" />
@@ -1034,6 +1024,11 @@ export function TrainerDashboard() {
             </table>
           </div>
         </motion.div>
+
+        {/* Announcements Feed Section */}
+        <motion.div variants={fadeUp}>
+          <AnnouncementsFeed />
+        </motion.div>
       </motion.div>
     </DashboardShell>
   )
@@ -1519,6 +1514,9 @@ export function AdminDashboard() {
                                       <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold transition-all">Suspend</button>
                                     </>
                                   )}
+                                  {u.approval_status === 'suspended' && (
+                                    <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all">Unsuspend</button>
+                                  )}
                                   {u.approval_status !== 'pending' && (
                                     <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all" title="Permanently Delete Account">Delete</button>
                                   )}
@@ -1636,6 +1634,9 @@ export function AdminDashboard() {
                                   )}
                                   {u.approval_status === 'approved' && (
                                     <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold transition-all">Suspend</button>
+                                  )}
+                                  {u.approval_status === 'suspended' && (
+                                    <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all">Unsuspend</button>
                                   )}
                                   {u.approval_status !== 'pending' && (
                                     <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-bold transition-all" title="Permanently Delete Account">Delete</button>
@@ -1809,14 +1810,25 @@ export function AdminDashboard() {
           )}
         </div>
 
+        {/* Announcements Feed Section */}
+        <motion.div variants={fadeUp}>
+          <AnnouncementsFeed />
+        </motion.div>
+
         {/* Quick Actions */}
         <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { icon: Users, title: 'Manage Users', desc: 'Approve, suspend, or promote accounts', to: '/admin', gradient: 'from-purple-600 to-purple-800' },
-            { icon: Shield, title: 'System Governance', desc: 'Configure platform access & policies', to: '/admin', gradient: 'from-pink-500 to-rose-600' },
-            { icon: BarChart3, title: 'Platform Analytics', desc: 'Usage metrics, completions & trends', to: '/admin', gradient: 'from-orange-400 to-orange-600' },
+            { icon: Users, title: 'Manage Users', desc: 'Approve, suspend, or promote accounts', tab: 'trainees' as any, gradient: 'from-purple-600 to-purple-800' },
+            { icon: Shield, title: 'System Governance', desc: 'Configure platform access & policies', tab: 'admins' as any, gradient: 'from-pink-500 to-rose-600' },
+            { icon: BarChart3, title: 'Platform Analytics', desc: 'Usage metrics, completions & trends', tab: 'logs' as any, gradient: 'from-orange-400 to-orange-600' },
           ].map(action => (
-            <Link key={action.title} to={action.to}>
+            <div key={action.title} onClick={() => {
+              if (action.tab === 'admins' && !isSuperAdmin) {
+                toast.error('Only Super Admins can access governance controls')
+              } else {
+                setActiveTab(action.tab)
+              }
+            }}>
               <div className="p-5 rounded-3xl bg-[#070E20]/90 border border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-xl hover:shadow-cyan-950/50 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.gradient} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
@@ -1829,7 +1841,7 @@ export function AdminDashboard() {
                 </div>
                 <ChevronRight className="w-5 h-5 text-zinc-200/30 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
               </div>
-            </Link>
+            </div>
           ))}
         </motion.div>
       </motion.div>

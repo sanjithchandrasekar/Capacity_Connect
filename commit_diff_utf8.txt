@@ -1,0 +1,223 @@
+commit e1be32fdbfb51448242c4a6bfdd5f4651dd61d15
+Merge: 9785fc8 bc76fc0
+Author: sanjithchandrasekar <sanjithchandrasekar03.com>
+Date:   Wed Sep 23 10:11:44 2026 +0530
+
+    Merge branch 'main' of https://github.com/sanjithchandrasekar/Capacity_Connect
+
+diff --cc src/components/ChatBot.tsx
+index 7fff291,29ab995..a752e3c
+--- a/src/components/ChatBot.tsx
++++ b/src/components/ChatBot.tsx
+@@@ -101,113 -28,89 +28,95 @@@ export function ChatBot() 
+    ])
+    const [inputValue, setInputValue] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
+ +  const [statusText, setStatusText] = useState<string | null>(null)
+ +  const [failedMsg, setFailedMsg] = useState<{
+ +    text: string
+ +    history: { role: 'bot' | 'user'; content: string }[]
+ +  } | null>(null)
+    const scrollRef = useRef<HTMLDivElement>(null)
++   const inputRef = useRef<HTMLInputElement>(null)
+  
+    useEffect(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      }
+ -  }, [messages, isLoading])
+ +  }, [messages, isLoading, statusText])
+  
+-   const runWithFallback = async (
+-     history: { role: 'bot' | 'user'; content: string }[]
+-   ): Promise<string | '__rate_limited__'> => {
+-     const GROQ_KEY = import.meta.env.VITE_GROQ_API_KEY || ''
+-     const GEMINI_KEYS: string[] = (
+-       import.meta.env.VITE_GEMINI_API_KEYS || import.meta.env.VITE_GEMINI_API_KEY || ''
+-     )
+-       .split(',')
+-       .map((k: string) => k.trim())
+-       .filter(Boolean)
++   useEffect(() => {
++     if (isOpen && inputRef.current) {
++       setTimeout(() => inputRef.current?.focus(), 150)
++     }
++   }, [isOpen])
+  
+-     // Convert history to OpenAI format for Groq
+-     const openAiMessages = history
+-       .filter((m, i) => !(i === 0 && m.role === 'bot'))
+-       .map((m) => ({ role: m.role === 'bot' ? 'assistant' : 'user', content: m.content }))
++   const handleResetChat = () => {
++     setMessages([
++       {
++         role: 'bot',
++         content: 'Greetings! I am Capacity Connect AI, your platform assistant. How can I help you today?',
++       },
++     ])
++   }
+  
+-     // 1️⃣ Try Groq first (fastest, most generous free tier)
+-     if (GROQ_KEY && GROQ_KEY !== 'your_groq_key_here') {
+-       setStatusText('Thinking...')
+-       try {
+-         const reply = await callGroq(GROQ_KEY, openAiMessages)
+-         if (reply) return reply
+-       } catch (e: any) {
+-         console.warn('Groq failed:', e.message)
+-       }
+-     }
++   const sendMessage = async (textToSend: string) => {
++     if (!textToSend.trim() || isLoading) return
+  
+-     // 2️⃣ Fall back to Gemini
+-     setStatusText('Switching to Gemini...')
+-     for (const key of GEMINI_KEYS) {
+-       try {
+-         const reply = await callGemini(key, history)
+-         if (reply) return reply
+-       } catch (e: any) {
+-         console.warn('Gemini key failed:', e.message)
+-       }
+-     }
++     const newMsg = textToSend.trim()
++     const updatedMessages: Message[] = [...messages, { role: 'user', content: newMsg }]
+  
+-     // 3️⃣ Auto-retry with countdown (15s → 30s)
+-     for (const delaySecs of [15, 30]) {
+-       for (let s = delaySecs; s > 0; s--) {
+-         setStatusText(`Rate limited — retrying in ${s}s...`)
+-         await new Promise((r) => setTimeout(r, 1000))
+-       }
++     setMessages(updatedMessages)
++     setInputValue('')
++     setIsLoading(true)
+  
+-       // Retry Groq
+-       if (GROQ_KEY && GROQ_KEY !== 'your_groq_key_here') {
+-         try {
+-           const reply = await callGroq(GROQ_KEY, openAiMessages)
+-           if (reply) return reply
+-         } catch {}
+-       }
++     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
++ 
++     try {
++       const formattedMessages = updatedMessages.map((msg) => ({
++         role: msg.role === 'bot' ? 'model' : 'user',
++         parts: [{ text: msg.content }],
++       }))
+  
+-       // Retry Gemini
+-       for (const key of GEMINI_KEYS) {
+-         try {
+-           const reply = await callGemini(key, history)
+-           if (reply) return reply
+-         } catch {}
++       const response = await fetch(
++         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${API_KEY}`,
++         {
++           method: 'POST',
++           headers: { 'Content-Type': 'application/json' },
++           body: JSON.stringify({
++             systemInstruction: {
++               parts: [
++                 {
++                   text: 'You are Capacity Connect AI, the intelligent platform assistant for Capacity Connect. You assist users with exploring courses, training modules, user registration, certifications, and platform navigation. Provide clear, helpful, and concise responses. Politely decline inquiries that are completely outside the scope of Capacity Connect.',
++                 },
++               ],
++             },
++             contents: formattedMessages,
++           }),
++         }
++       )
++ 
++       if (!response.ok) {
++         const errText = await response.text()
++         throw new Error(`Gemini API error: ${response.status} - ${errText}`)
+        }
+-     }
+  
+-     return '__rate_limited__'
+-   }
++       const data = await response.json()
++       const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
+  
+-   const sendMessage = async (
+-     userMsg: string,
+-     history: { role: 'bot' | 'user'; content: string }[]
+-   ) => {
+-     setIsLoading(true)
+-     setStatusText(null)
+-     setFailedMsg(null)
+-     try {
+-       const result = await runWithFallback(history)
+-       if (result === '__rate_limited__') {
+-         setFailedMsg({ text: userMsg, history })
+-         setMessages((prev) => [
+-           ...prev,
+-           {
+-             role: 'bot',
+-             content: '⚠️ All AI services are busy right now. Tap **Try Again** when ready.',
+-           },
+-         ])
++       if (reply) {
++         setMessages((prev) => [...prev, { role: 'bot', content: reply }])
+        } else {
+ -        throw new Error('Invalid response format')
+ +        setMessages((prev) => [...prev, { role: 'bot', content: result }])
+        }
+      } catch (err: any) {
+        console.error('Chatbot error:', err)
+        setMessages((prev) => [
+          ...prev,
+-         { role: 'bot', content: 'Something went wrong. Please try again.' },
++         {
++           role: 'bot',
++           content: 'I am currently in standby mode. For immediate assistance, please reach out via the Contact page or browse our course catalog.',
++         },
+        ])
+      } finally {
+ +      setStatusText(null)
+        setIsLoading(false)
+      }
+    }
+@@@ -281,27 -180,21 +186,21 @@@
+                    key={i}
+                    className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                  >
++                   {msg.role === 'bot' ? (
++                     <ChatBotLogo variant="badge" size={28} />
++                   ) : (
++                     <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-gradient-to-br from-cyan-600 to-blue-700 text-white shadow-xs">
++                       <User className="w-4 h-4" />
++                     </div>
++                   )}
+                    <div
+-                     className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+-                       msg.role === 'bot'
+-                         ? 'bg-cyan-100 border border-cyan-300 text-cyan-700'
+-                         : 'bg-amber-100 border border-amber-300 text-amber-700'
+-                     }`}
+-                   >
+-                     {msg.role === 'bot' ? (
+-                       <BrainCircuit className="w-3.5 h-3.5" />
+-                     ) : (
+-                       <User className="w-3.5 h-3.5" />
+-                     )}
+-                   </div>
+-                   <div
+-                     className={`p-3.5 rounded-2xl max-w-[82%] text-xs sm:text-sm leading-relaxed ${
++                     className={`p-3.5 rounded-2xl max-w-[82%] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
+                        msg.role === 'user'
+-                         ? 'bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white rounded-tr-sm shadow-sm font-medium'
+-                         : 'bg-white border border-slate-200/90 text-slate-800 rounded-tl-sm shadow-sm'
++                         ? 'bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white rounded-tr-xs shadow-md shadow-cyan-600/15 font-medium'
++                         : 'bg-white border border-slate-200/90 text-slate-800 rounded-tl-xs shadow-xs'
+                      }`}
+                    >
+ -                    {msg.content}
+ +                    {msg.role === 'bot' ? <BotMessage content={msg.content} /> : msg.content}
+                    </div>
+                  </div>
+                ))}
