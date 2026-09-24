@@ -517,7 +517,7 @@ export function CourseDetailPage() {
               <Card className="bg-white border border-slate-200/90 hover:border-cyan-500 transition-all cursor-pointer h-full rounded-2xl shadow-xs">
                 <CardContent className="p-5 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600"><Target className="w-5 h-5" /></div>
-                  <div><p className="text-sm font-bold text-slate-900">Assessment</p><p className="text-xs text-slate-500 font-medium">{assessment ? 'Created' : 'Not created'}</p></div>
+                  <div><p className="text-sm font-bold text-slate-900">Assessments</p><p className="text-xs text-slate-500 font-medium">{assessmentCount > 0 ? `${assessmentCount} tests` : 'Not created'}</p></div>
                 </CardContent>
               </Card>
             </RouterLink>
