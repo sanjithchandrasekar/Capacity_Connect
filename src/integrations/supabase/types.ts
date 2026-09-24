@@ -154,7 +154,8 @@ export interface Database {
           mobile_number?: string | null
           is_mobile_verified?: boolean
           is_email_verified?: boolean
-          password?: string | null
+          work_experience?: string | null
+          interests?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -176,6 +177,8 @@ export interface Database {
           is_mobile_verified?: boolean
           is_email_verified?: boolean
           password?: string | null
+          work_experience?: string | null
+          interests?: string | null
           created_at?: string
           updated_at?: string
         }

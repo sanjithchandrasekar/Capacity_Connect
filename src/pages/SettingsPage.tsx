@@ -115,15 +115,15 @@ export function SettingsPage() {
                       <>
                         <div className="space-y-2">
                           <label className="text-sm font-semibold text-slate-700">Qualifications</label>
-                          <Input value={qualifications} onChange={e => setQualifications(e.target.value)} placeholder="e.g. B.Tech, Meteorology Certifications" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
+                          <Input value={qualifications} onChange={e => setQualifications(e.target.value)} placeholder="e.g. B.Tech, Meteorology Certifications" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-semibold text-slate-700">Work Experience</label>
-                          <Input value={workExperience} onChange={e => setWorkExperience(e.target.value)} placeholder="e.g. 5 years as Forecaster" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
+                          <Input value={workExperience} onChange={e => setWorkExperience(e.target.value)} placeholder="e.g. 5 years as Forecaster" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl" />
                         </div>
                         <div className="space-y-2">
                           <label className="text-sm font-semibold text-slate-700">Professional Interests</label>
-                          <Input value={interests} onChange={e => setInterests(e.target.value)} placeholder="e.g. Climate Modeling, Data Science" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 rounded-xl" />
+                          <Input value={interests} onChange={e => setInterests(e.target.value)} placeholder="e.g. Climate Modeling, Data Science" className="max-w-md bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl" />
                         </div>
                       </>
                     )}
