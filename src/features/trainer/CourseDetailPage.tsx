@@ -526,68 +526,155 @@ export function CourseDetailPage() {
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Layers className="w-4 h-4 text-cyan-600" /> Course Modules ({(course as any).modules.length})
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {(course as any).modules.map((m: any, idx: number) => {
-                    const items = m.items || m.content_items || []
+                    const rawItems = m.items || m.content_items || []
                     const quizQuestions = m.quiz_questions || []
+                    
+                    // Build unified sequence if rawItems doesn't have quiz items already
+                    let unifiedItems: any[] = [...rawItems]
+                    const hasQuizInItems = rawItems.some((it: any) => it.type === 'quiz')
+                    if (!hasQuizInItems && quizQuestions.length > 0) {
+                      quizQuestions.forEach((q: any, qIdx: number) => {
+                        unifiedItems.push({
+                          id: q.id || `legacy-quiz-${qIdx}`,
+                          type: 'quiz',
+                          title: `Quiz Checkpoint ${qIdx + 1}: ${q.question}`,
+                          quiz_data: q,
+                        })
+                      })
+                    }
+
                     return (
                       <div
                         key={m.id || idx}
-                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 transition-all space-y-3"
+                        className="p-5 rounded-2xl border border-slate-200 bg-slate-50/70 transition-all space-y-4 shadow-xs"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-900">{m.title}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/80">
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-7 h-7 rounded-lg bg-cyan-100 text-cyan-800 text-xs font-bold flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <span className="text-sm font-bold text-slate-900">{m.title}</span>
+                              {m.description && (
+                                <p className="text-xs text-slate-600 mt-0.5">{m.description}</p>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-400 font-semibold">
-                              {items.length} item{items.length !== 1 ? 's' : ''}
-                            </span>
+                            <Badge className="bg-white border-slate-200 text-slate-700 text-[11px] font-semibold">
+                              {unifiedItems.length} sequential step{unifiedItems.length !== 1 ? 's' : ''}
+                            </Badge>
                             {quizQuestions.length > 0 && (
-                              <Badge className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-bold">
+                              <Badge className="bg-amber-50 text-amber-800 border-amber-200 text-[11px] font-bold flex items-center gap-1">
+                                <HelpCircle className="w-3 h-3 text-amber-600" />
                                 {quizQuestions.length} Quiz Qs (≥80% Pass Gate)
                               </Badge>
                             )}
                           </div>
                         </div>
-                        {m.description && (
-                          <p className="text-xs text-slate-600 leading-relaxed">{m.description}</p>
-                        )}
-                        {items.length > 0 && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
-                            {items.map((item: any, iIdx: number) => (
-                              <div key={item.id || iIdx} className="p-2.5 rounded-lg bg-white border border-slate-200 flex items-center gap-2 text-xs">
-                                {item.type === 'photo' && <ImageIcon className="w-3.5 h-3.5 text-cyan-600 shrink-0" />}
-                                {item.type === 'video' && <Video className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                                {item.type === 'link' && <Globe className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-                                {item.type === 'text' && <FileText className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
-                                <span className="truncate font-medium text-slate-800">{item.title}</span>
-                                {item.url && (
-                                  <a href={item.url} target="_blank" rel="noreferrer" className="ml-auto text-cyan-600 hover:text-cyan-700">
-                                    <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {quizQuestions.length > 0 && (
-                          <div className="pt-2 border-t border-slate-200/60 space-y-2">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                              <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-                              <span>Quiz Checkpoint ({quizQuestions.length} Questions)</span>
+
+                        {unifiedItems.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                              Module Content Sequence
+                            </p>
+                            <div className="space-y-2">
+                              {unifiedItems.map((item: any, sIdx: number) => {
+                                const qData = item.quiz_data || (item.type === 'quiz' ? quizQuestions[0] : null)
+                                return (
+                                  <div
+                                    key={item.id || sIdx}
+                                    className={`p-3 rounded-xl border transition-all ${
+                                      item.type === 'quiz'
+                                        ? 'bg-amber-50/50 border-amber-200/90'
+                                        : 'bg-white border-slate-200'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2.5">
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                                        Step {sIdx + 1}
+                                      </span>
+
+                                      {item.type === 'photo' && (
+                                        <Badge className="bg-cyan-50 text-cyan-700 border-cyan-200 text-[10px] flex items-center gap-1">
+                                          <ImageIcon className="w-3 h-3" /> Photo
+                                        </Badge>
+                                      )}
+                                      {item.type === 'video' && (
+                                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] flex items-center gap-1">
+                                          <Video className="w-3 h-3" /> Video
+                                        </Badge>
+                                      )}
+                                      {item.type === 'link' && (
+                                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] flex items-center gap-1">
+                                          <Globe className="w-3 h-3" /> Link
+                                        </Badge>
+                                      )}
+                                      {item.type === 'text' && (
+                                        <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] flex items-center gap-1">
+                                          <FileText className="w-3 h-3" /> Text Content
+                                        </Badge>
+                                      )}
+                                      {item.type === 'quiz' && (
+                                        <Badge className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] flex items-center gap-1 font-bold">
+                                          <HelpCircle className="w-3 h-3 text-amber-600" /> Quiz Question
+                                        </Badge>
+                                      )}
+
+                                      <span className="font-semibold text-xs text-slate-800 truncate">
+                                        {item.title}
+                                      </span>
+
+                                      {item.url && item.type !== 'text' && (
+                                        <a
+                                          href={item.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="ml-auto text-cyan-600 hover:text-cyan-700 flex items-center gap-1 text-[11px] font-medium"
+                                        >
+                                          <ExternalLink className="w-3.5 h-3.5" />
+                                          <span className="hidden sm:inline">View Source</span>
+                                        </a>
+                                      )}
+                                    </div>
+
+                                    {item.type === 'text' && item.url && (
+                                      <p className="mt-2 text-xs text-slate-600 pl-11 line-clamp-2 italic">
+                                        "{item.url}"
+                                      </p>
+                                    )}
+
+                                    {item.type === 'quiz' && qData && (
+                                      <div className="mt-2.5 pt-2 border-t border-amber-200/60 pl-11 text-xs space-y-1">
+                                        <p className="font-semibold text-amber-950">{qData.question}</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                                          {qData.options?.map((opt: string, optIdx: number) => {
+                                            const isCorrect = optIdx === (qData.correct_option ?? 0)
+                                            return (
+                                              <div
+                                                key={optIdx}
+                                                className={`px-2.5 py-1 rounded-md text-[11px] border ${
+                                                  isCorrect
+                                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-semibold'
+                                                    : 'bg-white border-slate-200 text-slate-600'
+                                                }`}
+                                              >
+                                                {String.fromCharCode(65 + optIdx)}. {opt} {isCorrect && '✓'}
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
                             </div>
-                            <div className="space-y-1.5">
-                              {quizQuestions.map((q: any, qIndex: number) => (
-                                <div key={q.id || qIndex} className="p-2 rounded-lg bg-white border border-slate-200 text-xs">
-                                  <p className="font-semibold text-slate-800">Q{qIndex + 1}: {q.question}</p>
-                                  <p className="text-[11px] text-emerald-700 mt-0.5 font-medium">
-                                    ✓ Correct Answer: {q.options?.[q.correct_option ?? 0] || 'Option 1'}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
                           </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">No sequential content added to this module yet.</p>
                         )}
                       </div>
                     )

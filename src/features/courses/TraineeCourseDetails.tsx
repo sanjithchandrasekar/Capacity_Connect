@@ -11,7 +11,8 @@ import {
   Lock, Target, Calendar, Video, Download, ExternalLink, Users,
   GraduationCap, Award, PlayCircle,
   ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle, BarChart3,
-  HelpCircle, Sparkles, CheckSquare, RotateCcw, Unlock, Image as ImageIcon, Check, Trophy
+  HelpCircle, Sparkles, CheckSquare, RotateCcw, Unlock, Image as ImageIcon, Check, Trophy,
+  Eye, Film, Camera, AlignLeft
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -29,6 +30,13 @@ import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certifica
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+}
+
+function getYouTubeEmbedUrl(url?: string): string | null {
+  if (!url) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+  const match = url.match(regExp)
+  return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null
 }
 
 function getMaterialIcon(type: string) {
@@ -140,13 +148,22 @@ export function TraineeCourseDetails() {
   }
 
   const handleSubmitModuleQuiz = async (mod: any) => {
-    const questions = mod.quiz_questions || []
+    const rawItems = mod.items || mod.content_items || []
+    const quizQuestionsFromItems = rawItems.filter((i: any) => i.type === 'quiz' && i.quiz_data).map((i: any) => i.quiz_data)
+    const legacyQuizQuestions = (mod.quiz_questions || [])
+    const questions: any[] = [...quizQuestionsFromItems]
+    legacyQuizQuestions.forEach((lq: any) => {
+      if (!questions.some(q => q.id === lq.id || q.question === lq.question)) {
+        questions.push(lq)
+      }
+    })
+
     if (questions.length === 0) return
 
     const userAnswers = moduleQuizAnswers[mod.id] || {}
     const answeredCount = Object.keys(userAnswers).length
     if (answeredCount < questions.length) {
-      toast.error(`Please answer all ${questions.length} questions before submitting.`)
+      toast.error(`Please answer all ${questions.length} questions before submitting. (${answeredCount}/${questions.length} answered)`)
       return
     }
 
@@ -960,8 +977,28 @@ export function TraineeCourseDetails() {
                           const isLocked = !isUnlocked
                           const isOpen = openModules.has(mod.id) || (isUnlocked && !isCompleted && mIdx === completedModules.length)
                           
-                          const items = mod.items || mod.content_items || []
-                          const quizQuestions = mod.quiz_questions || []
+                          const rawItems = mod.items || mod.content_items || []
+                          const quizQuestionsFromItems = rawItems.filter((i: any) => i.type === 'quiz' && i.quiz_data).map((i: any) => i.quiz_data)
+                          const legacyQuizQuestions = (mod.quiz_questions || [])
+                          const allQuizQuestions: any[] = [...quizQuestionsFromItems]
+                          legacyQuizQuestions.forEach((lq: any) => {
+                            if (!allQuizQuestions.some(q => q.id === lq.id || q.question === lq.question)) {
+                              allQuizQuestions.push(lq)
+                            }
+                          })
+
+                          const sequentialItems: any[] = [...rawItems]
+                          legacyQuizQuestions.forEach((lq: any) => {
+                            if (!sequentialItems.some(i => i.type === 'quiz' && (i.id === lq.id || i.quiz_data?.id === lq.id || i.quiz_data?.question === lq.question))) {
+                              sequentialItems.push({
+                                id: lq.id || crypto.randomUUID(),
+                                type: 'quiz',
+                                title: `Quiz: ${lq.question.slice(0, 50)}...`,
+                                quiz_data: lq
+                              })
+                            }
+                          })
+
                           const quizResult = moduleQuizScores[mod.id]
                           const userAnswers = moduleQuizAnswers[mod.id] || {}
 
@@ -1017,10 +1054,10 @@ export function TraineeCourseDetails() {
                                         <Sparkles className="w-3 h-3 text-cyan-600" /> In Progress
                                       </span>
                                     )}
-                                    {quizQuestions.length > 0 && (
+                                    {allQuizQuestions.length > 0 && (
                                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
                                         <HelpCircle className="w-3 h-3 text-amber-600" />
-                                        {quizQuestions.length} Q Quiz (≥80% to Unlock Next)
+                                        {allQuizQuestions.length} Q Quiz (≥80% Pass Gate)
                                       </span>
                                     )}
                                   </div>
@@ -1032,9 +1069,9 @@ export function TraineeCourseDetails() {
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
-                                  {items.length > 0 && (
+                                  {sequentialItems.length > 0 && (
                                     <span className="text-[11px] text-slate-600 font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-full">
-                                      {items.length} lesson item{items.length !== 1 ? 's' : ''}
+                                      {sequentialItems.length} item{sequentialItems.length !== 1 ? 's' : ''} in sequence
                                     </span>
                                   )}
                                   {!isLocked && (
@@ -1045,7 +1082,7 @@ export function TraineeCourseDetails() {
                                 </div>
                               </button>
 
-                              {/* Module Body */}
+                              {/* Module Body — Rendered strictly in defined sequence */}
                               <AnimatePresence initial={false}>
                                 {isOpen && !isLocked && (
                                   <motion.div
@@ -1058,60 +1095,279 @@ export function TraineeCourseDetails() {
                                   >
                                     <div className="px-5 pb-5 pt-3 bg-white border-t border-slate-100 space-y-4">
                                       {mod.description && (
-                                        <p className="text-xs text-slate-600 leading-relaxed">{mod.description}</p>
-                                      )}
-
-                                      {/* Content Items */}
-                                      {items.length > 0 && (
-                                        <div className="space-y-2">
-                                          <Label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                                            <FileText className="w-3.5 h-3.5 text-cyan-600" />
-                                            Module Resources & Lessons ({items.length})
-                                          </Label>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {items.map((item: any, iIdx: number) => (
-                                              <div
-                                                key={item.id || iIdx}
-                                                onClick={() => {
-                                                  if (item.url) window.open(item.url, '_blank')
-                                                  else if (item.previewUrl) {
-                                                    setPreviewMaterial({ file_name: item.title, material_type: 'image' })
-                                                    setPreviewUrl(item.previewUrl)
-                                                  }
-                                                }}
-                                                className="p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-cyan-300 hover:shadow-xs transition-all cursor-pointer flex items-center gap-3"
-                                              >
-                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
-                                                  {item.type === 'photo' && <ImageIcon className="w-4 h-4 text-cyan-600" />}
-                                                  {item.type === 'video' && <Video className="w-4 h-4 text-blue-600" />}
-                                                  {item.type === 'link' && <ExternalLink className="w-4 h-4 text-emerald-600" />}
-                                                  {item.type === 'text' && <FileText className="w-4 h-4 text-purple-600" />}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                  <p className="text-xs font-bold text-slate-900 truncate">{item.title}</p>
-                                                  {item.content && (
-                                                    <p className="text-[10px] text-slate-500 line-clamp-1">{item.content}</p>
-                                                  )}
-                                                  {item.url && (
-                                                    <p className="text-[10px] text-cyan-600 truncate font-medium">{item.url}</p>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
+                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600 leading-relaxed">
+                                          <span className="font-bold text-slate-800">Module Overview: </span>
+                                          {mod.description}
                                         </div>
                                       )}
 
-                                      {/* Quiz Section */}
-                                      {quizQuestions.length > 0 ? (
+                                      {/* Sequential Items Stream */}
+                                      {sequentialItems.length > 0 ? (
+                                        <div className="space-y-3.5">
+                                          {sequentialItems.map((item: any, sIdx: number) => {
+                                            const isQuiz = item.type === 'quiz'
+                                            const quizData = item.quiz_data || (isQuiz ? {
+                                              question: item.title,
+                                              options: item.options || [],
+                                              correct_option: item.correct_option ?? 0,
+                                              explanation: item.explanation || item.content
+                                            } : null)
+
+                                            // Find quiz index among allQuizQuestions
+                                            const qIdx = isQuiz
+                                              ? allQuizQuestions.findIndex(q => q.id === item.id || q.id === quizData?.id || q.question === quizData?.question)
+                                              : -1
+
+                                            return (
+                                              <div key={item.id || sIdx} className="space-y-2">
+                                                {/* Text Content */}
+                                                {item.type === 'text' && (
+                                                  <div className="p-4 rounded-2xl bg-purple-50/20 border border-purple-200/80 space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">
+                                                        {sIdx + 1}
+                                                      </span>
+                                                      <Badge className="bg-purple-50 text-purple-800 border-purple-200 text-[10px] font-bold">
+                                                        <AlignLeft className="w-3 h-3 mr-1" /> Lesson Notes
+                                                      </Badge>
+                                                      <h4 className="text-xs font-bold text-slate-900">{item.title}</h4>
+                                                    </div>
+                                                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap pl-7">
+                                                      {item.content || 'Read and review the topic materials above.'}
+                                                    </p>
+                                                  </div>
+                                                )}
+
+                                                {/* Video Lesson */}
+                                                {item.type === 'video' && (
+                                                  <div className="p-4 rounded-2xl bg-blue-50/30 border border-blue-200/80 space-y-3">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                      <div className="flex items-center gap-2">
+                                                        <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">
+                                                          {sIdx + 1}
+                                                        </span>
+                                                        <Badge className="bg-blue-50 text-blue-800 border-blue-200 text-[10px] font-bold">
+                                                          <Video className="w-3 h-3 mr-1" /> Video Lesson
+                                                        </Badge>
+                                                        <h4 className="text-xs font-bold text-slate-900">{item.title}</h4>
+                                                      </div>
+                                                      {item.url && (
+                                                        <a
+                                                          href={item.url}
+                                                          target="_blank"
+                                                          rel="noreferrer"
+                                                          className="text-[11px] font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-xs"
+                                                        >
+                                                          <ExternalLink className="w-3 h-3" /> Open Video In New Tab
+                                                        </a>
+                                                      )}
+                                                    </div>
+
+                                                    {item.url && getYouTubeEmbedUrl(item.url) ? (
+                                                      <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 shadow-xs bg-slate-900 max-h-96">
+                                                        <iframe
+                                                          src={getYouTubeEmbedUrl(item.url)!}
+                                                          title={item.title}
+                                                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                          allowFullScreen
+                                                          className="w-full h-full"
+                                                        />
+                                                      </div>
+                                                    ) : (item.url?.match(/\.(mp4|webm|mov)$/i) || item.previewUrl) ? (
+                                                      <video controls className="w-full rounded-xl border border-slate-200 max-h-80 bg-black">
+                                                        <source src={item.url || item.previewUrl} />
+                                                        Your browser does not support the video tag.
+                                                      </video>
+                                                    ) : null}
+
+                                                    {item.content && (
+                                                      <p className="text-xs text-slate-600 pl-7">{item.content}</p>
+                                                    )}
+                                                  </div>
+                                                )}
+
+                                                {/* Photo / Diagram */}
+                                                {item.type === 'photo' && (
+                                                  <div className="p-4 rounded-2xl bg-cyan-50/30 border border-cyan-200/80 space-y-3">
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="w-5 h-5 rounded-full bg-cyan-600 text-white text-[10px] font-black flex items-center justify-center shrink-0">
+                                                        {sIdx + 1}
+                                                      </span>
+                                                      <Badge className="bg-cyan-50 text-cyan-800 border-cyan-200 text-[10px] font-bold">
+                                                        <ImageIcon className="w-3 h-3 mr-1" /> Diagram / Image
+                                                      </Badge>
+                                                      <h4 className="text-xs font-bold text-slate-900">{item.title}</h4>
+                                                    </div>
+
+                                                    {(item.previewUrl || item.url) && (
+                                                      <div
+                                                        onClick={() => {
+                                                          setPreviewMaterial({ file_name: item.title, material_type: 'image' })
+                                                          setPreviewUrl(item.previewUrl || item.url)
+                                                        }}
+                                                        className="relative rounded-xl overflow-hidden border border-slate-200 max-h-80 bg-white cursor-pointer group flex items-center justify-center"
+                                                      >
+                                                        <img
+                                                          src={item.previewUrl || item.url}
+                                                          alt={item.title}
+                                                          className="w-full h-full object-contain max-h-80 group-hover:scale-[1.01] transition-all"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 backdrop-blur-xs">
+                                                          <Eye className="w-4 h-4" /> Click to Expand Image
+                                                        </div>
+                                                      </div>
+                                                    )}
+
+                                                    {item.content && (
+                                                      <p className="text-xs text-slate-600 pl-7">{item.content}</p>
+                                                    )}
+                                                  </div>
+                                                )}
+
+                                                {/* External Link */}
+                                                {item.type === 'link' && (
+                                                  <div className="p-3.5 rounded-2xl bg-emerald-50/30 border border-emerald-200/80 flex items-center justify-between gap-3">
+                                                    <div className="flex items-start gap-2.5 min-w-0">
+                                                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                                                        {sIdx + 1}
+                                                      </span>
+                                                      <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                          <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold">
+                                                            <ExternalLink className="w-3 h-3 mr-1" /> External Link
+                                                          </Badge>
+                                                          <h4 className="text-xs font-bold text-slate-900 truncate">{item.title}</h4>
+                                                        </div>
+                                                        {item.content && <p className="text-xs text-slate-600 mt-0.5 truncate">{item.content}</p>}
+                                                        {item.url && <p className="text-[11px] text-emerald-700 truncate font-medium">{item.url}</p>}
+                                                      </div>
+                                                    </div>
+                                                    {item.url && (
+                                                      <a
+                                                        href={item.url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="h-8 px-3 rounded-xl bg-white border border-emerald-200 hover:bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-xs"
+                                                      >
+                                                        <ExternalLink className="w-3.5 h-3.5" /> Visit Link
+                                                      </a>
+                                                    )}
+                                                  </div>
+                                                )}
+
+                                                {/* Sequential Quiz Question */}
+                                                {isQuiz && quizData && (
+                                                  <div className={`p-4 rounded-2xl border transition-all ${
+                                                    quizResult?.submitted
+                                                      ? userAnswers[qIdx] === quizData.correct_option
+                                                        ? 'bg-emerald-50/40 border-emerald-200'
+                                                        : 'bg-rose-50/30 border-rose-200'
+                                                      : 'bg-amber-50/30 border-amber-200/80'
+                                                  }`}>
+                                                    <div className="flex items-start gap-2.5 mb-3">
+                                                      <span className="w-6 h-6 rounded-full bg-amber-600 text-white text-xs font-black flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                                                        {sIdx + 1}
+                                                      </span>
+                                                      <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                          <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-bold">
+                                                            <HelpCircle className="w-3 h-3 mr-1 text-amber-700" /> Quiz Question
+                                                          </Badge>
+                                                          {quizResult?.submitted && (
+                                                            <Badge className={`text-[10px] font-bold ${
+                                                              userAnswers[qIdx] === quizData.correct_option
+                                                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                                : 'bg-rose-100 text-rose-800 border-rose-300'
+                                                            }`}>
+                                                              {userAnswers[qIdx] === quizData.correct_option ? '✓ Correct' : '✗ Incorrect'}
+                                                            </Badge>
+                                                          )}
+                                                        </div>
+                                                        <p className="text-xs font-bold text-slate-900 leading-relaxed">
+                                                          {quizData.question}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+
+                                                    <div className="space-y-2 pl-8">
+                                                      {(quizData.options || []).map((opt: string, optIdx: number) => {
+                                                        const isSelected = userAnswers[qIdx] === optIdx
+                                                        const isOptionCorrect = optIdx === quizData.correct_option
+                                                        const isGraded = quizResult?.submitted
+
+                                                        return (
+                                                          <button
+                                                            key={optIdx}
+                                                            type="button"
+                                                            disabled={quizResult?.passed}
+                                                            onClick={() => handleSelectQuizAnswer(mod.id, qIdx !== -1 ? qIdx : sIdx, optIdx)}
+                                                            className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-xs text-left transition-all ${
+                                                              isGraded
+                                                                ? isOptionCorrect
+                                                                  ? 'bg-emerald-100/80 border-emerald-400 text-emerald-950 font-bold'
+                                                                  : isSelected
+                                                                  ? 'bg-rose-100/80 border-rose-400 text-rose-950 font-semibold'
+                                                                  : 'bg-white border-slate-200 text-slate-600 opacity-60'
+                                                                : isSelected
+                                                                ? 'bg-amber-50 border-amber-400 text-amber-950 font-bold ring-2 ring-amber-200'
+                                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100/80'
+                                                            }`}
+                                                          >
+                                                            <span className={`w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center shrink-0 ${
+                                                              isGraded && isOptionCorrect
+                                                                ? 'bg-emerald-600 text-white'
+                                                                : isGraded && isSelected
+                                                                ? 'bg-rose-600 text-white'
+                                                                : isSelected
+                                                                ? 'bg-amber-600 text-white'
+                                                                : 'bg-slate-100 text-slate-600'
+                                                            }`}>
+                                                              {String.fromCharCode(65 + optIdx)}
+                                                            </span>
+                                                            <span className="flex-1">{opt}</span>
+                                                            {isGraded && isOptionCorrect && (
+                                                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-200/70 px-2 py-0.5 rounded-full">
+                                                                Correct Answer
+                                                              </span>
+                                                            )}
+                                                            {isGraded && isSelected && !isOptionCorrect && (
+                                                              <span className="text-[10px] font-bold text-rose-700 bg-rose-200/70 px-2 py-0.5 rounded-full">
+                                                                Your Choice
+                                                              </span>
+                                                            )}
+                                                          </button>
+                                                        )
+                                                      })}
+                                                    </div>
+
+                                                    {quizResult?.submitted && quizData.explanation && (
+                                                      <div className="mt-3 ml-8 p-2.5 rounded-xl bg-white/90 border border-slate-200 text-xs text-slate-600">
+                                                        <span className="font-bold text-slate-800">Explanation: </span>
+                                                        {quizData.explanation}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      ) : (
+                                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                                          <p className="text-xs text-slate-500">No content items added to this module yet.</p>
+                                        </div>
+                                      )}
+
+                                      {/* Quiz Section Submission & Pass Gate Controls */}
+                                      {allQuizQuestions.length > 0 ? (
                                         <div className="pt-3 border-t border-slate-100 space-y-4">
                                           <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-200">
                                             <div className="flex items-center gap-2">
                                               <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
                                               <div>
-                                                <h4 className="text-xs font-bold text-amber-950">Module Mastery Quiz</h4>
+                                                <h4 className="text-xs font-bold text-amber-950">Module Mastery Gate ({allQuizQuestions.length} Questions)</h4>
                                                 <p className="text-[11px] text-amber-800">
-                                                  Minimum passing score: <strong>80%</strong>. Score 80%+ to unlock Module {mIdx + 2}.
+                                                  Score <strong>80%+</strong> across all quiz checkpoints to unlock Module {mIdx + 2}.
                                                 </p>
                                               </div>
                                             </div>
@@ -1134,7 +1390,7 @@ export function TraineeCourseDetails() {
                                                 <div>
                                                   <p className="text-xs font-bold">You scored {quizResult.score}% (Under 80% Requirement)</p>
                                                   <p className="text-[11px] text-rose-700">
-                                                    Review the explanations below and retake the quiz to unlock the next module.
+                                                    Review the explanations and lessons above, then retake the quiz to unlock the next module.
                                                   </p>
                                                 </div>
                                               </div>
@@ -1148,94 +1404,6 @@ export function TraineeCourseDetails() {
                                               </Button>
                                             </div>
                                           )}
-
-                                          {/* Quiz Questions List */}
-                                          <div className="space-y-4">
-                                            {quizQuestions.map((q: any, qIdx: number) => {
-                                              const selectedOption = userAnswers[qIdx]
-                                              const isGraded = quizResult?.submitted
-                                              const isQuestionCorrect = selectedOption === q.correct_option
-
-                                              return (
-                                                <div
-                                                  key={q.id || qIdx}
-                                                  className={`p-4 rounded-2xl border transition-all ${
-                                                    isGraded
-                                                      ? isQuestionCorrect
-                                                        ? 'bg-emerald-50/40 border-emerald-200'
-                                                        : 'bg-rose-50/30 border-rose-200'
-                                                      : 'bg-slate-50 border-slate-200'
-                                                  }`}
-                                                >
-                                                  <div className="flex items-start gap-2.5 mb-3">
-                                                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
-                                                      {qIdx + 1}
-                                                    </span>
-                                                    <p className="text-xs font-bold text-slate-900 leading-relaxed flex-1">
-                                                      {q.question}
-                                                    </p>
-                                                  </div>
-
-                                                  <div className="space-y-2 pl-8">
-                                                    {q.options?.map((opt: string, optIdx: number) => {
-                                                      const isSelected = selectedOption === optIdx
-                                                      const isOptionCorrect = optIdx === q.correct_option
-
-                                                      return (
-                                                        <button
-                                                          key={optIdx}
-                                                          type="button"
-                                                          disabled={quizResult?.passed}
-                                                          onClick={() => handleSelectQuizAnswer(mod.id, qIdx, optIdx)}
-                                                          className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-xs text-left transition-all ${
-                                                            isGraded
-                                                              ? isOptionCorrect
-                                                                ? 'bg-emerald-100/80 border-emerald-400 text-emerald-950 font-bold'
-                                                                : isSelected
-                                                                ? 'bg-rose-100/80 border-rose-400 text-rose-950 font-semibold'
-                                                                : 'bg-white border-slate-200 text-slate-600 opacity-60'
-                                                              : isSelected
-                                                              ? 'bg-cyan-50 border-cyan-400 text-cyan-950 font-bold ring-2 ring-cyan-200'
-                                                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100/80'
-                                                          }`}
-                                                        >
-                                                          <span className={`w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center shrink-0 ${
-                                                            isGraded && isOptionCorrect
-                                                              ? 'bg-emerald-600 text-white'
-                                                              : isGraded && isSelected
-                                                              ? 'bg-rose-600 text-white'
-                                                              : isSelected
-                                                              ? 'bg-cyan-600 text-white'
-                                                              : 'bg-slate-100 text-slate-600'
-                                                          }`}>
-                                                            {String.fromCharCode(65 + optIdx)}
-                                                          </span>
-                                                          <span className="flex-1">{opt}</span>
-                                                          {isGraded && isOptionCorrect && (
-                                                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-200/70 px-2 py-0.5 rounded-full">
-                                                              Correct Answer
-                                                            </span>
-                                                          )}
-                                                          {isGraded && isSelected && !isOptionCorrect && (
-                                                            <span className="text-[10px] font-bold text-rose-700 bg-rose-200/70 px-2 py-0.5 rounded-full">
-                                                              Your Choice
-                                                            </span>
-                                                          )}
-                                                        </button>
-                                                      )
-                                                    })}
-                                                  </div>
-
-                                                  {isGraded && q.explanation && (
-                                                    <div className="mt-3 ml-8 p-2.5 rounded-xl bg-white/80 border border-slate-200 text-xs text-slate-600">
-                                                      <span className="font-bold text-slate-800">Explanation: </span>
-                                                      {q.explanation}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )
-                                            })}
-                                          </div>
 
                                           {/* Submit Quiz CTA */}
                                           {!quizResult?.passed && (
