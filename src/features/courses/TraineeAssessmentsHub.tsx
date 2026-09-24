@@ -17,7 +17,7 @@ const fadeUp = {
 export function TraineeAssessmentsHub() {
   const { profile } = useAuth()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'ongoing' | 'completed'>('ongoing')
+  const [activeTab, setActiveTab] = useState<'ongoing' | 'completed' | 'expired'>('ongoing')
   const [searchQuery, setSearchQuery] = useState('')
 
   // 1. Fetch user enrollments to get course IDs
@@ -53,6 +53,7 @@ export function TraineeAssessmentsHub() {
           passing_score,
           course_id,
           status,
+          results_publish_date,
           course:courses(title)
         `)
         .in('course_id', courseIds)
@@ -105,6 +106,16 @@ export function TraineeAssessmentsHub() {
     return now <= endDate
   })
 
+  const expiredAssessments = pendingAssessments.filter(a => {
+    if (!a.scheduled_date) return false
+    
+    const now = new Date()
+    const endStr = `${a.scheduled_date}T${a.end_time || '23:59:59'}`
+    const endDate = new Date(endStr)
+    
+    return now > endDate
+  })
+
   // Filter based on search query
   const filteredOngoing = ongoingAndUpcoming.filter(a => 
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -116,9 +127,14 @@ export function TraineeAssessmentsHub() {
     (a.course as any)?.title?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const filteredExpired = expiredAssessments.filter(a => 
+    a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (a.course as any)?.title?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <DashboardShell
-      title="Assessments Hub"
+      title="Assessments"
       icon={FileCheck}
       navLinks={[
         { to: '/trainee', label: 'Overview', icon: BarChart3 },
@@ -154,6 +170,17 @@ export function TraineeAssessmentsHub() {
               <CheckCircle2 className="w-4 h-4" />
               Completed
             </button>
+            <button
+              onClick={() => setActiveTab('expired')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all mt-1 ${
+                activeTab === 'expired' 
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200 shadow-sm' 
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              Expired & Missed
+            </button>
           </div>
 
           {/* Search/Filters */}
@@ -175,7 +202,7 @@ export function TraineeAssessmentsHub() {
         {/* Main Content Area */}
         <div className="flex-1 bg-white border border-slate-200/90 rounded-3xl p-6 md:p-8 shadow-sm min-h-[500px]">
           <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2 pb-4 border-b border-slate-100 tracking-tight">
-            {activeTab === 'ongoing' ? 'Ongoing & Upcoming Assessments' : 'Completed Assessments'}
+            {activeTab === 'ongoing' ? 'Ongoing & Upcoming Assessments' : activeTab === 'completed' ? 'Completed Assessments' : 'Expired & Missed Assessments'}
           </h2>
 
           {isLoading ? (
@@ -211,7 +238,8 @@ export function TraineeAssessmentsHub() {
                                   <Calendar className="w-3.5 h-3.5 text-amber-600" />
                                   <span>
                                     {format(new Date(assessment.scheduled_date), 'MMM do, yyyy')} 
-                                    {assessment.start_time && ` at ${assessment.start_time}`}
+                                    {assessment.start_time && ` at ${format(new Date(`2000-01-01T${assessment.start_time}`), 'h:mm a')}`}
+                                    {assessment.end_time && ` to ${format(new Date(`2000-01-01T${assessment.end_time}`), 'h:mm a')}`}
                                   </span>
                                 </div>
                               )}
@@ -256,9 +284,13 @@ export function TraineeAssessmentsHub() {
                           
                           <div className="flex items-center gap-6">
                             <div className="text-center">
-                              <p className="text-2xl font-black text-cyan-600">
-                                {assessment.attempt?.score ?? '-'}<span className="text-sm text-slate-400">/100</span>
-                              </p>
+                              {assessment.results_publish_date && new Date(assessment.results_publish_date) > new Date() ? (
+                                <p className="text-sm font-bold text-slate-500 mt-2">Hidden</p>
+                              ) : (
+                                <p className="text-2xl font-black text-cyan-600">
+                                  {assessment.attempt?.score ?? '-'}<span className="text-sm text-slate-400">/100</span>
+                                </p>
+                              )}
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Marks</p>
                             </div>
                             <Link to={`/trainee/courses/${assessment.course_id}/assessments/${assessment.id}`}>
@@ -266,6 +298,41 @@ export function TraineeAssessmentsHub() {
                                 View Result
                               </button>
                             </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+              {activeTab === 'expired' && (
+                <motion.div key="expired" variants={fadeUp} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+                  {filteredExpired.length === 0 ? (
+                    <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <Clock className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                      <p className="text-sm font-semibold text-slate-600">No expired assessments</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {filteredExpired.map((assessment) => (
+                        <div key={assessment.id} className="p-6 rounded-3xl bg-slate-50 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 opacity-75">
+                          <div className="flex-1">
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block border border-rose-200">
+                              Expired / Missed
+                            </span>
+                            <h3 className="text-lg font-bold text-slate-900">{assessment.title}</h3>
+                            <div className="flex items-center gap-4 mt-2">
+                              <span className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                Expired on: {assessment.scheduled_date ? format(new Date(assessment.scheduled_date), 'MMM do yyyy') : 'Unknown Date'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-6">
+                            <button disabled className="px-5 py-2.5 bg-slate-200 text-slate-500 text-sm font-bold rounded-xl whitespace-nowrap cursor-not-allowed">
+                              Missed
+                            </button>
                           </div>
                         </div>
                       ))}

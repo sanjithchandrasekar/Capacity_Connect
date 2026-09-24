@@ -555,6 +555,7 @@ export interface Database {
           approved: boolean
           created_at: string
             difficulty: 'easy' | 'medium' | 'hard' | null
+          question_type: string | null
         }
         Insert: {
           id?: string
@@ -567,6 +568,7 @@ export interface Database {
           approved?: boolean
           created_at?: string
             difficulty?: 'easy' | 'medium' | 'hard' | null
+          question_type?: string | null
         }
         Update: {
           id?: string
@@ -579,6 +581,7 @@ export interface Database {
           approved?: boolean
           created_at?: string
             difficulty?: 'easy' | 'medium' | 'hard' | null
+          question_type?: string | null
         }
         Relationships: []
       }

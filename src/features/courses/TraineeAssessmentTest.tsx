@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
-import { Loader2, ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, Target, Brain } from 'lucide-react'
+import { Loader2, ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, Target, Brain, LayoutDashboard, BookOpen, Compass, TrendingUp, Settings, Award } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -44,17 +44,25 @@ export function TraineeAssessmentTest() {
   const [currentDifficulty, setCurrentDifficulty] = useState<'easy'|'medium'|'hard'>('medium')
   const [isScanningRoom, setIsScanningRoom] = useState(false)
   const [roomScanProgress, setRoomScanProgress] = useState(0)
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  useEffect(() => {
+    if (!hasStarted) {
+      const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+      return () => clearInterval(timer)
+    }
+  }, [hasStarted])
 
   // Fetch assessment and questions
-  const { data: assessment, isLoading: isAssessmentLoading } = useQuery({
+  const { data: assessment, isLoading: isAssessmentLoading, error: assessmentError } = useQuery({
     queryKey: ['assessment', assessmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessments')
-        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, created_by, course_id, instructions, created_at, results_publish_date, is_adaptive, is_simulation, simulation_dataset_url')
+        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, created_by, course_id, instructions, created_at, assessment_type')
         .eq('id', assessmentId!)
         .single()
-      if (error) { console.error('Assessment fetch error:', error); return null; }
+      if (error) { throw error; }
       return data as any
     },
     enabled: !!assessmentId,
@@ -64,8 +72,16 @@ export function TraineeAssessmentTest() {
     queryKey: ['assessment-questions', assessmentId],
     queryFn: async () => {
       const { data, error } = await supabase.from('questions').select('*').eq('assessment_id', assessmentId!).order('position')
-      if (error) { console.error('Questions fetch error:', error); return []; }
-      return data || []
+      if (error) { 
+        console.error('Questions fetch error:', error); 
+        toast.error(`Error loading questions: ${error.message}`);
+        return []; 
+      }
+      return (data || []).map((q: any) => ({
+        ...q,
+        question_type: (q.options as any)?._question_type || 'mcq',
+        difficulty: (q.options as any)?._difficulty || 'medium',
+      }))
     },
     enabled: !!assessmentId,
   })
@@ -147,9 +163,9 @@ export function TraineeAssessmentTest() {
     setStrikes(s => {
       const newStrikes = s + 1
       if (newStrikes >= MAX_STRIKES) {
-        toast.error(`SEA Violation: ${reason}. Maximum strikes reached. Test auto-submitted.`, { duration: 5000 })
+        toast.error(`SEA Violation: ${reason}. Maximum strikes reached. You have been blocked.`, { duration: 5000 })
         if (document.fullscreenElement) document.exitFullscreen().catch(console.error)
-        handleSubmit()
+        handleSubmit(true)
       } else {
         toast.error(`SEA Warning (${newStrikes}/${MAX_STRIKES}): ${reason}. Return to the test immediately!`, { duration: 5000 })
       }
@@ -220,6 +236,10 @@ export function TraineeAssessmentTest() {
 
   const startTest = async () => {
     if (assessment?.requires_sea) {
+      const canFullscreen = await requestFullScreen()
+      if (!canFullscreen) {
+         return
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         mediaStreamRef.current = stream
@@ -315,12 +335,6 @@ export function TraineeAssessmentTest() {
         toast.error('Camera and Microphone access are required for Secure Exam Mode.')
         return
       }
-
-      const canFullscreen = await requestFullScreen()
-      if (!canFullscreen) {
-         mediaStreamRef.current?.getTracks().forEach(t => t.stop())
-         return
-      }
     }
 
     if (!questions || questions.length === 0) {
@@ -387,7 +401,7 @@ export function TraineeAssessmentTest() {
         assessment_id: assessmentId,
         user_id: profile!.id,
         score: results.score,
-        passed: results.score >= (assessment?.passing_score ?? 60),
+        passed: results.score >= (assessment?.passing_score ?? 50),
         answers: answers,
         grade_status: results.hasOpenEnded ? 'pending_manual' : 'graded',
         submitted_at: new Date().toISOString()
@@ -429,7 +443,7 @@ export function TraineeAssessmentTest() {
     onError: (err: any) => toast.error(err.message || 'Failed to submit assessment')
   })
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (isBlocked: boolean = false) => {
     if (!questions || questions.length === 0) {
       toast.error('Cannot submit: no questions loaded.')
       return
@@ -438,11 +452,50 @@ export function TraineeAssessmentTest() {
 
     // Calculate score locally
     setTimeout(() => {
+      if (isBlocked) {
+        submitMutation.mutate({ score: -1, hasOpenEnded: false })
+        setIsAiGrading(false)
+        return
+      }
+
       let correct = 0
       let hasOpenEnded = false
+
+      const getKeywords = (text: string) => {
+        if (!text) return [];
+        const stopWords = new Set(['the','is','in','at','of','on','and','a','to','it','for','with','as','by','this','that','these','those','an','are','was','were','be','been','being','have','has','had','do','does','did','will','would','shall','should','can','could','may','might','must','ought','i','you','he','she','we','they','what','which','who','whom','whose','where','when','why','how']);
+        return text.toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter(w => w.length > 2 && !stopWords.has(w));
+      };
+
       questions.forEach(q => {
-        if ((q as any).question_type === 'open_ended') {
+        const type = (q.options as any)?._question_type || (q as any).question_type || 'mcq'
+        if (type === 'open_ended') {
           hasOpenEnded = true
+          
+          const studentAns = answers[q.id] || '';
+          const refAns = q.correct_answer || '';
+          
+          const refKeywords = getKeywords(refAns);
+          const studentKeywords = getKeywords(studentAns);
+          
+          if (refKeywords.length > 0) {
+            let matchCount = 0;
+            refKeywords.forEach(rk => {
+              if (studentKeywords.some(sk => sk === rk || (sk.length > 3 && (sk.includes(rk) || rk.includes(sk))))) {
+                matchCount++;
+              }
+            });
+            const ratio = matchCount / refKeywords.length;
+            
+            if (ratio >= 0.5) correct += 1;
+            else if (ratio >= 0.25) correct += 0.5;
+          } else if (studentAns.trim().length > 10) {
+            // If no reference answer is provided but they wrote something substantial
+            correct += 0.5;
+          }
         } else if (answers[q.id] === q.correct_answer) {
           correct++
         }
@@ -466,12 +519,34 @@ export function TraineeAssessmentTest() {
     }
   }
 
+  const traineeNavLinks = [
+    { label: 'Dashboard', to: '/trainee/dashboard', icon: LayoutDashboard },
+    { label: 'My Learning', to: '/trainee/my-learning', icon: BookOpen },
+    { label: 'Course Catalog', to: '/trainee/courses', icon: Compass },
+    { label: 'Assessments', to: '/trainee/assessments', icon: Target },
+    { label: 'Settings', to: '/trainee/settings', icon: Settings }
+  ]
+
   if (isAssessmentLoading || isQuestionsLoading || isAttemptLoading) {
-    return <DashboardShell title="Assessment" icon={Target} navLinks={[]}><div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div></DashboardShell>
+    return <DashboardShell title="Assessment" icon={Target} navLinks={traineeNavLinks}><div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div></DashboardShell>
   }
 
   if (!assessment || !questions) {
-    return <DashboardShell title="Assessment" icon={Target} navLinks={[]}><div className="text-center py-20">Assessment not found.</div></DashboardShell>
+    return (
+      <DashboardShell title="Assessment" icon={Target} navLinks={traineeNavLinks}>
+        <div className="text-center py-20">
+          <p className="text-lg font-bold text-slate-800">Assessment not found.</p>
+          <div className="mt-4 text-xs text-slate-500 bg-slate-50 p-4 rounded-lg inline-block text-left">
+            <p>Debug Info:</p>
+            <p>Assessment ID: {assessmentId}</p>
+            <p>Course ID: {courseId}</p>
+            <p>Assessment loaded: {assessment ? 'Yes' : 'No'}</p>
+            <p>Questions loaded: {questions ? 'Yes' : 'No'}</p>
+            <p className="text-red-500 font-bold mt-2">Error: {assessmentError ? (assessmentError as any).message || JSON.stringify(assessmentError) : 'None'}</p>
+          </div>
+        </div>
+      </DashboardShell>
+    )
   }
 
   // Strip file extensions & underscores from titles set to raw filenames
@@ -485,16 +560,16 @@ export function TraineeAssessmentTest() {
   const displayTitle = cleanTitle(assessment.title)
 
   // Check if results are hidden
-  const areResultsHidden = assessment.results_publish_date && new Date(assessment.results_publish_date) > new Date();
+  const areResultsHidden = assessment?.results_publish_date ? new Date(assessment.results_publish_date) > new Date() : false;
 
   // Completed State
   if (previousAttempt) {
     const attemptData = previousAttempt as any
     return (
-      <DashboardShell title={displayTitle} icon={Target} navLinks={[]}>
+      <DashboardShell title={displayTitle} icon={Target} navLinks={traineeNavLinks}>
         <div className="max-w-4xl mx-auto space-y-6">
-          <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-zinc-200/60 hover:text-cyan-400 transition-colors mb-2 font-semibold">
-            <ArrowLeft className="w-4 h-4" /> Back to Course
+          <Link to={`/trainee/assessments`} className="inline-flex items-center gap-2 text-sm text-zinc-200/60 hover:text-cyan-400 transition-colors mb-2 font-semibold">
+            <ArrowLeft className="w-4 h-4" /> Back to Assessments
           </Link>
           <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-8 shadow-sm text-center">
             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -504,12 +579,12 @@ export function TraineeAssessmentTest() {
             {areResultsHidden ? (
                 <p className="text-slate-600 mb-6 bg-cyan-50 p-4 rounded-2xl border border-cyan-200 max-w-sm mx-auto text-sm font-medium">
                    Your results are currently hidden and will be published on <br/>
-                   <span className="font-bold text-cyan-700">{assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a later date'}</span>.
+                   <span className="font-bold text-cyan-700">{assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleDateString() : 'a later date'}</span>.
                 </p>
             ) : (
                 <p className="text-slate-600 mb-6 font-medium">You scored <span className="font-bold text-cyan-600">{attemptData.score}%</span>.</p>
             )}
-            <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">Return to Course</Button>
+            <Button onClick={() => navigate(`/trainee/assessments`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">Return to Assessments</Button>
           </div>
         </div>
       </DashboardShell>
@@ -520,7 +595,7 @@ export function TraineeAssessmentTest() {
   if (!hasStarted) {
     let gating = { allowed: true, message: '' };
     if (assessment.scheduled_date) {
-      const now = new Date();
+      const now = currentTime;
       const scheduledDate = new Date(assessment.scheduled_date);
       
       if (now.toDateString() !== scheduledDate.toDateString()) {
@@ -531,7 +606,14 @@ export function TraineeAssessmentTest() {
           const [startH, startM] = assessment.start_time.split(':').map(Number);
           const startTime = new Date(scheduledDate);
           startTime.setHours(startH, startM, 0);
-          if (now < startTime) gating = { allowed: false, message: `This assessment opens at ${assessment.start_time}` };
+          if (now < startTime) {
+            const diffSecs = Math.floor((startTime.getTime() - now.getTime()) / 1000);
+            const h = Math.floor(diffSecs / 3600);
+            const m = Math.floor((diffSecs % 3600) / 60);
+            const s = diffSecs % 60;
+            const countdownStr = `Starts in ${h > 0 ? `${h}h ` : ''}${m}m ${s < 10 ? '0' : ''}${s}s`;
+            gating = { allowed: false, message: `This assessment opens at ${assessment.start_time} (${countdownStr})` };
+          }
         }
         if (assessment.end_time) {
           const [endH, endM] = assessment.end_time.split(':').map(Number);
@@ -542,10 +624,10 @@ export function TraineeAssessmentTest() {
       }
     }
     return (
-      <DashboardShell title={displayTitle} icon={Target} navLinks={[]}>
+      <DashboardShell title={displayTitle} icon={Target} navLinks={traineeNavLinks}>
         <div className="max-w-4xl mx-auto">
-          <Link to={`/trainee/courses/${courseId}`} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-6 font-semibold">
-            <ArrowLeft className="w-4 h-4" /> Back to Course
+          <Link to={`/trainee/assessments`} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-6 font-semibold">
+            <ArrowLeft className="w-4 h-4" /> Back to Assessments
           </Link>
           <div className="bg-white border border-slate-200/90 rounded-3xl p-10 shadow-sm text-center max-w-2xl mx-auto">
             <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-cyan-200 text-cyan-600 shadow-sm">
@@ -554,14 +636,22 @@ export function TraineeAssessmentTest() {
             <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">{displayTitle}</h1>
             <p className="text-slate-600 mb-8 max-w-lg mx-auto leading-relaxed font-medium">{assessment.instructions || 'Please read each question carefully before answering. Good luck!'}</p>
             
-            <div className="flex justify-center gap-8 mb-10">
-              <div className="text-center">
-                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Duration</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10 max-w-xl mx-auto">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Duration</p>
                 <p className="font-bold text-slate-900 flex items-center gap-1.5"><Clock className="w-4 h-4 text-amber-600" /> {assessment.duration_minutes || 30} mins</p>
               </div>
-              <div className="text-center">
-                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Questions</p>
-                <p className="font-bold text-slate-900 flex items-center gap-1.5"><Target className="w-4 h-4 text-cyan-600" /> {questions.length}</p>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Questions</p>
+                <p className="font-bold text-slate-900 flex items-center gap-1.5"><Target className="w-4 h-4 text-cyan-600" /> {questions?.length || 0}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Marks</p>
+                <p className="font-bold text-slate-900 flex items-center gap-1.5"><Award className="w-4 h-4 text-emerald-600" /> {(questions?.length || 0) * 10}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Pattern</p>
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 capitalize text-sm"><BookOpen className="w-4 h-4 text-indigo-600" /> {assessment.assessment_type || 'Standard'}</p>
               </div>
             </div>
 
@@ -581,9 +671,14 @@ export function TraineeAssessmentTest() {
             )}
 
             {!gating.allowed ? (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 p-6 rounded-2xl flex flex-col items-center gap-3">
-                <AlertCircle className="w-8 h-8 text-amber-600" />
-                <p className="font-bold">{gating.message}</p>
+              <div className="flex flex-col items-center space-y-4">
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-6 rounded-2xl flex flex-col items-center gap-3 w-full">
+                  <AlertCircle className="w-8 h-8 text-amber-600" />
+                  <p className="font-bold">{gating.message}</p>
+                </div>
+                <Button onClick={() => navigate(`/trainee/assessments`)} variant="outline" className="text-slate-600 font-bold rounded-xl border-slate-200">
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to Assessments
+                </Button>
               </div>
             ) : (
               <Button onClick={startTest} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-2xl px-10 py-6 text-lg w-full sm:w-auto shadow-lg shadow-cyan-600/20 transition-all hover:scale-105 active:scale-95">
@@ -619,29 +714,29 @@ export function TraineeAssessmentTest() {
   if (submitMutation.isSuccess) {
     const attemptData = submitMutation.data as any;
     const now = new Date();
-    const areResultsHidden = assessment.results_publish_date && new Date(assessment.results_publish_date) > now;
+    const areResultsHidden = assessment.results_publish_date ? new Date(assessment.results_publish_date) > now : false;
     const isPendingManual = attemptData?.grade_status === 'pending_manual';
 
     if (areResultsHidden || isPendingManual) {
        return (
-        <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
+        <DashboardShell title={assessment.title} icon={Target} navLinks={traineeNavLinks}>
             <div className="max-w-4xl mx-auto space-y-6 text-center py-20">
               <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
               <h2 className="text-3xl font-black text-slate-900 mb-2">Submitted Successfully!</h2>
               <p className="text-slate-600 mb-8 max-w-md mx-auto font-medium">
                  {isPendingManual 
                    ? "Your assessment contains open-ended questions that require manual grading. Please check back later."
-                   : `Your assessment has been submitted. The results are hidden by your trainer until ${assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleString() : 'a future date'}.`
+                   : `Your assessment has been submitted. The results are hidden by your trainer until a future date.`
                  }
               </p>
-              <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white rounded-xl px-8 py-6 font-bold shadow-md shadow-cyan-600/10">Return to Course</Button>
+              <Button onClick={() => navigate(`/trainee/assessments`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white rounded-xl px-8 py-6 font-bold shadow-md shadow-cyan-600/10">Return to Assessments</Button>
             </div>
         </DashboardShell>
        )
     }
 
     return (
-      <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
+      <DashboardShell title={assessment.title} icon={Target} navLinks={traineeNavLinks}>
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex items-center justify-between border-b border-slate-200 pb-4">
             <div>
@@ -765,7 +860,7 @@ export function TraineeAssessmentTest() {
           </div>
 
           <div className="flex justify-center pt-6 pb-20">
-            <Button onClick={() => navigate(`/trainee/courses/${courseId}`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl px-8 py-6 shadow-md shadow-cyan-600/10">Return to Course</Button>
+            <Button onClick={() => navigate(`/trainee/assessments`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl px-8 py-6 shadow-md shadow-cyan-600/10">Return to Assessments</Button>
           </div>
         </div>
       </DashboardShell>
@@ -921,7 +1016,7 @@ export function TraineeAssessmentTest() {
           
           {(!assessment.is_adaptive && currentQuestionIndex === questions.length - 1) || (assessment.is_adaptive && adaptiveHistory.length + 1 >= questions.length) ? (
             <Button 
-              onClick={handleSubmit} 
+              onClick={() => handleSubmit(false)} 
               className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold px-8 shadow-md shadow-emerald-600/20"
             >
               Submit Assessment
