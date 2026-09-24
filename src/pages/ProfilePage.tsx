@@ -198,13 +198,19 @@ export function ProfilePage() {
         work_experience: form.work_experience || null,
         years_of_experience: form.years_of_experience ? parseInt(form.years_of_experience) : null,
         bio: form.bio || null,
-        learning_goals: form.learning_goals || null,
-        availability: form.availability || 'available',
         linkedin_url: form.linkedin_url || null,
         website_url: form.website_url || null,
         github_url: form.github_url || null,
         skills: form.skills,
         interests: form.interests,
+      }
+
+      if (profile?.role === 'trainer') {
+        payload.availability = form.availability || 'available'
+      }
+
+      if (profile?.role === 'trainee') {
+        payload.learning_goals = form.learning_goals || null
       }
 
       const { error } = await supabase

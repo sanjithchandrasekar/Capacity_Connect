@@ -27,6 +27,7 @@ const SuperAdminDashboard = lazy(() => import('./pages/Dashboards').then((m) => 
 // Course & Trainee features
 const TraineeCourseCatalog = lazy(() => import('./features/courses/TraineeCourseCatalog').then((m) => ({ default: m.TraineeCourseCatalog })))
 const TraineeCourseDetails = lazy(() => import('./features/courses/TraineeCourseDetails').then((m) => ({ default: m.TraineeCourseDetails })))
+const TraineeCourseLearnPage = lazy(() => import('./features/courses/TraineeCourseLearnPage').then((m) => ({ default: m.TraineeCourseLearnPage })))
 const TraineeAssessmentTest = lazy(() => import('./features/courses/TraineeAssessmentTest').then((m) => ({ default: m.TraineeAssessmentTest })))
 const TraineeAssessmentsHub = lazy(() => import('./features/courses/TraineeAssessmentsHub').then((m) => ({ default: m.TraineeAssessmentsHub })))
 const TraineeMyLearning = lazy(() => import('./features/courses/TraineeMyLearning').then((m) => ({ default: m.TraineeMyLearning })))
@@ -168,6 +169,7 @@ function AnimatedAppRoutes() {
                     <Route path="/trainee" element={<TraineeDashboard />} />
                     <Route path="/trainee/courses" element={<TraineeCourseCatalog />} />
                     <Route path="/trainee/courses/:courseId" element={<TraineeCourseDetails />} />
+                    <Route path="/trainee/courses/:courseId/learn" element={<TraineeCourseLearnPage />} />
                     <Route path="/trainee/courses/:courseId/assessments/:assessmentId" element={<TraineeAssessmentTest />} />
                     <Route path="/trainee/assessments" element={<TraineeAssessmentsHub />} />
                     <Route path="/trainee/my-learning" element={<TraineeMyLearning />} />

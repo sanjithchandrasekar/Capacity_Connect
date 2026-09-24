@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
-import { Clock, User, ArrowLeft, Loader2, Layers, LogIn } from 'lucide-react'
+import { Clock, User, ArrowLeft, Loader2, Layers, LogIn, GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const fadeUp = {
@@ -21,7 +21,7 @@ export function PublicCourseDetails() {
         .from('courses')
         .select(`
           *,
-          trainer:trainers!courses_trainer_id_fkey(full_name, department)
+          trainer:trainers!courses_trainer_id_fkey(full_name, department, bio, qualifications, study_details, work_experience, years_of_experience, expertise_areas)
         `)
         .eq('id', courseId!)
         .eq('status', 'published')
@@ -120,15 +120,41 @@ export function PublicCourseDetails() {
               <div className="space-y-6">
                 <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Trainer Details</h3>
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-cyan-600/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-cyan-600/20 shrink-0">
                       {course.trainer?.full_name?.charAt(0) || 'T'}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-900">{course.trainer?.full_name || 'Assigned Instructor'}</p>
-                      <p className="text-xs text-slate-500 font-medium">{course.trainer?.department || 'Trainer'}</p>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {course.trainer?.department || 'Trainer'}
+                        {course.trainer?.years_of_experience ? ` • ${course.trainer.years_of_experience} yrs exp` : ''}
+                      </p>
                     </div>
                   </div>
+
+                  {course.trainer?.bio && (
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 mb-3">
+                      <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider mb-1">
+                        Professional Summary
+                      </p>
+                      <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
+                        {course.trainer.bio}
+                      </p>
+                    </div>
+                  )}
+
+                  {course.trainer?.qualifications && (
+                    <div className="p-3 bg-blue-50/70 rounded-2xl border border-blue-100">
+                      <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                        <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+                        Academic & Professional Qualifications
+                      </p>
+                      <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-line font-medium">
+                        {course.trainer.qualifications}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
