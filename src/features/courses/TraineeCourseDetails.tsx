@@ -10,7 +10,7 @@ import {
   BookMarked, Layers, ChevronDown, ChevronUp, Play, FileText, Link2,
   Lock, Target, Calendar, Video, Download, ExternalLink, Users,
   GraduationCap, Award, PlayCircle,
-  ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle
+  ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle, BarChart3
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -371,7 +371,7 @@ export function TraineeCourseDetails() {
 
   const sessionTypeColors: Record<string, string> = {
     recorded: 'bg-blue-50 text-blue-700 border-blue-200',
-    live: 'bg-rose-50 text-rose-700 border-rose-200',
+    live: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     in_person: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     hybrid: 'bg-purple-50 text-purple-700 border-purple-200',
   }
@@ -386,10 +386,11 @@ export function TraineeCourseDetails() {
         title={course?.title || 'Course Details'}
         icon={BookOpen}
         navLinks={[
-          { to: '/trainee', label: 'Overview', icon: BookMarked },
+          { to: '/trainee', label: 'Dashboard', icon: BarChart3 },
           { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
           { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
           { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+          { to: '/trainee/profile', label: 'Profile', icon: User },
         ]}
       >
         <div className="max-w-6xl space-y-6">
@@ -697,12 +698,12 @@ export function TraineeCourseDetails() {
                     </div>
                   )}
 
-                  {/* Session Flow */}
+                  {/* Course Outline */}
                   {course.session_flow_text && (
                     <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
                       <div className="flex items-center justify-between mb-5">
                         <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                          <ListOrdered className="w-4 h-4 text-cyan-600" /> Session Flow
+                          <ListOrdered className="w-4 h-4 text-cyan-600" /> Course Outline
                         </h2>
                         {course.session_flow_document_path && (
                           <Button
@@ -715,7 +716,7 @@ export function TraineeCourseDetails() {
                             {docLoading
                               ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               : <FileText className="w-3.5 h-3.5" />}
-                            View Document
+                            View Outline Document
                           </Button>
                         )}
                       </div>
@@ -766,22 +767,35 @@ export function TraineeCourseDetails() {
                         {course.sessions.map((session: any, index: number) => {
                           const sessionMaterials = course.materials?.filter((m: any) => m.session_id === session.id) || []
                           const isOpen = openSessions.has(session.id)
-                          const typeColor = sessionTypeColors[session.session_type] || 'bg-slate-100 text-slate-700 border-slate-200'
+                          
+                          // Determine real-time session status
+                          const now = Date.now()
+                          const startTime = session.start_time ? new Date(session.start_time).getTime() : null
+                          const endTime = session.end_time ? new Date(session.end_time).getTime() : (startTime ? startTime + 60 * 60 * 1000 : null)
+                          
+                          const isFinished = endTime ? endTime < now : (startTime ? startTime < now : false)
+                          const isLiveNow = startTime && endTime ? (now >= startTime && now <= endTime) : false
 
                           return (
                             <div
                               key={session.id}
                               className={`border rounded-2xl overflow-hidden transition-all duration-200 ${
-                                isOpen ? 'border-cyan-300 shadow-sm' : 'border-slate-200'
+                                isLiveNow ? 'border-rose-300 ring-2 ring-rose-100 shadow-sm' : isOpen ? 'border-cyan-300 shadow-sm' : 'border-slate-200'
                               }`}
                             >
                               {/* Session header */}
                               <button
                                 onClick={() => toggleSession(session.id)}
-                                className="w-full flex items-center gap-4 p-4 bg-slate-50/70 hover:bg-slate-50 transition-colors text-left"
+                                className={`w-full flex items-center gap-4 p-4 transition-colors text-left ${
+                                  isLiveNow ? 'bg-rose-50/40 hover:bg-rose-50/60' : 'bg-slate-50/70 hover:bg-slate-50'
+                                }`}
                               >
                                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-all ${
-                                  isOpen ? 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white shadow-xs' : 'bg-white border border-slate-200 text-cyan-700'
+                                  isLiveNow
+                                    ? 'bg-rose-600 text-white shadow-sm'
+                                    : isOpen
+                                      ? 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white shadow-xs'
+                                      : 'bg-white border border-slate-200 text-cyan-700'
                                 }`}>
                                   {index + 1}
                                 </div>
@@ -789,11 +803,19 @@ export function TraineeCourseDetails() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex flex-wrap items-center gap-2 mb-0.5">
                                     <p className="text-sm font-bold text-slate-900">{session.title}</p>
-                                    {session.session_type && (
-                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${typeColor}`}>
-                                        {session.session_type === 'recorded' ? 'Video' : session.session_type}
+                                    {isLiveNow ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-rose-50 text-rose-700 border-rose-200 flex items-center gap-1 shadow-xs animate-pulse">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" /> Live Now
                                       </span>
-                                    )}
+                                    ) : isFinished ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200 flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3 text-slate-400" /> Completed
+                                      </span>
+                                    ) : session.session_type ? (
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${sessionTypeColors[session.session_type] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                                        {session.session_type === 'recorded' ? 'Video' : session.session_type === 'live' ? 'Live Online' : session.session_type.replace('_', ' ')}
+                                      </span>
+                                    ) : null}
                                   </div>
                                   {session.start_time && (
                                     <p className="text-xs text-slate-500 flex items-center gap-1">
@@ -801,6 +823,7 @@ export function TraineeCourseDetails() {
                                       {new Date(session.start_time).toLocaleString(undefined, {
                                         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
                                       })}
+                                      {session.end_time && ` - ${new Date(session.end_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`}
                                     </p>
                                   )}
                                 </div>
@@ -812,15 +835,28 @@ export function TraineeCourseDetails() {
                                     </span>
                                   )}
                                   {session.meet_link && enrollment && (session.session_type === 'live' || session.session_type === 'hybrid') && (
-                                    <a
-                                      href={session.meet_link}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      onClick={e => e.stopPropagation()}
-                                      className="flex items-center gap-1 text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors font-semibold"
-                                    >
-                                      <Video className="w-3.5 h-3.5" /> Join
-                                    </a>
+                                    isFinished ? (
+                                      <span
+                                        onClick={e => e.stopPropagation()}
+                                        className="text-[11px] font-semibold text-slate-400 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg"
+                                      >
+                                        Ended
+                                      </span>
+                                    ) : (
+                                      <a
+                                        href={session.meet_link}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        onClick={e => e.stopPropagation()}
+                                        className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition-all font-semibold ${
+                                          isLiveNow
+                                            ? 'text-white bg-gradient-to-r from-red-600 to-rose-600 border-rose-500 hover:opacity-90 shadow-sm animate-pulse'
+                                            : 'text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100'
+                                        }`}
+                                      >
+                                        <Video className="w-3.5 h-3.5" /> {isLiveNow ? 'Join Live Now' : 'Join'}
+                                      </a>
+                                    )
                                   )}
                                   {session.location && enrollment && (session.session_type === 'in_person' || session.session_type === 'hybrid') && (
                                     <span className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-semibold truncate max-w-[120px]">
@@ -1056,6 +1092,11 @@ export function TraineeCourseDetails() {
                     </div>
                   )}
 
+                  {/* Feedback Card in Sidebar */}
+                  {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'completed' || enrollment.status === 'in_progress') && (
+                    <CourseFeedback courseId={courseId!} isTrainer={false} />
+                  )}
+
                   {/* Enroll prompt for non-enrolled */}
                   {!enrollment && (
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
@@ -1067,13 +1108,6 @@ export function TraineeCourseDetails() {
                   )}
                 </div>
               </div>
-            </motion.div>
-          )}
-
-          {/* Course Feedback Section */}
-          {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'completed') && (
-            <motion.div variants={fadeUp} className="mt-8">
-              <CourseFeedback courseId={courseId!} />
             </motion.div>
           )}
         </div>

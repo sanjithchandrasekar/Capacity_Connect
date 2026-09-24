@@ -651,7 +651,7 @@ export function AdminHomePageSettings() {
                   type="text"
                   value={formData.announcements_bar_label}
                   onChange={(e) => handleInputChange('announcements_bar_label', e.target.value)}
-                  placeholder="Announcements"
+                  placeholder="Updates"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
                 />
               </div>
@@ -665,17 +665,17 @@ export function AdminHomePageSettings() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <select
-                    value={[16, 24, 45].includes(formData.announcements_bar_speed) ? formData.announcements_bar_speed : 'custom'}
+                    value={[35, 65, 90].includes(formData.announcements_bar_speed) ? formData.announcements_bar_speed : 'custom'}
                     onChange={(e) => {
                       if (e.target.value !== 'custom') {
-                        handleInputChange('announcements_bar_speed', parseInt(e.target.value) || 24);
+                        handleInputChange('announcements_bar_speed', parseInt(e.target.value) || 65);
                       }
                     }}
                     className="w-full px-3 py-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-white text-xs focus:outline-none focus:border-cyan-400"
                   >
-                    <option value={16} className="bg-slate-900 text-white">Fast (16s cycle)</option>
-                    <option value={24} className="bg-slate-900 text-white">Medium / Balanced (24s cycle)</option>
-                    <option value={45} className="bg-slate-900 text-white">Smooth / Calm (45s cycle)</option>
+                    <option value={35} className="bg-slate-900 text-white">Brisk (35s cycle)</option>
+                    <option value={65} className="bg-slate-900 text-white">Comfortable / Slow (65s cycle - Recommended)</option>
+                    <option value={90} className="bg-slate-900 text-white">Very Slow / Relaxed (90s cycle)</option>
                     <option value="custom" className="bg-slate-900 text-cyan-300">Custom (Enter Seconds)</option>
                   </select>
 
@@ -684,8 +684,8 @@ export function AdminHomePageSettings() {
                       type="number"
                       min={4}
                       max={300}
-                      value={formData.announcements_bar_speed || 24}
-                      onChange={(e) => handleInputChange('announcements_bar_speed', Math.max(1, parseInt(e.target.value) || 24))}
+                      value={formData.announcements_bar_speed || 65}
+                      onChange={(e) => handleInputChange('announcements_bar_speed', Math.max(1, parseInt(e.target.value) || 65))}
                       placeholder="Custom seconds..."
                       className="w-full pl-3 pr-12 py-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-white text-xs font-mono focus:outline-none focus:border-cyan-400"
                     />

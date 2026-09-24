@@ -327,19 +327,10 @@ export function CourseEditPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 sm:col-span-2">
                     <Label className="text-slate-700 text-xs font-semibold">Duration (hours)</Label>
-                    <Input type="number" {...register('duration_hours')} placeholder="e.g. 20" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
+                    <Input type="number" {...register('duration_hours')} placeholder="e.g. 20" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl max-w-sm" />
                     <p className="text-[10px] text-slate-400 font-medium">Leave empty for self-paced</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-slate-700 text-xs font-semibold">Passing Score (%)</Label>
-                    <Input type="number" {...register('passing_score')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
-                  </div>
-                  <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                    <Label className="text-slate-700 text-xs font-semibold">Live Meeting Link</Label>
-                    <Input type="url" {...register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
-                    {errors.meet_link && <p className="text-xs text-rose-600 font-medium">{errors.meet_link.message}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-slate-700 text-xs font-semibold">Start Date</Label>
@@ -384,15 +375,15 @@ export function CourseEditPage() {
             </Card>
 
             <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl mt-4">
-              <CardHeader className="border-b border-slate-100"><CardTitle className="text-slate-900 text-base font-bold">Session Flow</CardTitle></CardHeader>
+              <CardHeader className="border-b border-slate-100"><CardTitle className="text-slate-900 text-base font-bold">Course Outline</CardTitle></CardHeader>
               <CardContent className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-slate-700 text-xs font-semibold">Session Flow Details</Label>
-                  <Textarea {...register('session_flow_text')} rows={6} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white rounded-xl resize-none" placeholder="Describe the session flow, topics covered, and engagement plan..." />
+                  <Label className="text-slate-700 text-xs font-semibold">Course Outline Details</Label>
+                  <Textarea {...register('session_flow_text')} rows={6} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white rounded-xl resize-none" placeholder="Describe the course outline, modules/topics covered, and learning plan..." />
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-slate-700 text-xs font-semibold">Session Flow Document</Label>
+                  <Label className="text-slate-700 text-xs font-semibold">Course Outline Document</Label>
                   {sessionFlowDocPath || sessionFlowDoc ? (
                     <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl max-w-sm">
                       <div className="flex items-center gap-2 text-sm text-slate-900 font-medium truncate">
@@ -427,9 +418,9 @@ export function CourseEditPage() {
             </Card>
 
             <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl mt-4">
-              <CardHeader className="border-b border-slate-100"><CardTitle className="text-slate-900 text-base font-bold">Required Skills</CardTitle></CardHeader>
+              <CardHeader className="border-b border-slate-100"><CardTitle className="text-slate-900 text-base font-bold">Outcomes of Learning (Skills Developed)</CardTitle></CardHeader>
               <CardContent className="p-6 space-y-3">
-                <p className="text-xs text-slate-500">Select existing skills or add your own.</p>
+                <p className="text-xs text-slate-500">Select the skills this course builds or add custom skills.</p>
                 <div className="flex gap-2">
                   <Input
                     value={customSkillName}

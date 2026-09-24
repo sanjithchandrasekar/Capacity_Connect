@@ -433,7 +433,7 @@ export function AdminCourseEditPage() {
                     </div>
                   ))}
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-slate-700">Required Skills</Label>
+                    <Label className="text-sm font-semibold text-slate-700">Outcomes of Learning (Skills Developed)</Label>
                     <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-200 min-h-[60px]">
                       {skills.map(skill => (
                         <button key={skill.id} type="button" onClick={() => toggleSkill(skill.id)} className={'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ' + (selectedSkills.includes(skill.id) ? 'bg-cyan-100 text-cyan-800 border-cyan-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100')}>{skill.name}</button>

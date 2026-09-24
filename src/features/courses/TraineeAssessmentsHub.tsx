@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
-import { BookOpen, Compass, FileCheck, CheckCircle2, Clock, Calendar, Search, Filter, PlayCircle, BarChart3, ChevronRight } from 'lucide-react'
+import { BookOpen, Compass, FileCheck, CheckCircle2, Clock, Calendar, Search, Filter, PlayCircle, BarChart3, ChevronRight, User } from 'lucide-react'
 import { format, isFuture, isPast } from 'date-fns'
 
 const fadeUp = {
@@ -121,10 +121,11 @@ export function TraineeAssessmentsHub() {
       title="Assessments Hub"
       icon={FileCheck}
       navLinks={[
-        { to: '/trainee', label: 'Overview', icon: BarChart3 },
+        { to: '/trainee', label: 'Dashboard', icon: BarChart3 },
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
         { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+        { to: '/trainee/profile', label: 'Profile', icon: User },
       ]}
     >
       <div className="flex flex-col lg:flex-row gap-6 max-w-full">
