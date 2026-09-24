@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, Link, useSearchParams } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { generateQuestionsFromMaterial, extractTextFromFile } from '@/lib/ai'
@@ -544,24 +544,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                 </span>
               )}
             </h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                materials.forEach(m => {
-                  if (!generatingForMaterial) handleGenerateQuestions(m)
-                })
-              }}
-              disabled={!!generatingForMaterial}
-              className="border-cyan-500/30 text-zinc-200 hover:bg-ink/5 h-8 text-xs"
-            >
-              {generatingForMaterial ? (
-                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-              ) : (
-                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-              )}
-              Generate Questions
-            </Button>
+
           </div>
           <div className="space-y-2">
             {materials.map(material => {
@@ -598,31 +581,17 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                         </>
                       )}
                       <span>{formatDistanceToNow(new Date(material.created_at), { addSuffix: true })}</span>
-                      {!isLink && (
-                        <Badge className={
-                          material.extraction_status === 'completed' ? 'bg-green-50 text-green-700 border border-green-200 text-[10px] h-4' :
-                          material.extraction_status === 'failed' ? 'bg-red-50 text-red-600 border border-red-200 text-[10px] h-4' :
-                            'bg-ink/10 text-zinc-200/60 border border-cyan-500/30 text-[10px] h-4'
-                        }>
-                          {material.extraction_status === 'completed' && <CheckCircle className="w-2.5 h-2.5 mr-0.5 inline" />}
-                          {material.extraction_status}
-                        </Badge>
-                      )}
+
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => handleGenerateQuestions(material)}
-                      disabled={generatingForMaterial === material.id}
+                    <Link
+                      to={`/trainer/courses/${courseId}/assessments`}
                       className="p-2 rounded-lg hover:bg-ink/5 text-zinc-200/60 hover:text-zinc-200 transition-all"
-                      title="Generate AI Questions"
+                      title="Go to Assessments"
                     >
-                      {generatingForMaterial === material.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-4 h-4" />
-                      )}
-                    </button>
+                      <Sparkles className="w-4 h-4" />
+                    </Link>
                     {!isLink && (
                       <button
                         onClick={() => handleDownload(material)}

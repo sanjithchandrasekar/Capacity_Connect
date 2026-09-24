@@ -85,7 +85,7 @@ export function AssessmentsPage() {
   })
 
   const [aiGenDialogOpen, setAiGenDialogOpen] = useState(false)
-  const [aiGenForm, setAiGenForm] = useState({ type: 'daily_test', topic: '', material_id: 'none', count: 5, difficulty: 'mixed' })
+  const [aiGenForm, setAiGenForm] = useState({ type: 'daily_test', topic: '', material_ids: [] as string[], count: 5, difficulty: 'mixed' })
 
   const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId)
 
@@ -321,8 +321,8 @@ export function AssessmentsPage() {
   }
 
   const handleAIGenerate = async () => {
-    if (aiGenForm.material_id === 'none' && !aiGenForm.topic) { 
-      toast.error('Please enter a topic or select a material'); 
+    if (aiGenForm.material_ids.length === 0 && !aiGenForm.topic) { 
+      toast.error('Please enter a topic or select at least one material'); 
       return; 
     }
     setSaving(true)
@@ -335,41 +335,49 @@ export function AssessmentsPage() {
       let testTitle = aiGenForm.topic ? `${aiGenForm.topic} Test` : "AI Generated Test";
 
       let inlineData: { mimeType: string, data: string } | null = null;
-      if (aiGenForm.material_id !== 'none') {
-        const selectedMaterial = materials.find(m => m.id === aiGenForm.material_id);
-        if (selectedMaterial) {
-          if (!aiGenForm.topic) {
-            testTitle = `${selectedMaterial.file_name} Test`;
-          }
-          if (selectedMaterial.extracted_text) {
-             contextStr = `\n\nCOURSE MATERIAL CONTENT FOR CONTEXT:\n------------------------\n${selectedMaterial.extracted_text.substring(0, 15000)}\n------------------------\n`;
-          } else if (selectedMaterial.storage_path) {
-             // No extracted text, download the file directly for Gemini to read natively
-             const { data: fileBlob, error: downloadError } = await supabase.storage.from('materials').download(selectedMaterial.storage_path);
-             if (!downloadError && fileBlob) {
-                const toBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(blob);
-                    reader.onload = () => resolve((reader.result as string).split(',')[1]);
-                    reader.onerror = error => reject(error);
-                });
+
+      if (aiGenForm.material_ids.length > 0) {
+        const selectedMaterials = materials.filter(m => aiGenForm.material_ids.includes(m.id));
+        if (!aiGenForm.topic && selectedMaterials.length === 1) {
+          testTitle = `${selectedMaterials[0].file_name} Test`;
+        } else if (!aiGenForm.topic && selectedMaterials.length > 1) {
+          testTitle = `Combined Materials Test`;
+        }
+
+        const toBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = error => reject(error);
+        });
+
+        const combinedTexts: string[] = [];
+        for (const mat of selectedMaterials) {
+          if (mat.extracted_text) {
+            combinedTexts.push(`--- ${mat.file_name} ---\n${mat.extracted_text.substring(0, Math.floor(15000 / selectedMaterials.length))}`);
+          } else if (mat.storage_path) {
+            if (selectedMaterials.length === 1) {
+              // For a single file with no extracted text, send inline to Gemini
+              const { data: fileBlob, error: downloadError } = await supabase.storage.from('materials').download(mat.storage_path);
+              if (!downloadError && fileBlob) {
                 try {
-                    const base64data = await toBase64(fileBlob);
-                    inlineData = {
-                        mimeType: fileBlob.type || "application/pdf",
-                        data: base64data
-                    };
-                    contextStr = `\n\nI have attached the course material file. Please read it and base the questions on it.\n`;
-                } catch (e) {
-                    contextStr = `\n\nCOURSE MATERIAL TITLE FOR CONTEXT: ${selectedMaterial.file_name}\n`;
+                  const base64data = await toBase64(fileBlob);
+                  inlineData = { mimeType: fileBlob.type || 'application/pdf', data: base64data };
+                  combinedTexts.push(`--- ${mat.file_name} ---\n(File attached for AI to read directly)`);
+                } catch {
+                  combinedTexts.push(`--- ${mat.file_name} ---`);
                 }
-             } else {
-                 contextStr = `\n\nCOURSE MATERIAL TITLE FOR CONTEXT: ${selectedMaterial.file_name}\n`;
-             }
+              } else {
+                combinedTexts.push(`--- ${mat.file_name} ---`);
+              }
+            } else {
+              combinedTexts.push(`--- ${mat.file_name} ---`);
+            }
           } else {
-             contextStr = `\n\nCOURSE MATERIAL TITLE FOR CONTEXT: ${selectedMaterial.file_name}\n`;
+            combinedTexts.push(`--- ${mat.file_name} ---`);
           }
         }
+        contextStr = `\n\nCOURSE MATERIAL CONTENT FOR CONTEXT:\n========================\n${combinedTexts.join('\n\n')}\n========================\n`;
       }
 
       const baseTopic = aiGenForm.topic ? `about the following topic: "${aiGenForm.topic}"` : "based primarily on the provided course material";
@@ -516,7 +524,7 @@ export function AssessmentsPage() {
 
       toast.success('Assessment generated successfully!')
       setAiGenDialogOpen(false)
-      setAiGenForm({ type: 'daily_test', topic: '', material_id: 'none', count: 5, difficulty: 'mixed' })
+      setAiGenForm({ type: 'daily_test', topic: '', material_ids: [], count: 5, difficulty: 'mixed' })
       fetchData()
     } catch (err) {
       console.error(err);
@@ -1107,33 +1115,71 @@ export function AssessmentsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="daily_test">Daily Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="assessment_test">Assessment Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="mock_test">Mock Test (Trainer Approved)</SelectItem>
-                      <SelectItem value="final">Final Exam (Admin Approval Required)</SelectItem>
+                      <SelectItem value="daily_test">Daily Test (Trainer Can Publish)</SelectItem>
+                      <SelectItem value="assessment_test">Assessment Test (Trainer Can Publish)</SelectItem>
+                      <SelectItem value="mock_test">Mock Test (Trainer Can Publish)</SelectItem>
+                      <SelectItem value="final">Final Exam (Requires Admin Approval)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Source Material (Optional)</Label>
-                  <Select value={aiGenForm.material_id} onValueChange={v => setAiGenForm({...aiGenForm, material_id: v})}>
-                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl">
-                      <SelectValue placeholder="Select a course material" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">
-                      <SelectItem value="none">None (Provide topic manually)</SelectItem>
-                      {materials.map(m => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.file_name} {m.extracted_text ? '' : '(No text)'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Source Material (Optional)</Label>
+                    {materials.length > 0 && (
+                      <button
+                        type="button"
+                        className="text-xs text-cyan-600 hover:text-cyan-700 font-medium"
+                        onClick={() => {
+                          if (aiGenForm.material_ids.length === materials.length) {
+                            setAiGenForm({ ...aiGenForm, material_ids: [] })
+                          } else {
+                            setAiGenForm({ ...aiGenForm, material_ids: materials.map(m => m.id) })
+                          }
+                        }}
+                      >
+                        {aiGenForm.material_ids.length === materials.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="border border-slate-200 rounded-xl bg-slate-50 divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                    {materials.length === 0 ? (
+                      <p className="text-xs text-slate-400 px-3 py-3">No materials uploaded yet.</p>
+                    ) : (
+                      materials.map(m => {
+                        const checked = aiGenForm.material_ids.includes(m.id)
+                        return (
+                          <label
+                            key={m.id}
+                            className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-100 transition-colors ${
+                              checked ? 'bg-cyan-50' : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                const ids = checked
+                                  ? aiGenForm.material_ids.filter(id => id !== m.id)
+                                  : [...aiGenForm.material_ids, m.id]
+                                setAiGenForm({ ...aiGenForm, material_ids: ids })
+                              }}
+                              className="w-4 h-4 accent-cyan-600 rounded shrink-0"
+                            />
+                            <span className="text-sm text-slate-800 truncate flex-1">{m.file_name}</span>
+
+                          </label>
+                        )
+                      })
+                    )}
+                  </div>
+                  {aiGenForm.material_ids.length > 0 && (
+                    <p className="text-xs text-cyan-600 font-medium">{aiGenForm.material_ids.length} material{aiGenForm.material_ids.length > 1 ? 's' : ''} selected</p>
+                  )}
                 </div>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Topic / Instructions for AI {aiGenForm.material_id !== 'none' && '(Optional)'}</Label>
+                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Topic / Instructions for AI {aiGenForm.material_ids.length > 0 && '(Optional)'}</Label>
                   <div className="relative">
                     <Textarea 
                       placeholder="e.g. Generate a test about advanced marine biology and coral reefs..." 
