@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   ArrowLeft, Plus, Trash2, Loader2, FileText,
-  Save, Send, Target, AlertCircle, Calendar, Clock, Brain
+  Save, Send, Target, AlertCircle, Calendar, Clock, Brain, Sparkles
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -82,20 +82,49 @@ export function AssessmentsPage() {
     start_time: '',
     end_time: '',
     results_publish_date: '',
+    passing_score: 50,
   })
 
   const [aiGenDialogOpen, setAiGenDialogOpen] = useState(false)
-  const [aiGenForm, setAiGenForm] = useState({ type: 'daily_test', topic: '', material_ids: [] as string[], count: 5, difficulty: 'mixed' })
+  const [aiGenForm, setAiGenForm] = useState({
+    type: 'daily_test',
+    topic: '',
+    material_ids: [] as string[],
+    count: 5,
+    difficulty: 'mixed',
+    scheduled_date: '',
+    start_time: '',
+    end_time: '',
+    results_publish_date: '',
+    question_format: 'mcq' as 'mcq' | 'open_ended' | 'both',
+    requires_sea: false,
+    passing_score: 50,
+  })
 
   const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId)
 
   const cleanTitle = (raw: string | undefined) => {
-    if (!raw) return '';
-    return raw
-      .replace(/\.[a-zA-Z0-9]{2,5}(\s|$)/g, '$1')
-      .replace(/_/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return raw || '';
+  }
+
+  const formatSafeTime = (timeStr: string | null) => {
+    if (!timeStr) return '';
+    let d = new Date(timeStr);
+    if (isNaN(d.getTime())) {
+      d = new Date(`2000-01-01T${timeStr}`);
+      if (isNaN(d.getTime())) return timeStr.substring(0, 5);
+    }
+    return format(d, 'h:mm a');
+  }
+
+  const extractTime = (timeStr: string | null) => {
+    if (!timeStr) return '';
+    if (timeStr.includes('T')) {
+      const d = new Date(timeStr);
+      if (isNaN(d.getTime())) return '';
+      return format(d, 'HH:mm');
+    }
+    return timeStr;
   }
 
   const fetchData = useCallback(async () => {
@@ -110,7 +139,13 @@ export function AssessmentsPage() {
       
       if (selectedAssessmentId) {
         const { data: q } = await supabase.from('questions').select('*').eq('assessment_id', selectedAssessmentId).order('position')
-        if (q) setQuestions(q)
+        if (q) {
+          setQuestions(q.map((question: any) => ({
+             ...question,
+             question_type: (question.options as any)?._question_type || 'mcq',
+             difficulty: (question.options as any)?._difficulty || 'medium',
+          })))
+        }
 
         const { data: att } = await supabase.from('assessment_attempts' as any).select('*, profiles(first_name, last_name)').eq('assessment_id', selectedAssessmentId).order('submitted_at', { ascending: false })
         if (att && att.length > 0) {
@@ -148,7 +183,7 @@ export function AssessmentsPage() {
     setSaving(true)
     try {
       const { error } = await supabase.from('assessment_attempts' as any)
-        .update({ score: gradingScore, passed: gradingScore >= (selectedAssessment?.passing_score ?? 60), grade_status: 'graded' })
+        .update({ score: gradingScore, passed: gradingScore >= (selectedAssessment?.passing_score ?? 50), grade_status: 'graded' })
         .eq('id', attemptId)
       
       if (error) throw error
@@ -162,6 +197,76 @@ export function AssessmentsPage() {
     }
   }
 
+  const handleAutoGradeAttempt = async (attemptId: string) => {
+    const attempt = attempts.find(a => a.id === attemptId)
+    if (!attempt || !(attempt as any).answers) return
+    
+    setSaving(true)
+    const toastId = toast.loading('AI is evaluating the answers...')
+    try {
+      const openEndedQs = questions.filter(q => (q as any).question_type === 'open_ended')
+      if (openEndedQs.length === 0) throw new Error("No open-ended questions to grade.")
+
+      let prompt = "You are an expert evaluator grading a student's open-ended test answers based on a reference rubric. Assign a score between 0 and 100 for each answer. 0 means completely wrong, 100 means perfect match with rubric. Return ONLY a valid JSON object mapping the question ID to the numerical score. DO NOT return markdown formatting.\n\n"
+      
+      openEndedQs.forEach(q => {
+        prompt += `Question ID: ${q.id}\nReference Rubric: ${q.correct_answer}\nStudent Answer: ${(attempt as any).answers[q.id] || 'No answer'}\n\n`
+      })
+
+      const allKeys = (import.meta.env.VITE_GEMINI_API_KEYS || import.meta.env.VITE_GEMINI_API_KEY || '').split(',').map((k: string) => k.trim()).filter(Boolean)
+      if (!allKeys.length) throw new Error("Missing Gemini API Key")
+
+      const key = allKeys[Math.floor(Math.random() * allKeys.length)]
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1 }
+        })
+      })
+
+      if (!response.ok) throw new Error("AI Evaluation request failed")
+      
+      const data = await response.json()
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text
+      if (!responseText) throw new Error("Empty AI response")
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("AI did not return valid JSON format");
+      const scores = JSON.parse(jsonMatch[0]);
+
+      let totalCorrectPoints = 0
+      questions.forEach(q => {
+        if ((q as any).question_type === 'open_ended') {
+          const aiScore = scores[q.id] || 0
+          totalCorrectPoints += (aiScore / 100)
+        } else {
+          if ((attempt as any).answers[q.id] === q.correct_answer) {
+             totalCorrectPoints += 1
+          }
+        }
+      })
+      
+      const finalScore = Math.round((totalCorrectPoints / questions.length) * 100)
+      
+      const { error } = await supabase.from('assessment_attempts' as any)
+        .update({ score: finalScore, passed: finalScore >= (selectedAssessment?.passing_score ?? 50), grade_status: 'graded' })
+        .eq('id', attemptId)
+      
+      if (error) throw error
+      toast.success('AI Evaluation complete!', { id: toastId })
+      setGradingAttemptId(null)
+      fetchData()
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err.message || "AI Auto-grading failed.", { id: toastId })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleSaveAssessment = async () => {
     if (!user || !courseId) return
     
@@ -170,30 +275,32 @@ export function AssessmentsPage() {
       const courseStart = course.start_date ? new Date(course.start_date) : null
       const courseEnd = course.end_date ? new Date(course.end_date) : null
       
-      if (courseStart && testDate < courseStart) {
-        toast.error('Test date cannot be before course start date')
-        return
-      }
-      if (courseEnd && testDate > courseEnd) {
-        toast.error('Test date cannot be after course end date')
-        return
-      }
+      // Removed strict validation against course start/end dates to allow pre-assessments and make-up tests
     }
 
     setSaving(true)
     try {
+      let duration_minutes = null;
+      if (assessmentForm.start_time && assessmentForm.end_time) {
+        const [startH, startM] = assessmentForm.start_time.split(':').map(Number);
+        const [endH, endM] = assessmentForm.end_time.split(':').map(Number);
+        let diffMins = (endH * 60 + endM) - (startH * 60 + startM);
+        if (diffMins < 0) diffMins += 24 * 60;
+        duration_minutes = diffMins;
+      }
+
+      const editingAssessment = assessments.find(a => a.id === editingAssessmentId);
+      
       const payload = {
         title: assessmentForm.title || `${assessmentForm.assessment_type} Test`,
         assessment_type: assessmentForm.assessment_type,
-        status: 'draft' as const,
+        status: editingAssessment ? editingAssessment.status : ('draft' as const),
         requires_sea: assessmentForm.requires_sea,
-        is_adaptive: assessmentForm.is_adaptive,
-        is_simulation: assessmentForm.is_simulation,
-        simulation_dataset_url: assessmentForm.simulation_dataset_url || null,
         scheduled_date: assessmentForm.scheduled_date || null,
-        start_time: assessmentForm.start_time ? new Date(assessmentForm.start_time).toISOString() : null,
-        end_time: assessmentForm.end_time ? new Date(assessmentForm.end_time).toISOString() : null,
-        results_publish_date: assessmentForm.results_publish_date ? new Date(assessmentForm.results_publish_date).toISOString() : null,
+        start_time: assessmentForm.start_time || null,
+        end_time: assessmentForm.end_time || null,
+        duration_minutes: duration_minutes,
+        results_publish_date: assessmentForm.results_publish_date || null,
       }
 
       if (editingAssessmentId) {
@@ -205,7 +312,7 @@ export function AssessmentsPage() {
           ...payload, 
           course_id: courseId, 
           created_by: user.id, 
-          passing_score: course?.passing_score ?? 60 
+          passing_score: assessmentForm.passing_score 
         } as any)
         if (error) throw error
         toast.success('Assessment created')
@@ -213,7 +320,7 @@ export function AssessmentsPage() {
       setAssessmentDialogOpen(false)
       fetchData()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save assessment')
+      toast.error((err as any)?.message || 'Failed to save assessment')
     } finally {
       setSaving(false)
     }
@@ -240,18 +347,47 @@ export function AssessmentsPage() {
     }
   }
 
+  const handleUnblockAttempt = async (attemptId: string) => {
+    const isConfirmed = await confirm('Are you sure you want to unblock this user? This will delete the blocked record and allow them to take the assessment again.', 'Unblock Trainee')
+    if (!isConfirmed) return
+
+    try {
+      const { error } = await supabase.from('assessment_attempts' as any).delete().eq('id', attemptId)
+      if (error) throw error
+
+      toast.success('User unblocked successfully.')
+      setAttempts(prev => prev.filter(a => a.id !== attemptId))
+      
+      // Update attempts stats
+      setAttemptsStats(prev => {
+        if (!prev) return prev
+        const total = prev.total - 1
+        // We assume a blocked attempt wasn't counted as passed, but it lowered avgScore. 
+        // We'll just trigger a refetch of data to be perfectly accurate:
+        setTimeout(() => fetchData(), 500)
+        return { ...prev, total }
+      })
+    } catch (err: any) {
+      console.error('Unblock error:', err)
+      toast.error(err.message || 'Failed to unblock trainee')
+    }
+  }
+
+
   const handleSaveQuestion = async () => {
     if (!selectedAssessment) return
     setSaving(true)
     try {
       const qData = {
         assessment_id: selectedAssessment.id,
-        question_type: editingQuestion.question_type,
         question_text: editingQuestion.question_text,
-        options: editingQuestion.question_type === 'mcq' ? { A: editingQuestion.option_a, B: editingQuestion.option_b, C: editingQuestion.option_c, D: editingQuestion.option_d } : {},
+        options: {
+          ...(editingQuestion.question_type === 'mcq' ? { A: editingQuestion.option_a, B: editingQuestion.option_b, C: editingQuestion.option_c, D: editingQuestion.option_d } : {}),
+          _question_type: editingQuestion.question_type,
+          _difficulty: editingQuestion.difficulty
+        },
         correct_answer: editingQuestion.correct_answer,
         explanation: editingQuestion.explanation || null,
-        difficulty: editingQuestion.difficulty,
         position: editingQuestionId ? undefined : questions.length + 1,
         approved: false,
       }
@@ -288,6 +424,21 @@ export function AssessmentsPage() {
     }
   }
 
+  const handlePublishResultsNow = async () => {
+    if (!selectedAssessment) return
+    try {
+      setSaving(true)
+      const { error } = await supabase.from('assessments').update({ results_publish_date: null } as any).eq('id', selectedAssessment.id)
+      if (error) throw error
+      toast.success('Results published instantly!')
+      fetchData()
+    } catch(err) {
+      toast.error('Failed to publish results')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleSubmitForReview = async () => {
     if (!selectedAssessment) return
     setSaving(true)
@@ -297,6 +448,8 @@ export function AssessmentsPage() {
         toast.success('Final Exam submitted to Admin for review')
       } else {
         await supabase.from('assessments').update({ status: 'published' }).eq('id', selectedAssessment.id)
+        // Also approve all questions for this assessment
+        await supabase.from('questions').update({ approved: true } as any).eq('assessment_id', selectedAssessment.id)
         
         // Notify enrolled trainees
         const { data: enrollments } = await supabase.from('enrollments').select('user_id').eq('course_id', selectedAssessment.course_id).eq('status', 'enrolled')
@@ -324,6 +477,14 @@ export function AssessmentsPage() {
     if (aiGenForm.material_ids.length === 0 && !aiGenForm.topic) { 
       toast.error('Please enter a topic or select at least one material'); 
       return; 
+    }
+    if (!aiGenForm.scheduled_date) {
+      toast.error('Please select a test date');
+      return;
+    }
+    if (aiGenForm.type !== 'daily_test' && !aiGenForm.start_time) {
+      toast.error('Please set a start time');
+      return;
     }
     setSaving(true)
     try {
@@ -382,15 +543,35 @@ export function AssessmentsPage() {
 
       const baseTopic = aiGenForm.topic ? `about the following topic: "${aiGenForm.topic}"` : "based primarily on the provided course material";
       
-      // System prompt for generating assessment
-      const prompt = `You are an expert educator. Generate a strictly formatted JSON array of ${aiGenForm.count} multiple-choice questions ${baseTopic}. ${contextStr}
-      The difficulty of these questions should be: ${aiGenForm.difficulty}.
-      The JSON must be an array of objects where each object has:
+      // Build format-specific prompt
+      const formatInstructions = aiGenForm.question_format === 'mcq'
+        ? `All questions must be multiple-choice (MCQ). Each object must have:
+      - "question_type": "mcq"
       - "question_text" (string)
-      - "options" (object with keys "A", "B", "C", "D" mapped to string answers)
+      - "options" (object with keys "A", "B", "C", "D")
       - "correct_answer" (string: "A", "B", "C", or "D")
-      - "explanation" (string: brief explanation of why the answer is correct)
-      - "difficulty" (string: exactly "easy", "medium", or "hard")
+      - "explanation" (string)
+      - "difficulty" (string: "easy", "medium", or "hard")`
+        : aiGenForm.question_format === 'open_ended'
+        ? `All questions must be open-ended / Q&A (short answer). Each object must have:
+      - "question_type": "open_ended"
+      - "question_text" (string)
+      - "options": {}
+      - "correct_answer" (string: a model answer or key points expected)
+      - "explanation" (string: grading guidance)
+      - "difficulty" (string: "easy", "medium", or "hard")`
+        : `Mix MCQ and open-ended questions roughly equally. Each object must have:
+      - "question_type" (string: "mcq" or "open_ended")
+      - "question_text" (string)
+      - "options" (object: keys A/B/C/D for mcq, empty object {} for open_ended)
+      - "correct_answer" (string: "A"/"B"/"C"/"D" for mcq, model answer for open_ended)
+      - "explanation" (string)
+      - "difficulty" (string: "easy", "medium", or "hard")`;
+
+      // System prompt for generating assessment
+      const prompt = `You are an expert educator. Generate a strictly formatted JSON array of ${aiGenForm.count} questions ${baseTopic}. ${contextStr}
+      The difficulty of these questions should be: ${aiGenForm.difficulty}.
+      ${formatInstructions}
       Only return the raw JSON array. Do not include markdown code blocks.`;
 
       const parts: any[] = [{ text: prompt }];
@@ -406,7 +587,7 @@ export function AssessmentsPage() {
       // Try each key, with a 2-second delay if we hit a rate limit (429) to let the API recover
       for (const currentKey of shuffledKeys) {
         try {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${currentKey}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${currentKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -449,7 +630,7 @@ export function AssessmentsPage() {
             Authorization: `Bearer ${groqKey.trim()}`,
           },
           body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
+            model: 'llama3-70b-8192',
             messages: [
               { role: 'system', content: 'You are an expert educator that generates multiple choice quiz questions in strict JSON format.' },
               { role: 'user', content: prompt }
@@ -494,15 +675,31 @@ export function AssessmentsPage() {
       };
       const dbType = typeMap[aiGenForm.type] || 'daily';
 
+      // Daily test: result on the spot, no SEA; others need SEA
+      const isDailyTest = aiGenForm.type === 'daily_test';
+
+      let duration_minutes = null;
+      if (!isDailyTest && aiGenForm.start_time && aiGenForm.end_time) {
+        const [startH, startM] = aiGenForm.start_time.split(':').map(Number);
+        const [endH, endM] = aiGenForm.end_time.split(':').map(Number);
+        let diffMins = (endH * 60 + endM) - (startH * 60 + startM);
+        if (diffMins < 0) diffMins += 24 * 60;
+        duration_minutes = diffMins;
+      }
+
       // Create Assessment record
       const { data: assessment, error: assessmentError } = await supabase.from('assessments').insert({
         course_id: courseId || '',
         title: testTitle,
         assessment_type: dbType,
-        requires_sea: true,
+        requires_sea: aiGenForm.requires_sea,
         created_by: user?.id || '',
-        passing_score: course?.passing_score ?? 60,
-        status: 'draft'
+        passing_score: aiGenForm.passing_score,
+        status: 'draft',
+        scheduled_date: aiGenForm.scheduled_date || null,
+        start_time: (!isDailyTest && aiGenForm.start_time) ? aiGenForm.start_time : null,
+        end_time: (!isDailyTest && aiGenForm.end_time) ? aiGenForm.end_time : null,
+        duration_minutes: duration_minutes
       }).select().single();
 
       if (assessmentError) throw assessmentError;
@@ -511,10 +708,13 @@ export function AssessmentsPage() {
       const questionsToInsert = generatedQuestions.map((q: any, i: number) => ({
         assessment_id: assessment.id,
         question_text: q.question_text,
-        options: q.options,
+        options: {
+          ...(q.question_type === 'open_ended' ? {} : (q.options || {})),
+          _question_type: q.question_type === 'open_ended' ? 'open_ended' : 'mcq',
+          _difficulty: q.difficulty && ['easy', 'medium', 'hard'].includes(q.difficulty.toLowerCase()) ? q.difficulty.toLowerCase() : 'medium'
+        },
         correct_answer: q.correct_answer,
         explanation: q.explanation,
-        difficulty: q.difficulty && ['easy', 'medium', 'hard'].includes(q.difficulty.toLowerCase()) ? q.difficulty.toLowerCase() : 'medium',
         position: i + 1,
         approved: false
       }));
@@ -524,7 +724,7 @@ export function AssessmentsPage() {
 
       toast.success('Assessment generated successfully!')
       setAiGenDialogOpen(false)
-      setAiGenForm({ type: 'daily_test', topic: '', material_ids: [], count: 5, difficulty: 'mixed' })
+      setAiGenForm({ type: 'daily_test', topic: '', material_ids: [], count: 5, difficulty: 'mixed', scheduled_date: '', start_time: '', end_time: '', results_publish_date: '', question_format: 'mcq', requires_sea: false, passing_score: 50 })
       fetchData()
     } catch (err) {
       console.error(err);
@@ -537,11 +737,11 @@ export function AssessmentsPage() {
   const openEditQuestion = (q: Question) => {
     const opts = (q.options as Record<string, string>) || {}
     setEditingQuestion({
-      question_type: ((q as any).question_type as 'mcq'|'open_ended') || 'mcq',
+      question_type: ((opts as any)._question_type as 'mcq'|'open_ended') || ((q as any).question_type as 'mcq'|'open_ended') || 'mcq',
       question_text: q.question_text,
       option_a: opts.A || '', option_b: opts.B || '', option_c: opts.C || '', option_d: opts.D || '',
       correct_answer: q.correct_answer, explanation: q.explanation ?? '',
-      difficulty: ((q as any).difficulty as 'easy'|'medium'|'hard') || 'medium',
+      difficulty: ((opts as any)._difficulty as 'easy'|'medium'|'hard') || ((q as any).difficulty as 'easy'|'medium'|'hard') || 'medium',
     })
     setEditingQuestionId(q.id)
     setQuestionDialogOpen(true)
@@ -551,7 +751,7 @@ export function AssessmentsPage() {
     setEditingAssessmentId(null)
     setAssessmentForm({
       title: '', assessment_type: 'final', requires_sea: true, scheduled_date: '', start_time: '', end_time: '', results_publish_date: '',
-      is_adaptive: false, is_simulation: false, simulation_dataset_url: ''
+      is_adaptive: false, is_simulation: false, simulation_dataset_url: '', passing_score: course?.passing_score ?? 60
     })
     setAssessmentDialogOpen(true)
   }
@@ -563,12 +763,13 @@ export function AssessmentsPage() {
       assessment_type: (a.assessment_type || 'final') as 'daily' | 'mock' | 'final',
       requires_sea: a.requires_sea,
       scheduled_date: a.scheduled_date ? new Date(a.scheduled_date).toISOString().slice(0, 10) : '',
-      start_time: a.start_time || '',
-      end_time: a.end_time || '',
+      start_time: extractTime(a.start_time),
+      end_time: extractTime(a.end_time),
       results_publish_date: (a as any).results_publish_date ? new Date((a as any).results_publish_date).toISOString().slice(0, 10) : '',
       is_adaptive: (a as any).is_adaptive || false,
       is_simulation: (a as any).is_simulation || false,
-      simulation_dataset_url: (a as any).simulation_dataset_url || ''
+      simulation_dataset_url: (a as any).simulation_dataset_url || '',
+      passing_score: a.passing_score ?? course?.passing_score ?? 60
     })
     setAssessmentDialogOpen(true)
   }
@@ -666,7 +867,7 @@ export function AssessmentsPage() {
                               <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {new Date(a.scheduled_date).toLocaleDateString()}</span>
                             )}
                             {a.start_time && (
-                              <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-slate-400" /> {format(new Date(a.start_time), 'h:mm a')} - {a.end_time ? format(new Date(a.end_time), 'h:mm a') : 'TBD'}</span>
+                              <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-slate-400" /> {formatSafeTime(a.start_time)} {a.end_time ? `- ${formatSafeTime(a.end_time)}` : '- TBD'}</span>
                             )}
                           </div>
                         </div>
@@ -708,12 +909,17 @@ export function AssessmentsPage() {
                   <p className="text-xs text-slate-500 mt-1 font-medium">{questions.length} questions | Passing: {selectedAssessment?.passing_score}%</p>
                 </div>
                 <div className="flex gap-2">
+                  {selectedAssessment?.results_publish_date && new Date(selectedAssessment.results_publish_date) > new Date() && (
+                    <Button onClick={handlePublishResultsNow} disabled={saving} variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-xl border border-emerald-200">
+                      Publish Results Now
+                    </Button>
+                  )}
                   <Button onClick={() => { setEditingQuestion(emptyQuestion); setEditingQuestionId(null); setQuestionDialogOpen(true) }}
                     className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
                     <Plus className="w-4 h-4 mr-2" /> Add Question
                   </Button>
                   <Button onClick={handleSubmitForReview} disabled={saving || questions.length === 0} variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
-                    <Send className="w-4 h-4 mr-2" /> {selectedAssessment?.assessment_type === 'final' ? 'Submit for Admin Review' : 'Approve & Publish'}
+                    <Send className="w-4 h-4 mr-2" /> {selectedAssessment?.assessment_type === 'final' ? 'Submit for Admin Review' : (selectedAssessment?.status === 'published' ? 'Update Published' : 'Approve & Publish')}
                   </Button>
                 </div>
               </div>
@@ -824,61 +1030,93 @@ export function AssessmentsPage() {
                 ) : (
                   attempts.map((att) => (
                     <Card key={att.id} className="bg-white border border-slate-200/90 shadow-sm rounded-3xl overflow-hidden">
-                      <CardHeader className="bg-slate-50 border-b border-slate-100 py-3.5 px-5">
+                      <CardHeader className={`border-b py-3.5 px-5 ${att.score === -1 ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-slate-900">{att.profiles?.first_name} {att.profiles?.last_name}</span>
                             <span className="text-xs text-slate-400 font-medium">{new Date(att.submitted_at).toLocaleString()}</span>
                           </div>
-                          <Badge className={att.grade_status === 'pending_manual' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100'}>
-                            {att.grade_status === 'pending_manual' ? 'Needs Grading' : `Graded: ${att.score}%`}
-                          </Badge>
+                          {att.score === -1 ? (
+                             <div className="flex items-center gap-2">
+                               <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+                                 Blocked (Suspicious Activity)
+                               </Badge>
+                               <Button 
+                                 onClick={() => handleUnblockAttempt(att.id)}
+                                 size="sm" 
+                                 className="bg-red-600 hover:bg-red-700 text-white rounded-lg h-7 px-3 text-xs"
+                               >
+                                 Unblock
+                               </Button>
+                             </div>
+                          ) : (
+                            <Badge className={att.grade_status === 'pending_manual' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100'}>
+                              {att.grade_status === 'pending_manual' ? 'Needs Grading' : `Graded: ${att.score}%`}
+                            </Badge>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent className="p-5 space-y-6">
-                        {questions.filter(q => (q as any).question_type === 'open_ended').map((q) => {
-                          const traineeAnswer = att.answers?.[q.id] || 'No answer provided.';
-                          return (
-                            <div key={q.id} className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
-                              <p className="text-sm font-semibold text-slate-900"><span className="text-slate-400 mr-1">Q.</span>{q.question_text}</p>
-                              <div className="bg-slate-50 p-3 rounded-xl text-sm text-slate-800 font-mono whitespace-pre-wrap border border-slate-200">
-                                {traineeAnswer}
-                              </div>
-                              <div className="bg-emerald-50 p-3 rounded-xl text-xs text-emerald-900 italic border border-emerald-200">
-                                <span className="font-bold block mb-1">Reference/Rubric:</span>
-                                {q.correct_answer}
-                              </div>
-                            </div>
-                          )
-                        })}
-                        {att.grade_status === 'pending_manual' && (
-                          <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                            <Label className="font-bold text-slate-900 whitespace-nowrap">Final Score (0-100):</Label>
-                            <Input 
-                              type="number" 
-                              min="0" max="100" 
-                              className="w-24 bg-slate-50 border-slate-200 text-slate-900 rounded-xl"
-                              placeholder={att.score?.toString()}
-                              value={gradingAttemptId === att.id ? gradingScore : att.score}
-                              onChange={(e) => {
-                                setGradingAttemptId(att.id)
-                                setGradingScore(parseInt(e.target.value) || 0)
-                              }}
-                            />
-                            <Button 
-                              size="sm" 
-                              className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl"
-                              onClick={() => handleGradeAttempt(att.id)}
-                              disabled={saving || gradingAttemptId !== att.id}
-                            >
-                              Save Grade
-                            </Button>
+                        {att.score === -1 ? (
+                          <div className="text-center py-4">
+                            <p className="text-red-600 font-medium text-sm">This attempt was automatically blocked by the system due to repeated Secure Exam Area (SEA) violations.</p>
+                            <p className="text-red-500/80 text-xs mt-1">Unblocking will delete this attempt record, allowing the trainee to retake the assessment.</p>
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
+                        ) : (
+                          <>
+                            {questions.filter(q => (q as any).question_type === 'open_ended').map((q) => {
+                              const traineeAnswer = att.answers?.[q.id] || 'No answer provided.';
+                              return (
+                                <div key={q.id} className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
+                                  <p className="text-sm font-semibold text-slate-900"><span className="text-slate-400 mr-1">Q.</span>{q.question_text}</p>
+                                  <div className="bg-slate-50 p-3 rounded-xl text-sm text-slate-800 font-mono whitespace-pre-wrap border border-slate-200">
+                                    {traineeAnswer}
+                                  </div>
+                                  <div className="bg-emerald-50 p-3 rounded-xl text-xs text-emerald-900 italic border border-emerald-200">
+                                    <span className="font-bold block mb-1">Reference/Rubric:</span>
+                                    {q.correct_answer}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                            {att.grade_status === 'pending_manual' && (
+                              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                                <Label className="font-bold text-slate-900 whitespace-nowrap">Final Score (0-100):</Label>
+                                <Input 
+                                  type="number" 
+                                  min="0" max="100" 
+                                  className="w-24 bg-slate-50 border-slate-200 text-slate-900 rounded-xl"
+                                  placeholder={att.score?.toString()}
+                                  value={gradingAttemptId === att.id ? gradingScore : (att.score ?? '')}
+                                  onChange={(e) => {
+                                    setGradingAttemptId(att.id)
+                                    setGradingScore(parseInt(e.target.value) || 0)
+                                  }}
+                                />
+                                <Button 
+                                  size="sm" 
+                                  className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl"
+                                  onClick={() => handleGradeAttempt(att.id)}
+                                  disabled={saving || gradingAttemptId !== att.id}
+                                >
+                                  Save Grade
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl ml-auto flex items-center gap-2"
+                                  onClick={() => handleAutoGradeAttempt(att.id)}
+                                  disabled={saving}
+                                >
+                                  <Sparkles className="w-4 h-4" /> AI Auto-Grade
+                                </Button>
+                              </div>
+                            )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
               </motion.div>
             )}
           </>
@@ -968,139 +1206,163 @@ export function AssessmentsPage() {
 
         {/* Assessment Settings Dialog */}
         <Dialog open={assessmentDialogOpen} onOpenChange={setAssessmentDialogOpen}>
-          <DialogContent className="sm:max-w-[425px] bg-white border border-slate-200/90 shadow-2xl rounded-3xl text-slate-900">
-            <DialogHeader>
-              <DialogTitle className="text-slate-900 font-black text-xl">{editingAssessmentId ? 'Edit Test Details' : 'New Test / Assessment'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-1.5">
-                <Label className="text-slate-700 font-semibold text-xs">Title</Label>
-                <Input value={assessmentForm.title} onChange={e => setAssessmentForm({...assessmentForm, title: e.target.value})} placeholder="e.g. Midterm Mock Test" className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-slate-700 font-semibold text-xs">Assessment Type</Label>
-                <Select value={assessmentForm.assessment_type} onValueChange={(v) => setAssessmentForm({ ...assessmentForm, assessment_type: v as any })}>
-                  <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">Daily Assessment</SelectItem>
-                    <SelectItem value="mock">Mock Test</SelectItem>
-                    <SelectItem value="final">Final Exam</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-1.5">
-                <Label className="text-slate-700 font-semibold text-xs">Scheduled Date</Label>
-                <Input type="date" value={assessmentForm.scheduled_date} onChange={e => setAssessmentForm({...assessmentForm, scheduled_date: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
-                {course && <p className="text-[10px] text-slate-500">Must be between {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'start'} and {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'end'} of course.</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-slate-700 font-semibold text-xs">Results Publish Date</Label>
-                <Input type="date" value={assessmentForm.results_publish_date} onChange={e => setAssessmentForm({...assessmentForm, results_publish_date: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
-                <p className="text-[10px] text-slate-500">If set, trainee marks are hidden until this date.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center space-x-2 border border-cyan-200 p-3 rounded-xl bg-cyan-50/50 mt-2 transition-all">
-                  <input 
-                    type="checkbox" 
-                    id="is_adaptive" 
-                    className="w-4 h-4 rounded text-cyan-600 border-cyan-300"
-                    checked={assessmentForm.is_adaptive}
-                    onChange={(e) => setAssessmentForm({ ...assessmentForm, is_adaptive: e.target.checked })}
-                  />
-                  <Label htmlFor="is_adaptive" className="text-cyan-800 font-bold flex-1 cursor-pointer text-xs">
-                    Adaptive MCQ Mode
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 border border-emerald-200 p-3 rounded-xl bg-emerald-50 mt-2 transition-all">
-                  <input 
-                    type="checkbox" 
-                    id="is_simulation" 
-                    className="w-4 h-4 rounded text-emerald-600 border-emerald-300"
-                    checked={assessmentForm.is_simulation}
-                    onChange={(e) => setAssessmentForm({ ...assessmentForm, is_simulation: e.target.checked })}
-                  />
-                  <Label htmlFor="is_simulation" className="text-emerald-800 font-bold flex-1 cursor-pointer text-xs">
-                    IMD Simulation Mode
-                  </Label>
-                </div>
-              </div>
-
-              {assessmentForm.is_simulation && (
+          <DialogContent className="w-[95vw] max-w-lg bg-white border border-slate-200/90 shadow-2xl rounded-3xl text-slate-900 flex flex-col max-h-[90vh] p-0 overflow-hidden">
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 pt-6 pb-2">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-slate-900 font-black text-xl">{editingAssessmentId ? 'Edit Test Details' : 'New Test / Assessment'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {(() => {
+                  const editingAssessment = assessments.find(a => a.id === editingAssessmentId);
+                  
+                  return (
+                    <>
                 <div className="space-y-1.5">
-                  <Label className="text-slate-700 font-semibold text-xs">Dataset URL / Image Link (Optional)</Label>
-                  <Input value={assessmentForm.simulation_dataset_url} onChange={e => setAssessmentForm({...assessmentForm, simulation_dataset_url: e.target.value})} placeholder="https://example.com/weather-chart.jpg" className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
-                  <p className="text-[10px] text-slate-500">Link to weather chart or dataset to display alongside questions.</p>
+                  <Label className="text-slate-700 font-semibold text-xs">Title</Label>
+                  <Input value={assessmentForm.title} onChange={e => setAssessmentForm({...assessmentForm, title: e.target.value})} placeholder="e.g. Midterm Mock Test" className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
                 </div>
-              )}
+                <div className="space-y-1.5">
+                  <Label className="text-slate-700 font-semibold text-xs">Assessment Type</Label>
+                  <Select disabled={!!editingAssessmentId} value={assessmentForm.assessment_type} onValueChange={(v) => setAssessmentForm({ ...assessmentForm, assessment_type: v as any })}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl disabled:opacity-60"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily Assessment (Trainer Can Publish)</SelectItem>
+                      <SelectItem value="assessment">Assessment Test (Trainer Can Publish)</SelectItem>
+                      <SelectItem value="mock">Mock Test (Trainer Can Publish)</SelectItem>
+                      <SelectItem value="final">Final Exam (Requires Admin Approval)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {assessmentForm.assessment_type !== 'daily' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-slate-700 font-semibold text-xs">Start Time</Label>
-                      <Input type="time" value={assessmentForm.start_time} onChange={e => setAssessmentForm({...assessmentForm, start_time: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-slate-700 font-semibold text-xs">End Time</Label>
-                      <Input type="time" value={assessmentForm.end_time} onChange={e => setAssessmentForm({...assessmentForm, end_time: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
-                    </div>
+                <div className="space-y-1.5">
+                  <Label className="text-slate-700 font-semibold text-xs">Scheduled Date</Label>
+                  <Input 
+                    type="date" 
+                    value={assessmentForm.scheduled_date} 
+                    onChange={e => setAssessmentForm({...assessmentForm, scheduled_date: e.target.value})} 
+                    className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" 
+                  />
+                </div>
+
+                <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <Label className="text-slate-700 font-semibold text-xs">Passing Score</Label>
+                  <p className="text-sm font-bold text-slate-900">
+                    {editingAssessmentId && questions.length > 0 
+                      ? `${Math.round(questions.length * 10 * (assessmentForm.passing_score / 100))} marks (${assessmentForm.passing_score}%)`
+                      : `${assessmentForm.passing_score}% of total marks (Auto-calculated)`}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Passing score is automatically set based on the number of questions.</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center space-x-2 border border-cyan-200 p-3 rounded-xl bg-cyan-50/50 transition-all">
+                    <input type="checkbox" id="is_adaptive" className="w-4 h-4 rounded text-cyan-600 border-cyan-300" checked={assessmentForm.is_adaptive} onChange={(e) => setAssessmentForm({ ...assessmentForm, is_adaptive: e.target.checked })} />
+                    <Label htmlFor="is_adaptive" className="text-cyan-800 font-bold flex-1 cursor-pointer text-xs">Adaptive MCQ Mode</Label>
                   </div>
-                  {assessmentForm.start_time && assessmentForm.end_time && (
-                    <div className="text-xs font-medium text-slate-600">
-                      Duration: <span className="text-cyan-700 font-bold">
-                        {(() => {
-                          const [startH, startM] = assessmentForm.start_time.split(':').map(Number);
-                          const [endH, endM] = assessmentForm.end_time.split(':').map(Number);
-                          let diffMins = (endH * 60 + endM) - (startH * 60 + startM);
-                          if (diffMins < 0) diffMins += 24 * 60;
-                          const h = Math.floor(diffMins / 60);
-                          const m = diffMins % 60;
-                          return `${h > 0 ? `${h}h ` : ''}${m > 0 ? `${m}m` : ''}` || '0m';
-                        })()}
-                      </span>
+                  <div className="flex items-center space-x-2 border border-emerald-200 p-3 rounded-xl bg-emerald-50 transition-all">
+                    <input type="checkbox" id="is_simulation" className="w-4 h-4 rounded text-emerald-600 border-emerald-300" checked={assessmentForm.is_simulation} onChange={(e) => setAssessmentForm({ ...assessmentForm, is_simulation: e.target.checked })} />
+                    <Label htmlFor="is_simulation" className="text-emerald-800 font-bold flex-1 cursor-pointer text-xs">IMD Simulation Mode</Label>
+                  </div>
+                </div>
+
+                {assessmentForm.is_simulation && (
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 font-semibold text-xs">Dataset URL / Image Link (Optional)</Label>
+                    <Input value={assessmentForm.simulation_dataset_url} onChange={e => setAssessmentForm({...assessmentForm, simulation_dataset_url: e.target.value})} placeholder="https://example.com/weather-chart.jpg" className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
+                    <p className="text-[10px] text-slate-500">Link to weather chart or dataset to display alongside questions.</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 font-semibold text-xs">Start Time</Label>
+                    <Input type="time" value={assessmentForm.start_time} onChange={e => setAssessmentForm({...assessmentForm, start_time: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10 disabled:opacity-60" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 font-semibold text-xs">End Time</Label>
+                    <Input type="time" value={assessmentForm.end_time} onChange={e => setAssessmentForm({...assessmentForm, end_time: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10 disabled:opacity-60" />
+                  </div>
+                </div>
+                {assessmentForm.start_time && assessmentForm.end_time && (
+                  <div className="text-xs font-medium text-slate-600">
+                    Duration: <span className="text-cyan-700 font-bold">
+                      {(() => {
+                        const [startH, startM] = assessmentForm.start_time.split(':').map(Number);
+                        const [endH, endM] = assessmentForm.end_time.split(':').map(Number);
+                        let diffMins = (endH * 60 + endM) - (startH * 60 + startM);
+                        if (diffMins < 0) diffMins += 24 * 60;
+                        const h = Math.floor(diffMins / 60);
+                        const m = diffMins % 60;
+                        return `${h > 0 ? `${h}h ` : ''}${m > 0 ? `${m}m` : ''}` || '0m';
+                      })()}
+                    </span>
+                  </div>
+                )}
+                    </>
+                  );
+                })()}
+
+                <div
+                  className={`flex items-center space-x-2 border p-3 rounded-xl transition-all cursor-pointer ${
+                    assessmentForm.requires_sea
+                      ? 'border-cyan-400 bg-cyan-50 shadow-sm'
+                      : 'border-slate-200 bg-slate-50'
+                  }`}
+                  onClick={() => setAssessmentForm({ ...assessmentForm, requires_sea: !assessmentForm.requires_sea })}
+                >
+                  <input
+                    type="checkbox"
+                    id="requires_sea"
+                    className="w-4 h-4 rounded accent-cyan-600 border-cyan-300 cursor-pointer"
+                    checked={assessmentForm.requires_sea}
+                    onChange={e => setAssessmentForm({ ...assessmentForm, requires_sea: e.target.checked })}
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="requires_sea" className="text-cyan-800 font-bold text-xs cursor-pointer block">Require SEA (Secure Exam Mode)</Label>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Enable secure browser lock during the exam.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 border-t border-slate-100 pt-4 mt-4">
+                <Label className="text-slate-700 font-semibold text-xs">Result Publication</Label>
+                <div className="flex flex-col gap-3 mb-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="instant_publish" className="w-4 h-4 rounded text-indigo-600 border-indigo-300" checked={!assessmentForm.results_publish_date} onChange={(e) => setAssessmentForm({ ...assessmentForm, results_publish_date: e.target.checked ? '' : new Date().toISOString().slice(0, 10) })} />
+                    <Label htmlFor="instant_publish" className="text-indigo-800 font-bold flex-1 cursor-pointer text-xs">Instant Result Publication</Label>
+                  </div>
+                  {assessmentForm.results_publish_date !== '' && (
+                    <div className="space-y-1.5 border-t border-slate-200 pt-3 mt-1">
+                      <Label className="text-slate-500 font-semibold text-[10px] uppercase">Scheduled Publish Date</Label>
+                      <Input type="date" value={assessmentForm.results_publish_date} onChange={e => setAssessmentForm({...assessmentForm, results_publish_date: e.target.value})} className="bg-white border-slate-200 text-slate-900 rounded-lg h-9 text-sm" />
                     </div>
                   )}
-                </>
-              )}
-              
-              <div className="flex items-center space-x-2 border border-cyan-200 p-3 rounded-xl bg-cyan-50/50 mt-4 opacity-90 pointer-events-none">
-                <input 
-                  type="checkbox" 
-                  id="requires_sea" 
-                  className="w-4 h-4 rounded text-cyan-600 border-cyan-300"
-                  checked={true}
-                  disabled
-                  onChange={() => {}}
-                />
-                <Label htmlFor="requires_sea" className="text-cyan-800 font-bold flex-1 text-xs">
-                  Require SEA (Secure Exam Mode)
-                </Label>
+                </div>
               </div>
-              <div className="text-xs text-cyan-700 pl-2 font-medium">
-                Locked: Secure Exam Mode (SEA) is permanently enabled for all assessments.
-              </div>
+
             </div>
-            <DialogFooter>
+
+            {/* Sticky footer */}
+            <div className="flex justify-end gap-3 px-4 sm:px-6 py-4 border-t border-slate-100 bg-white shrink-0">
               <Button variant="outline" onClick={() => setAssessmentDialogOpen(false)} className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl">Cancel</Button>
               <Button onClick={handleSaveAssessment} disabled={saving} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Save
               </Button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
 
-        {/* AI Generation Dialog */}
         <Dialog open={aiGenDialogOpen} onOpenChange={setAiGenDialogOpen}>
-          <DialogContent className="sm:max-w-[500px] bg-white border border-slate-200/90 shadow-2xl rounded-3xl overflow-hidden p-0 text-slate-900">
-            <div className="p-6">
-              <DialogHeader className="mb-6">
-                <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-3">
-                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-200 text-cyan-600">
-                    <Brain className="w-5 h-5"/> 
+          <DialogContent className="w-[95vw] max-w-lg bg-white border border-slate-200/90 shadow-2xl rounded-3xl overflow-hidden p-0 text-slate-900 flex flex-col max-h-[90vh]">
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1 p-4 sm:p-6">
+              <DialogHeader className="mb-5">
+                <DialogTitle className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-3">
+                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-200 text-cyan-600 shrink-0">
+                    <Brain className="w-5 h-5"/>
                   </div>
                   Auto-Generate Test
                 </DialogTitle>
@@ -1122,7 +1384,71 @@ export function AssessmentsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
+                {/* ── Scheduling fields (vary by type) ── */}
+                {aiGenForm.type === 'daily_test' ? (
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      Test Date <span className="text-red-500">*</span>
+                    </Label>
+                    <input
+                      type="date"
+                      value={aiGenForm.scheduled_date}
+                      onChange={e => setAiGenForm({ ...aiGenForm, scheduled_date: e.target.value })}
+                      className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    />
+                    <p className="text-[11px] text-slate-400">Trainees can attend on this date only. Result published instantly. Expires after this day.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1">
+                          Test Date <span className="text-red-500">*</span>
+                        </Label>
+                        <input
+                          type="date"
+                          value={aiGenForm.scheduled_date}
+                          onChange={e => setAiGenForm({ ...aiGenForm, scheduled_date: e.target.value })}
+                          className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1">
+                          Start Time <span className="text-red-500">*</span>
+                        </Label>
+                        <input
+                          type="time"
+                          value={aiGenForm.start_time}
+                          onChange={e => setAiGenForm({ ...aiGenForm, start_time: e.target.value })}
+                          className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">
+                          End Time
+                        </Label>
+                        <input
+                          type="time"
+                          value={aiGenForm.end_time}
+                          onChange={e => setAiGenForm({ ...aiGenForm, end_time: e.target.value })}
+                          className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider block mb-1">
+                        Passing Score
+                      </Label>
+                      <p className="text-lg font-black text-cyan-700">
+                        {Math.round(aiGenForm.count * 10 * (aiGenForm.passing_score / 100))} <span className="text-sm font-bold text-slate-500">marks</span>
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-500">Calculated as {aiGenForm.passing_score}% of {aiGenForm.count * 10} total marks.</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Source Material (Optional)</Label>
@@ -1142,7 +1468,7 @@ export function AssessmentsPage() {
                       </button>
                     )}
                   </div>
-                  <div className="border border-slate-200 rounded-xl bg-slate-50 divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                  <div className="border border-slate-200 rounded-xl bg-slate-50 divide-y divide-slate-100 max-h-40 overflow-y-auto">
                     {materials.length === 0 ? (
                       <p className="text-xs text-slate-400 px-3 py-3">No materials uploaded yet.</p>
                     ) : (
@@ -1167,7 +1493,6 @@ export function AssessmentsPage() {
                               className="w-4 h-4 accent-cyan-600 rounded shrink-0"
                             />
                             <span className="text-sm text-slate-800 truncate flex-1">{m.file_name}</span>
-
                           </label>
                         )
                       })
@@ -1177,23 +1502,23 @@ export function AssessmentsPage() {
                     <p className="text-xs text-cyan-600 font-medium">{aiGenForm.material_ids.length} material{aiGenForm.material_ids.length > 1 ? 's' : ''} selected</p>
                   )}
                 </div>
-                
+
                 <div className="space-y-1.5">
                   <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Topic / Instructions for AI {aiGenForm.material_ids.length > 0 && '(Optional)'}</Label>
                   <div className="relative">
-                    <Textarea 
-                      placeholder="e.g. Generate a test about advanced marine biology and coral reefs..." 
-                      value={aiGenForm.topic} 
-                      onChange={e => setAiGenForm({...aiGenForm, topic: e.target.value})} 
-                      className="bg-slate-50 border-slate-200 text-slate-900 h-24 rounded-xl resize-none p-3 placeholder:text-slate-400" 
+                    <Textarea
+                      placeholder="e.g. Generate a test about advanced marine biology and coral reefs..."
+                      value={aiGenForm.topic}
+                      onChange={e => setAiGenForm({...aiGenForm, topic: e.target.value})}
+                      className="bg-slate-50 border-slate-200 text-slate-900 h-24 rounded-xl resize-none p-3 placeholder:text-slate-400"
                     />
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Number of Questions</Label>
-                    <Input 
+                    <Input
                       type="number"
                       min="1"
                       max="50"
@@ -1217,20 +1542,65 @@ export function AssessmentsPage() {
                     </Select>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <Button variant="outline" onClick={() => setAiGenDialogOpen(false)} className="border-slate-200 text-slate-700 hover:bg-slate-50 h-11 rounded-xl px-5">
-                  Cancel
-                </Button>
-                <Button onClick={handleAIGenerate} disabled={saving} className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:opacity-95 font-semibold h-11 rounded-xl px-6 shadow-md shadow-cyan-600/10">
-                  {saving ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin text-white/80" /> Synthesizing...</>
-                  ) : (
-                    <><Brain className="w-4 h-4 mr-2" /> Generate Now</>
-                  )}
-                </Button>
+                {/* Question Format */}
+                <div className="space-y-1.5">
+                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Question Format</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([['mcq', 'MCQ Only'], ['open_ended', 'Q&A Only'], ['both', 'MCQ + Q&A']] as const).map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setAiGenForm({ ...aiGenForm, question_format: val })}
+                        className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                          aiGenForm.question_format === val
+                            ? 'bg-cyan-600 text-white border-cyan-600 shadow-sm'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-cyan-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SEA toggle */}
+                <div
+                  className={`flex items-center space-x-3 border p-3 rounded-xl transition-all cursor-pointer ${
+                    aiGenForm.requires_sea
+                      ? 'border-cyan-400 bg-cyan-50 shadow-sm'
+                      : 'border-slate-200 bg-slate-50'
+                  }`}
+                  onClick={() => setAiGenForm({ ...aiGenForm, requires_sea: !aiGenForm.requires_sea })}
+                >
+                  <input
+                    type="checkbox"
+                    id="ai_requires_sea"
+                    className="w-4 h-4 rounded accent-cyan-600 border-cyan-300 cursor-pointer shrink-0"
+                    checked={aiGenForm.requires_sea}
+                    onChange={e => setAiGenForm({ ...aiGenForm, requires_sea: e.target.checked })}
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="ai_requires_sea" className="text-cyan-800 font-bold text-xs cursor-pointer block">Require SEA (Secure Exam Mode)</Label>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Enable secure browser lock during the exam.</p>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Sticky footer */}
+            <div className="flex justify-end gap-3 px-4 sm:px-6 py-4 border-t border-slate-100 bg-white shrink-0">
+              <Button variant="outline" onClick={() => setAiGenDialogOpen(false)} className="border-slate-200 text-slate-700 hover:bg-slate-50 h-11 rounded-xl px-5">
+                Cancel
+              </Button>
+              <Button onClick={handleAIGenerate} disabled={saving} className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:opacity-95 font-semibold h-11 rounded-xl px-6 shadow-md shadow-cyan-600/10">
+                {saving ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin text-white/80" /> Synthesizing...</>
+                ) : (
+                  <><Brain className="w-4 h-4 mr-2" /> Generate Now</>
+                )}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
