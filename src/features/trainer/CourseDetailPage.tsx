@@ -195,10 +195,6 @@ export function CourseDetailPage() {
                   <span>&bull;</span>
                   <span>{course.department || 'General'}</span>
                   <span>&bull;</span>
-                  <span className="capitalize flex items-center gap-1"><Video className="w-3.5 h-3.5 text-cyan-600" /> {course.delivery_mode || 'recorded'}</span>
-                  <span>&bull;</span>
-                  <span>Pass: {course.passing_score}%</span>
-                  <span>&bull;</span>
                   <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-cyan-600" /> {enrollmentCount} {course.max_trainees ? `/ ${course.max_trainees}` : ''} enrolled</span>
                 </div>
               </div>

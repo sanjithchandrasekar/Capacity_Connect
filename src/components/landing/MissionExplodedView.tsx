@@ -62,7 +62,7 @@ export function MissionExplodedView({
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [isReducedMotion, setIsReducedMotion] = useState(false);
 
-  // Check for prefers-reduced-motion only
+  // Check for prefers-reduced-motion
   useEffect(() => {
     const checkMotion = () => {
       const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -75,7 +75,6 @@ export function MissionExplodedView({
     return () => mediaQuery.removeEventListener('change', checkMotion);
   }, []);
 
-  // Handle video metadata loading
   const handleLoadedMetadata = () => {
     setIsVideoLoaded(true);
     ScrollTrigger.refresh();
@@ -88,12 +87,11 @@ export function MissionExplodedView({
         setIsVideoLoaded(true);
         ScrollTrigger.refresh();
       }
-      // Prime video for mobile scrub
       video.currentTime = 0.001;
     }
   }, []);
 
-  // GSAP ScrollTrigger Animations
+  // Smooth ScrollTrigger & video seeking
   useEffect(() => {
     const section = sectionRef.current;
     const pinWrapper = pinWrapperRef.current;
@@ -101,47 +99,72 @@ export function MissionExplodedView({
 
     if (!section || !pinWrapper) return;
 
-    // Clean up any stale ScrollTriggers for these specific elements
     ScrollTrigger.getAll().forEach((st) => {
       if (st.trigger === section || st.trigger === pinWrapper) {
         st.kill(true);
       }
     });
 
+    let targetProgress = 0;
+    let currentProgress = 0;
+    let isSeeking = false;
+    let isRunning = true;
+
+    const onSeeked = () => {
+      isSeeking = false;
+    };
+
+    if (video) {
+      video.addEventListener('seeked', onSeeked);
+    }
+
+    const ticker = () => {
+      if (!isRunning || !video || isNaN(video.duration) || video.duration <= 0) return;
+
+      const diff = targetProgress - currentProgress;
+      if (Math.abs(diff) > 0.001) {
+        currentProgress += diff * 0.15;
+        const targetTime = currentProgress * video.duration;
+
+        if (!isSeeking && Math.abs(video.currentTime - targetTime) > 0.02) {
+          isSeeking = true;
+          try {
+            if ('fastSeek' in video && typeof (video as any).fastSeek === 'function') {
+              (video as any).fastSeek(targetTime);
+            } else {
+              video.currentTime = targetTime;
+            }
+          } catch {
+            video.currentTime = targetTime;
+            isSeeking = false;
+          }
+        }
+      }
+    };
+
+    gsap.ticker.add(ticker);
+
     const ctx = gsap.context(() => {
       if (!isReducedMotion) {
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-        let rafId: number | null = null;
 
-        // Master ScrollTrigger Timeline pinned for smooth, natural scroll speed
         ScrollTrigger.create({
           trigger: section,
           pin: pinWrapper,
           pinSpacing: true,
           start: 'top top',
-          end: () => (isMobile ? '+=180%' : '+=260%'),
+          end: () => (isMobile ? '+=180%' : '+=220%'),
           scrub: isMobile ? 0.4 : 0.6,
           anticipatePin: 1,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             const p = self.progress;
+            targetProgress = p;
 
-            // Throttled RAF video time sync to eliminate stutter on mobile / laptops
-            if (rafId) cancelAnimationFrame(rafId);
-            rafId = requestAnimationFrame(() => {
-              if (video && video.duration && !isNaN(video.duration)) {
-                const targetTime = p * video.duration;
-                if (Math.abs(video.currentTime - targetTime) > 0.02) {
-                  video.currentTime = targetTime;
-                }
-              }
-            });
-
-            // Dynamically calculate and transition active phase
             let nextPhase = 0;
-            if (p >= 0.65) {
+            if (p >= 0.66) {
               nextPhase = 2;
-            } else if (p >= 0.32) {
+            } else if (p >= 0.33) {
               nextPhase = 1;
             } else {
               nextPhase = 0;
@@ -154,7 +177,6 @@ export function MissionExplodedView({
           },
         });
       } else if (video && isReducedMotion) {
-        // Reduced-motion fallback only: show all sequentially or autoplay video
         ScrollTrigger.create({
           trigger: section,
           start: 'top 70%',
@@ -167,7 +189,6 @@ export function MissionExplodedView({
       }
     }, section);
 
-    // Refresh ScrollTrigger after DOM has settled
     const refreshTimer = setTimeout(() => {
       ScrollTrigger.refresh();
     }, 200);
@@ -176,6 +197,11 @@ export function MissionExplodedView({
     window.addEventListener('load', handleWindowLoad);
 
     return () => {
+      isRunning = false;
+      gsap.ticker.remove(ticker);
+      if (video) {
+        video.removeEventListener('seeked', onSeeked);
+      }
       clearTimeout(refreshTimer);
       window.removeEventListener('load', handleWindowLoad);
       ctx.revert();
@@ -193,19 +219,21 @@ export function MissionExplodedView({
       {/* Pinned Viewport Container */}
       <div
         ref={pinWrapperRef}
-        className="relative w-full h-[100dvh] min-h-[620px] overflow-hidden flex items-center justify-center bg-[#030712]"
+        className="relative w-full h-[100dvh] min-h-[600px] overflow-hidden flex items-center justify-center bg-[#030712]"
       >
         {/* ======================================================================= */}
-        {/* VIDEO LAYER: Enhanced Brightness, Clarity, and Full Visibility          */}
+        {/* VIDEO LAYER: Clear, Bright, Edge Softening Only                         */}
         {/* ======================================================================= */}
         <div className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden bg-[#030712]">
           <video
             ref={videoRef}
             muted
             playsInline
-            preload="metadata"
+            preload="auto"
+            disablePictureInPicture
+            disableRemotePlayback
             onLoadedMetadata={handleLoadedMetadata}
-            className={`w-full h-full object-cover object-center brightness-[0.95] contrast-[1.10] saturate-[1.15] transition-opacity duration-700 ${
+            className={`w-full h-full object-cover object-center brightness-[0.98] contrast-[1.05] saturate-[1.1] transition-opacity duration-700 ${
               isVideoLoaded ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -219,41 +247,43 @@ export function MissionExplodedView({
             />
           </video>
 
-          {/* Seamless section transition edge fades matching space obsidian #030712 */}
-          <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#030712] to-transparent pointer-events-none z-10" />
-          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#030712] to-transparent pointer-events-none z-10" />
+          {/* Minimal top and bottom boundary blend */}
+          <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#030712] to-transparent pointer-events-none z-10" />
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#030712] to-transparent pointer-events-none z-10" />
         </div>
 
         {/* Ambient atmospheric backdrop glow behind floating text */}
         <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
-          <div className="w-[600px] h-[350px] bg-cyan-500/10 rounded-full blur-[120px] opacity-70" />
+          <div className="w-[500px] h-[300px] bg-cyan-500/10 rounded-full blur-[100px] opacity-60" />
         </div>
 
         {/* ======================================================================= */}
-        {/* CONTENT LAYER: Seamless Framer Motion Phase Transitions on Scroll       */}
+        {/* CONTENT LAYER: Pure Centered Floating Typography                        */}
         {/* ======================================================================= */}
-        <div className="relative z-30 max-w-5xl mx-auto px-6 sm:px-8 w-full flex items-center justify-center my-auto pointer-events-none">
-          <div className="relative w-full flex items-center justify-center min-h-[260px] sm:min-h-[300px] overflow-visible">
+        <div className="relative z-30 max-w-4xl mx-auto px-6 sm:px-8 w-full flex items-center justify-center pointer-events-none">
+          <div className="relative w-full flex items-center justify-center min-h-[220px] overflow-visible">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentPhase.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="w-full flex flex-col items-center justify-center text-center max-w-4xl mx-auto px-4"
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="w-full flex flex-col items-center justify-center text-center px-4"
               >
                 <div className="flex flex-col items-center max-w-3xl mx-auto">
                   {/* Headline - Pure Floating Typography with Atmospheric Palette */}
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold font-display text-white tracking-[-0.03em] leading-[1.15] mb-5 drop-shadow-[0_4px_30px_rgba(0,0,0,0.98)]">
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold font-display text-white tracking-[-0.03em] leading-[1.15] mb-4 drop-shadow-[0_4px_30px_rgba(0,0,0,0.98)]">
                     {currentPhase.headlinePrefix}
-                    <span className={`text-transparent bg-clip-text bg-gradient-to-r ${currentPhase.highlightGradient} drop-shadow-none`}>
+                    <span
+                      className={`text-transparent bg-clip-text bg-gradient-to-r ${currentPhase.highlightGradient} drop-shadow-none`}
+                    >
                       {currentPhase.headlineHighlight}
                     </span>
                   </h2>
 
-                  {/* Subtext - Floating directly with high contrast titanium slate tone */}
-                  <p className="text-slate-100 text-sm sm:text-base md:text-xl leading-relaxed font-normal max-w-2xl mx-auto drop-shadow-[0_2px_16px_rgba(0,0,0,0.98)]">
+                  {/* Subtext - Crisp high-contrast titanium tone */}
+                  <p className="text-slate-100 text-sm sm:text-base md:text-lg leading-relaxed font-normal max-w-2xl mx-auto drop-shadow-[0_2px_16px_rgba(0,0,0,0.98)]">
                     {currentPhase.subtext}
                   </p>
                 </div>
@@ -265,3 +295,4 @@ export function MissionExplodedView({
     </section>
   );
 }
+
