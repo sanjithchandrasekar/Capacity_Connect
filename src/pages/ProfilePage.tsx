@@ -253,26 +253,6 @@ export function ProfilePage() {
     }
   }
 
-  // Calculate profile completion percentage
-  const calculateCompletion = () => {
-    const fields = [
-      form.full_name,
-      form.phone,
-      form.department,
-      form.designation,
-      form.city,
-      form.qualifications,
-      form.work_experience,
-      form.bio,
-      form.skills.length > 0 ? 'yes' : '',
-      form.interests.length > 0 ? 'yes' : '',
-    ]
-    const filled = fields.filter(Boolean).length
-    return Math.round((filled / fields.length) * 100)
-  }
-
-  const completionRate = calculateCompletion()
-
   if (loading) {
     const loadingView = (
       <div className="flex flex-col items-center justify-center py-28 space-y-4">
@@ -308,11 +288,6 @@ export function ProfilePage() {
                   <span className="text-xs px-2.5 py-0.5 rounded-full border bg-cyan-500/20 text-cyan-300 border-cyan-500/40 capitalize font-bold">
                     {profile?.role?.replace('_', ' ')}
                   </span>
-                  {profile?.approval_status === 'approved' && (
-                    <span className="text-xs px-2.5 py-0.5 rounded-full border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Verified
-                    </span>
-                  )}
                 </div>
                 <p className="text-slate-300 text-xs sm:text-sm font-medium flex items-center gap-2 truncate">
                   <Mail className="w-3.5 h-3.5 text-cyan-400 shrink-0" /> {form.email || user?.email}
@@ -326,21 +301,21 @@ export function ProfilePage() {
               </div>
             </div>
 
-            {/* Profile Completion Indicator */}
-            <div className="sm:text-right bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 min-w-[200px]">
-              <div className="flex items-center justify-between gap-3 text-xs font-semibold mb-2">
-                <span className="text-slate-300">Profile Strength</span>
-                <span className="text-cyan-400 font-bold">{completionRate}%</span>
+            {/* Verified Account Status Badge */}
+            <div className="flex items-center gap-3.5 bg-slate-900/80 backdrop-blur-md px-5 py-3.5 rounded-2xl border border-emerald-500/30 shadow-lg shadow-emerald-950/40 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/30 shrink-0">
+                <CheckCircle2 className="w-5 h-5 text-white" />
               </div>
-              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-500 transition-all duration-500"
-                  style={{ width: `${completionRate}%` }}
-                />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white tracking-wide">
+                    {profile?.approval_status === 'rejected' ? 'Action Required' : profile?.approval_status === 'pending' ? 'Verification Pending' : 'Verified Member'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
+                  Official Capacity Connect Member
+                </p>
               </div>
-              <p className="text-[10px] text-slate-400 mt-2 font-medium">
-                {completionRate >= 80 ? '🌟 Excellent profile completeness' : 'Complete details to get certified faster'}
-              </p>
             </div>
           </div>
         </div>

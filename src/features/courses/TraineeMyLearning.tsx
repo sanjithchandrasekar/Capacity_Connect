@@ -1,12 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
-import { BookOpen, Compass, BookMarked, PlayCircle, CheckCircle2, Clock, Sparkles, FileCheck, User, BarChart3 } from 'lucide-react'
+import { BookOpen, Compass, BookMarked, PlayCircle, CheckCircle2, Clock, Sparkles, FileCheck, User, BarChart3, Award, Loader2 } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
+import { toast } from 'sonner'
+import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -15,7 +17,8 @@ const fadeUp = {
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }
 
 export function TraineeMyLearning() {
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const { data: enrollments, isLoading } = useQuery({
     queryKey: ['my_learning', profile?.id],
@@ -33,7 +36,10 @@ export function TraineeMyLearning() {
             course_type,
             thumbnail_path,
             duration_minutes,
-            passing_score
+            passing_score,
+            certificate_template_url,
+            has_certificate,
+            trainer:trainers!courses_trainer_id_fkey(full_name)
           )
         `)
         .eq('user_id', profile!.id)
@@ -44,6 +50,37 @@ export function TraineeMyLearning() {
     },
     enabled: !!profile?.id
   })
+
+  const handleDownloadCertificate = async (enrollment: any) => {
+    if (!profile || !enrollment.course) return
+    setDownloadingId(enrollment.id)
+    try {
+      const traineeName = profile.full_name || user?.email?.split('@')[0] || 'Trainee'
+      const percentage = enrollment.progress_percent ?? 100
+
+      const { blob, fileName } = await generateTraineeCertificate(
+        enrollment.course.certificate_template_url,
+        {
+          traineeName,
+          traineeEmail: profile.email || user?.email,
+          traineeId: user!.id,
+          courseId: enrollment.course.id,
+          courseTitle: enrollment.course.title,
+          trainerName: enrollment.course.trainer?.full_name || 'Lead Trainer',
+          percentage,
+          completedAt: new Date().toISOString(),
+        }
+      )
+
+      triggerFileDownload(blob, fileName)
+      toast.success('Certificate downloaded successfully! 🎉')
+    } catch (err: any) {
+      console.error('Certificate generation error:', err)
+      toast.error(err.message || 'Failed to download certificate')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   const inProgressCount = enrollments?.filter(e => e.status === 'in_progress' || e.status === 'enrolled').length || 0
   const completedCount = enrollments?.filter(e => e.status === 'completed').length || 0
@@ -159,13 +196,23 @@ export function TraineeMyLearning() {
                 </div>
 
                 {/* Actions */}
-                <div className="shrink-0 flex items-center gap-3 pt-4 md:pt-0 md:pl-4 md:border-l border-slate-100">
-                  {enrollment.status === 'completed' ? (
-                    <Link to={`/trainee/courses/${enrollment.course?.id}`}>
-                      <button className="px-5 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Review Course
+                <div className="shrink-0 flex flex-wrap items-center gap-2.5 pt-4 md:pt-0 md:pl-4 md:border-l border-slate-100">
+                  {enrollment.status === 'completed' || enrollment.progress_percent === 100 ? (
+                    <>
+                      <button
+                        onClick={() => handleDownloadCertificate(enrollment)}
+                        disabled={downloadingId === enrollment.id}
+                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-sm hover:scale-105 transition-all flex items-center gap-1.5"
+                      >
+                        {downloadingId === enrollment.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5 text-amber-300" />}
+                        {downloadingId === enrollment.id ? 'Generating...' : 'Certificate'}
                       </button>
-                    </Link>
+                      <Link to={`/trainee/courses/${enrollment.course?.id}`}>
+                        <button className="px-4 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Review
+                        </button>
+                      </Link>
+                    </>
                   ) : (
                     <Link to={`/trainee/courses/${enrollment.course?.id}`}>
                       <button className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs shadow-md shadow-cyan-600/20 hover:scale-105 transition-all flex items-center gap-2">

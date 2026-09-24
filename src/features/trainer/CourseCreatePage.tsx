@@ -21,10 +21,11 @@ import {
   ArrowLeft, ArrowRight, CheckCircle, Loader2, Plus, Upload, X,
   BookOpen, Settings, Target, Eye, AlertCircle, FileText, File, Image,
   Video, Link2, ExternalLink, Globe, Trash2, Layers, Trophy, Film, Camera,
-  Sparkles, AlignLeft, HelpCircle, CheckSquare
+  Sparkles, AlignLeft, HelpCircle, CheckSquare, Award
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
+import { CourseCertificateStep } from '@/features/courses/CourseCertificateStep'
 
 type Skill = Database['public']['Tables']['skills']['Row']
 
@@ -133,7 +134,8 @@ const STEPS = [
   { id: 4, label: 'Learning & Skills', icon: Target },
   { id: 5, label: 'Modules', icon: Layers },
   { id: 6, label: 'Materials', icon: FileText },
-  { id: 7, label: 'Review & Submit', icon: Eye },
+  { id: 7, label: 'Certificate', icon: Award },
+  { id: 8, label: 'Review & Submit', icon: Eye },
 ]
 
 export function CourseCreatePage() {
@@ -142,6 +144,9 @@ export function CourseCreatePage() {
 
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
+  const [hasCertificate, setHasCertificate] = useState(true)
+  const [certificateTemplateUrl, setCertificateTemplateUrl] = useState<string | null>(null)
+  const [certificateTemplateName, setCertificateTemplateName] = useState<string | null>(null)
   const [skills, setSkills] = useState<Skill[]>([])
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [thumbnail, setThumbnail] = useState<File | null>(null)
@@ -374,7 +379,7 @@ export function CourseCreatePage() {
   const handleNext = async () => {
     const valid = await validateStep()
     if (!valid) return
-    setStep(s => Math.min(s + 1, 7))
+    setStep(s => Math.min(s + 1, 8))
   }
 
   const handleBack = () => {
@@ -500,7 +505,10 @@ export function CourseCreatePage() {
           max_trainees: s.max_trainees || null,
           trainer_suggestion: s.trainer_suggestion || null,
           session_flow_text: f.session_flow_text || null,
-        })
+          has_certificate: hasCertificate,
+          certificate_template_url: certificateTemplateUrl,
+          certificate_template_name: certificateTemplateName,
+        } as any)
         .select()
         .single()
       if (error) throw error
@@ -1475,8 +1483,21 @@ export function CourseCreatePage() {
             </div>
           )}
 
-          {/* Step 7: Review & Submit */}
+          {/* Step 7: Certificate */}
           {step === 7 && (
+            <CourseCertificateStep
+              hasCertificate={hasCertificate}
+              setHasCertificate={setHasCertificate}
+              templateUrl={certificateTemplateUrl}
+              setTemplateUrl={setCertificateTemplateUrl}
+              templateName={certificateTemplateName}
+              setTemplateName={setCertificateTemplateName}
+              courseTitle={watchedValues.title || 'Specialized Training Course'}
+            />
+          )}
+
+          {/* Step 8: Review & Submit */}
+          {step === 8 && (
             <div className="space-y-4">
               <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
                 <CardContent className="p-6 space-y-4">
@@ -1498,6 +1519,30 @@ export function CourseCreatePage() {
                         <div><span className="text-[10px] font-semibold text-slate-400">Type</span><p className="text-xs font-semibold text-slate-800 capitalize">{watchedValues.course_type}</p></div>
                         <div><span className="text-[10px] font-semibold text-slate-400">Department</span><p className="text-xs font-semibold text-slate-800">{watchedValues.department || '—'}</p></div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Certificate Settings Review */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <Award className="w-3 h-3 text-cyan-600" /> Certificate Configuration
+                    </div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">
+                          {hasCertificate ? 'Certificate Enabled' : 'No Certificate'}
+                        </p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {hasCertificate 
+                            ? (certificateTemplateName ? `Custom Template: ${certificateTemplateName}` : 'Using Standard MoES Capacity Connect PPTX Template')
+                            : 'Trainees will not receive a certificate upon completion'}
+                        </p>
+                      </div>
+                      {hasCertificate && (
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Auto-Issue on 100%
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1633,7 +1678,7 @@ export function CourseCreatePage() {
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
           <div className="flex items-center gap-3">
-            {step < 7 ? (
+            {step < 8 ? (
               <Button onClick={handleNext} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold shadow-md shadow-cyan-600/20 rounded-xl">
                 Next <ArrowRight className="w-4 h-4 ml-2" />
               </Button>

@@ -21,6 +21,7 @@ import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { CourseFeedback } from './CourseFeedback'
 import { CourseAnnouncements } from './CourseAnnouncements'
 import { CourseChat } from './CourseChat'
+import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -73,7 +74,7 @@ function parseSessionFlowText(text: string): Array<{ number: string; title: stri
 
 export function TraineeCourseDetails() {
   const { courseId } = useParams<{ courseId: string }>()
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -341,6 +342,39 @@ export function TraineeCourseDetails() {
     setOtpInput('')
   }
 
+  const [downloadingCert, setDownloadingCert] = useState(false)
+
+  const handleDownloadCertificate = async () => {
+    if (!profile || !course) return
+    setDownloadingCert(true)
+    try {
+      const traineeName = profile.full_name || user?.email?.split('@')[0] || 'Trainee'
+      const percentage = enrollment?.progress_percent ?? 100
+
+      const { blob, fileName } = await generateTraineeCertificate(
+        (course as any).certificate_template_url,
+        {
+          traineeName,
+          traineeEmail: profile.email || user?.email,
+          traineeId: user!.id,
+          courseId: course.id,
+          courseTitle: course.title,
+          trainerName: course.trainer?.full_name || 'Lead Trainer',
+          percentage,
+          completedAt: new Date().toISOString(),
+        }
+      )
+
+      triggerFileDownload(blob, fileName)
+      toast.success('Certificate downloaded successfully! 🎉')
+    } catch (err: any) {
+      console.error('Certificate generation error:', err)
+      toast.error(err.message || 'Failed to download certificate')
+    } finally {
+      setDownloadingCert(false)
+    }
+  }
+
   const isLoading = isCourseLoading || isEnrollmentLoading
 
   const seatLimit = course?.seat_limit ?? 50
@@ -523,7 +557,25 @@ export function TraineeCourseDetails() {
 
                   {/* CTA */}
                   <div className="flex flex-wrap items-center gap-3">
-                    {enrollment && enrollment.status === 'enrolled' ? (
+                    {enrollment && (enrollment.status === 'completed' || enrollment.progress_percent === 100) ? (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                          onClick={handleDownloadCertificate}
+                          disabled={downloadingCert}
+                          className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white font-bold rounded-2xl px-6 py-3 shadow-lg shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                        >
+                          {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4 text-amber-300" />}
+                          {downloadingCert ? 'Generating...' : 'Download Certificate'}
+                        </Button>
+                        <Button
+                          onClick={() => navigate('/trainee/my-learning')}
+                          variant="outline"
+                          className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                        >
+                          <PlayCircle className="w-4 h-4 mr-2" /> Review Lessons
+                        </Button>
+                      </div>
+                    ) : enrollment && enrollment.status === 'enrolled' ? (
                       <div className="flex flex-wrap items-center gap-3">
                         <Button
                           onClick={() => navigate('/trainee/my-learning')}

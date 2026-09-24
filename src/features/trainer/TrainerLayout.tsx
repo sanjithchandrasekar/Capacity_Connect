@@ -129,7 +129,7 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="h-14 md:h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-10 flex items-center px-4 md:px-6 gap-3 shadow-xs">
+        <header className="h-14 md:h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-30 flex items-center px-4 md:px-6 gap-3 shadow-xs">
           <button onClick={() => setMobileOpen(true)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all md:hidden">
             <Menu className="w-5 h-5" />
           </button>

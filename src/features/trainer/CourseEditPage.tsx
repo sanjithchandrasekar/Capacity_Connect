@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CourseMaterials } from '@/features/courses/CourseMaterials'
+import { CourseCertificateStep } from '@/features/courses/CourseCertificateStep'
 
 type Course = Database['public']['Tables']['courses']['Row']
 type Skill = Database['public']['Tables']['skills']['Row']
@@ -80,6 +81,10 @@ export function CourseEditPage() {
   const [sessionFlowDoc, setSessionFlowDoc] = useState<File | null>(null)
   const [sessionFlowDocPath, setSessionFlowDocPath] = useState<string | null>(null)
 
+  const [hasCertificate, setHasCertificate] = useState(true)
+  const [certificateTemplateUrl, setCertificateTemplateUrl] = useState<string | null>(null)
+  const [certificateTemplateName, setCertificateTemplateName] = useState<string | null>(null)
+
   const { register, handleSubmit, setValue, watch, reset, trigger, formState: { errors } } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
   })
@@ -106,6 +111,9 @@ export function CourseEditPage() {
       ])
       if (courseRes.error) throw courseRes.error
       setCourse(courseRes.data)
+      setHasCertificate((courseRes.data as any).has_certificate ?? true)
+      setCertificateTemplateUrl((courseRes.data as any).certificate_template_url ?? null)
+      setCertificateTemplateName((courseRes.data as any).certificate_template_name ?? null)
       if (courseRes.data.thumbnail_path) {
         const signedUrl = await getSignedUrl('materials', courseRes.data.thumbnail_path)
         setThumbnailPreview(signedUrl)
@@ -208,10 +216,13 @@ export function CourseEditPage() {
         end_date: data.end_date ? new Date(data.end_date).toISOString() : null,
         thumbnail_path: thumbnailPath,
         session_flow_document_path: sessionDocPathToSave,
+        has_certificate: hasCertificate,
+        certificate_template_url: certificateTemplateUrl,
+        certificate_template_name: certificateTemplateName,
       }
       const { error } = await supabase
         .from('courses')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', course.id)
       if (error) throw error
 
@@ -454,6 +465,16 @@ export function CourseEditPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <CourseCertificateStep
+              hasCertificate={hasCertificate}
+              setHasCertificate={setHasCertificate}
+              templateUrl={certificateTemplateUrl}
+              setTemplateUrl={setCertificateTemplateUrl}
+              templateName={certificateTemplateName}
+              setTemplateName={setCertificateTemplateName}
+              courseTitle={watch('title') || course.title}
+            />
           </motion.div>
         ) : (
           <motion.div variants={fadeUp}>

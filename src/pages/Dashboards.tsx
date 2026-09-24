@@ -205,7 +205,7 @@ export function DashboardShell({
       {/* Main content */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Topbar */}
-        <header className="h-14 md:h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-10 flex items-center px-4 md:px-6 gap-3 shadow-xs">
+        <header className="h-14 md:h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-30 flex items-center px-4 md:px-6 gap-3 shadow-xs">
           <button
             onClick={() => {
               if (window.innerWidth < 768) {
