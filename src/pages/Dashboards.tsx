@@ -18,7 +18,7 @@ import {
   Globe, LogOut, Users, BookOpen, BarChart3, Shield,
   GraduationCap, ChevronRight, CheckCircle, Search,
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
-  Award, Target, FileText, Settings,
+  Award, Target, FileText, Settings, User,
   RefreshCw, Star, MessageSquare,
   Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone, FileCheck
 } from 'lucide-react'

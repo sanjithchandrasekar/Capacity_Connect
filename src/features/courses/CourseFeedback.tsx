@@ -47,7 +47,7 @@ export function CourseFeedback({ courseId, isTrainer = false }: CourseFeedbackPr
           .in('id', userIds)
 
         const traineeMap = new Map<string, { full_name: string; email: string; department?: string }>()
-        traineesData?.forEach(t => traineeMap.set(t.id, { full_name: t.full_name || 'Trainee', email: t.email, department: t.department }))
+        traineesData?.forEach(t => traineeMap.set(t.id, { full_name: t.full_name || 'Trainee', email: t.email || '', department: t.department || undefined }))
 
         return data.map(f => ({
           ...f,
