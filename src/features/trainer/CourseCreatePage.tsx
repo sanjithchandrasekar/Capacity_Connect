@@ -523,11 +523,11 @@ export function CourseCreatePage() {
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <motion.div variants={fadeUp}>
-          <button onClick={() => navigate('/trainer/courses')} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
+          <button onClick={() => navigate('/trainer/courses')} className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Courses
           </button>
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Create Course</h2>
-          <p className="text-sm text-zinc-200/50 mt-1">Fill in the details, add materials, and submit for review.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Create Course</h2>
+          <p className="text-sm text-slate-500 mt-1">Fill in the details, add materials, and submit for review.</p>
         </motion.div>
 
         {/* Progress Steps */}
@@ -537,18 +537,18 @@ export function CourseCreatePage() {
               <React.Fragment key={s.id}>
                 <button
                   onClick={() => { if (s.id < step) setStep(s.id) }}
-                  className={`flex items-center gap-1.5 transition-all ${s.id <= step ? 'text-zinc-200' : 'text-zinc-200/30'} ${s.id < step ? 'cursor-pointer' : 'cursor-default'}`}
+                  className={`flex items-center gap-1.5 transition-all ${s.id <= step ? 'text-slate-900 font-bold' : 'text-slate-400'} ${s.id < step ? 'cursor-pointer hover:text-cyan-700' : 'cursor-default'}`}
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all ${
-                    step > s.id ? 'bg-ink/20 border-cyan-500/30 text-zinc-200' :
-                    step === s.id ? 'bg-ink text-cream border-ink' :
-                    'border-cyan-500/30 text-zinc-200/40'
+                    step > s.id ? 'bg-emerald-50 border-emerald-300 text-emerald-700' :
+                    step === s.id ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-transparent shadow-xs' :
+                    'border-slate-300 text-slate-400 bg-white'
                   }`}>
                     {step > s.id ? <CheckCircle className="w-3.5 h-3.5" /> : <s.icon className="w-3.5 h-3.5" />}
                   </div>
                   <span className="text-[10px] hidden md:inline">{s.label}</span>
                 </button>
-                {i < STEPS.length - 1 && <div className={`flex-1 h-px ${step > s.id ? 'bg-ink/30' : 'bg-ink/10'}`} />}
+                {i < STEPS.length - 1 && <div className={`flex-1 h-px ${step > s.id ? 'bg-cyan-500' : 'bg-slate-200'}`} />}
               </React.Fragment>
             ))}
           </div>
@@ -558,25 +558,25 @@ export function CourseCreatePage() {
         <motion.div variants={fadeUp}>
           {/* Step 1: Course Details */}
           {step === 1 && (
-            <Card className="bg-[#040814] border-cyan-500/30">
+            <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="w-4 h-4 text-zinc-200/60" />
-                  <h3 className="text-sm font-semibold text-zinc-200">Course Details</h3>
+                  <BookOpen className="w-4 h-4 text-cyan-600" />
+                  <h3 className="text-sm font-bold text-slate-900">Course Details</h3>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-zinc-200/80 text-xs">Course Title *</Label>
-                  <Input {...detailsForm.register('title')} placeholder="e.g. Cyclone Response and Warning Communication" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
-                  {detailsForm.formState.errors.title && <p className="text-xs text-red-600">{detailsForm.formState.errors.title.message}</p>}
+                  <Label className="text-slate-700 text-xs font-semibold">Course Title *</Label>
+                  <Input {...detailsForm.register('title')} placeholder="e.g. Cyclone Response and Warning Communication" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
+                  {detailsForm.formState.errors.title && <p className="text-xs text-rose-600 font-medium">{detailsForm.formState.errors.title.message}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-zinc-200/80 text-xs">Description *</Label>
-                  <Textarea {...detailsForm.register('description')} rows={4} placeholder="Describe what this course covers, its target audience, and key topics..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
-                  {detailsForm.formState.errors.description && <p className="text-xs text-red-600">{detailsForm.formState.errors.description.message}</p>}
+                  <Label className="text-slate-700 text-xs font-semibold">Description *</Label>
+                  <Textarea {...detailsForm.register('description')} rows={4} placeholder="Describe what this course covers, its target audience, and key topics..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white rounded-xl resize-none" />
+                  {detailsForm.formState.errors.description && <p className="text-xs text-rose-600 font-medium">{detailsForm.formState.errors.description.message}</p>}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Course Type</Label>
+                    <Label className="text-slate-700 text-xs font-semibold">Course Type</Label>
                     <Select 
                       value={isCustomType ? 'custom' : detailsForm.watch('course_type')} 
                       onValueChange={v => {
@@ -589,7 +589,7 @@ export function CourseCreatePage() {
                         }
                       }}
                     >
-                      <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 h-10 rounded-xl"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="standard">Standard Training</SelectItem>
                         <SelectItem value="scenario">Scenario-Based Training</SelectItem>
@@ -601,14 +601,14 @@ export function CourseCreatePage() {
                       <Input 
                         {...detailsForm.register('course_type')} 
                         placeholder="Enter custom course type" 
-                        className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10 mt-2" 
+                        className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 mt-2 rounded-xl" 
                       />
                     )}
-                    {detailsForm.formState.errors.course_type && <p className="text-xs text-red-600">{detailsForm.formState.errors.course_type.message}</p>}
+                    {detailsForm.formState.errors.course_type && <p className="text-xs text-rose-600 font-medium">{detailsForm.formState.errors.course_type.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Department</Label>
-                    <Input {...detailsForm.register('department')} placeholder="e.g. IMD, CWC, NIOT" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <Label className="text-slate-700 text-xs font-semibold">Department</Label>
+                    <Input {...detailsForm.register('department')} placeholder="e.g. IMD, CWC, NIOT" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
                   </div>
                 </div>
               </CardContent>
@@ -617,104 +617,104 @@ export function CourseCreatePage() {
 
           {/* Step 2: Course Configuration */}
           {step === 2 && (
-            <Card className="bg-[#040814] border-cyan-500/30">
+            <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Settings className="w-4 h-4 text-zinc-200/60" />
-                  <h3 className="text-sm font-semibold text-zinc-200">Course Configuration</h3>
+                  <Settings className="w-4 h-4 text-cyan-600" />
+                  <h3 className="text-sm font-bold text-slate-900">Course Configuration</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Duration (hours)</Label>
-                    <Input type="number" {...settingsForm.register('duration_hours')} placeholder="e.g. 20" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
-                    <p className="text-[10px] text-zinc-200/40">Leave empty for self-paced</p>
+                    <Label className="text-slate-700 text-xs font-semibold">Duration (hours)</Label>
+                    <Input type="number" {...settingsForm.register('duration_hours')} placeholder="e.g. 20" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
+                    <p className="text-[10px] text-slate-400 font-medium">Leave empty for self-paced</p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Passing Score (%)</Label>
-                    <Input type="number" {...settingsForm.register('passing_score')} placeholder="60" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
-                    <p className="text-[10px] text-zinc-200/40">Minimum score to pass</p>
+                    <Label className="text-slate-700 text-xs font-semibold">Passing Score (%)</Label>
+                    <Input type="number" {...settingsForm.register('passing_score')} placeholder="60" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
+                    <p className="text-[10px] text-slate-400 font-medium">Minimum score to pass</p>
                   </div>
-                  <div className="space-y-1.5 col-span-2">
-                    <Label className="text-zinc-200/80 text-xs">Live Meeting Link</Label>
-                    <Input type="url" {...settingsForm.register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
-                    {settingsForm.formState.errors.meet_link && <p className="text-[10px] text-red-600">{settingsForm.formState.errors.meet_link.message}</p>}
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                    <Label className="text-slate-700 text-xs font-semibold">Live Meeting Link</Label>
+                    <Input type="url" {...settingsForm.register('meet_link')} placeholder="e.g. https://meet.google.com/..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
+                    {settingsForm.formState.errors.meet_link && <p className="text-[10px] text-rose-600 font-medium">{settingsForm.formState.errors.meet_link.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Start Date</Label>
-                    <Input type="date" {...settingsForm.register('start_date')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <Label className="text-slate-700 text-xs font-semibold">Start Date</Label>
+                    <Input type="date" {...settingsForm.register('start_date')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
                     {settingsForm.formState.errors.start_date && (
-                      <p className="text-[10px] text-red-500">{settingsForm.formState.errors.start_date.message}</p>
+                      <p className="text-[10px] text-rose-600 font-medium">{settingsForm.formState.errors.start_date.message}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">End Date</Label>
-                    <Input type="date" {...settingsForm.register('end_date')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <Label className="text-slate-700 text-xs font-semibold">End Date</Label>
+                    <Input type="date" {...settingsForm.register('end_date')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
                     {settingsForm.formState.errors.end_date && (
-                      <p className="text-[10px] text-red-500">{settingsForm.formState.errors.end_date.message}</p>
+                      <p className="text-[10px] text-rose-600 font-medium">{settingsForm.formState.errors.end_date.message}</p>
                     )}
                   </div>
                   {isUrgent && settingsForm.watch('start_date') && !settingsForm.formState.errors.start_date && (
-                    <div className="col-span-2 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
+                    <div className="col-span-1 sm:col-span-2 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs font-medium flex items-center gap-2">
                       <span className="text-lg">⚠️</span> Course starts in less than 30 days! This will be flagged as <strong className="font-bold">URGENT</strong> for fast-track Admin approval.
                     </div>
                   )}
                   
                   {/* Capacity */}
-                  <div className="space-y-1.5 col-span-2">
-                    <Label className="text-zinc-200/80 text-xs">Trainee Capacity Limit</Label>
-                    <Input type="number" {...settingsForm.register('max_trainees')} placeholder="e.g. 50" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
-                    <p className="text-[10px] text-zinc-200/40">Must be between 50 and 250</p>
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                    <Label className="text-slate-700 text-xs font-semibold">Trainee Capacity Limit</Label>
+                    <Input type="number" {...settingsForm.register('max_trainees')} placeholder="e.g. 50" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
+                    <p className="text-[10px] text-slate-400 font-medium">Must be between 50 and 250</p>
                   </div>
                   
                   {/* Trainer Suggestion / Notice */}
-                  <div className="space-y-1.5 col-span-2">
-                    <Label className="text-zinc-200/80 text-xs flex items-center gap-2">Notice to Admin <Badge variant="secondary" className="text-[9px] h-4 bg-purple-100 text-cyan-400">Optional</Badge></Label>
-                    <Textarea {...settingsForm.register('trainer_suggestion')} placeholder="Add any notes or suggestions for the admin approving this course..." className="bg-ink/5 border-cyan-500/30 text-zinc-200 min-h-[60px]" />
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                    <Label className="text-slate-700 text-xs font-semibold flex items-center gap-2">Notice to Admin <Badge variant="secondary" className="text-[9px] h-4 bg-slate-100 text-slate-600">Optional</Badge></Label>
+                    <Textarea {...settingsForm.register('trainer_suggestion')} placeholder="Add any notes or suggestions for the admin approving this course..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white min-h-[60px] rounded-xl resize-none" />
                   </div>
                   
                   {/* Test Planning */}
-                  <div className="space-y-1.5 col-span-2 mt-2 pt-4 border-t border-cyan-500/30">
-                    <Label className="text-zinc-200 font-medium">Test & Assessment Plan</Label>
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2 mt-2 pt-4 border-t border-slate-100">
+                    <Label className="text-slate-900 font-bold text-sm">Test & Assessment Plan</Label>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Planned Daily Assessments</Label>
-                    <Input type="number" {...settingsForm.register('planned_assessments_count')} placeholder="e.g. 10" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <Label className="text-slate-700 text-xs font-semibold">Planned Daily Assessments</Label>
+                    <Input type="number" {...settingsForm.register('planned_assessments_count')} placeholder="e.g. 10" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Planned Mock Tests</Label>
-                    <Input type="number" {...settingsForm.register('planned_mock_tests_count')} placeholder="e.g. 2" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <Label className="text-slate-700 text-xs font-semibold">Planned Mock Tests</Label>
+                    <Input type="number" {...settingsForm.register('planned_mock_tests_count')} placeholder="e.g. 2" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
                   </div>
-                  <div className="space-y-1.5 col-span-2">
-                    <Label className="text-zinc-200/80 text-xs font-semibold mt-2">Final Exam Details</Label>
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                    <Label className="text-slate-700 text-xs font-bold mt-2">Final Exam Details</Label>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Date</Label>
-                    <Input type="date" {...settingsForm.register('final_test_date')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                    <Label className="text-slate-700 text-xs font-semibold">Date</Label>
+                    <Input type="date" {...settingsForm.register('final_test_date')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
                   </div>
                   <div className="grid grid-cols-2 gap-4 col-span-1">
                     <div className="space-y-1.5">
-                      <Label className="text-zinc-200/80 text-xs">Start Time</Label>
-                      <Input type="time" {...settingsForm.register('final_test_start_time')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                      <Label className="text-slate-700 text-xs font-semibold">Start Time</Label>
+                      <Input type="time" {...settingsForm.register('final_test_start_time')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-zinc-200/80 text-xs">End Time</Label>
-                      <Input type="time" {...settingsForm.register('final_test_end_time')} className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10" />
+                      <Label className="text-slate-700 text-xs font-semibold">End Time</Label>
+                      <Input type="time" {...settingsForm.register('final_test_end_time')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
                     </div>
                   </div>
                   {examDuration && (
-                    <div className="col-span-2 text-xs font-medium text-zinc-200/70">
-                      Duration: <span className="text-brand">{examDuration}</span>
+                    <div className="col-span-1 sm:col-span-2 text-xs font-semibold text-slate-700">
+                      Duration: <span className="text-cyan-600 font-bold">{examDuration}</span>
                     </div>
                   )}
                   
                   {/* Delivery & Schedule Fields */}
-                  <div className="space-y-1.5 col-span-2 mt-2 pt-4 border-t border-cyan-500/30">
-                    <Label className="text-zinc-200 font-medium">Delivery & Schedule</Label>
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2 mt-2 pt-4 border-t border-slate-100">
+                    <Label className="text-slate-900 font-bold text-sm">Delivery & Schedule</Label>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Delivery Mode</Label>
+                  <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                    <Label className="text-slate-700 text-xs font-semibold">Delivery Mode</Label>
                     <Select value={settingsForm.watch('delivery_mode')} onValueChange={v => settingsForm.setValue('delivery_mode', v as any)}>
-                      <SelectTrigger className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-10"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 h-10 rounded-xl"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="recorded">Pre-recorded Videos</SelectItem>
                         <SelectItem value="live">Live Online Classes</SelectItem>
@@ -723,21 +723,21 @@ export function CourseCreatePage() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-zinc-200/80 text-xs">Course Thumbnail</Label>
+                <div className="space-y-1.5 pt-2">
+                  <Label className="text-slate-700 text-xs font-semibold">Course Thumbnail</Label>
                   <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
                   {thumbnailPreview ? (
-                    <div className="relative w-full h-40 rounded-lg overflow-hidden border border-cyan-500/30">
+                    <div className="relative w-full h-40 rounded-xl overflow-hidden border border-slate-200 shadow-xs">
                       <img src={thumbnailPreview} alt="" className="w-full h-full object-cover" />
-                      <button onClick={() => { setThumbnail(null); setThumbnailPreview(null) }} className="absolute top-2 right-2 p-1.5 rounded-full bg-ink/80 text-cream hover:bg-red-600 transition-colors">
+                      <button onClick={() => { setThumbnail(null); setThumbnailPreview(null) }} className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-white hover:bg-rose-600 transition-colors">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => thumbRef.current?.click()} className="w-full h-32 border-2 border-dashed border-cyan-500/30 rounded-lg flex flex-col items-center justify-center gap-2 text-zinc-200/40 hover:text-zinc-200 hover:border-cyan-500/30 transition-all">
+                    <button onClick={() => thumbRef.current?.click()} className="w-full h-32 border-2 border-dashed border-slate-200 hover:border-cyan-500 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-cyan-600 bg-slate-50/50 hover:bg-cyan-50/20 transition-all">
                       <Upload className="w-6 h-6" />
-                      <span className="text-xs">Click to upload thumbnail</span>
-                      <span className="text-[10px] text-zinc-200/30">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
+                      <span className="text-xs font-semibold">Click to upload thumbnail</span>
+                      <span className="text-[10px] text-slate-400">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
                     </button>
                   )}
                 </div>
@@ -747,28 +747,28 @@ export function CourseCreatePage() {
 
           {/* Step 3: Session Flow */}
           {step === 3 && (
-            <Card className="bg-[#040814] border-cyan-500/30">
+            <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4 text-zinc-200/60" />
-                  <h3 className="text-sm font-semibold text-zinc-200">Session Flow</h3>
+                  <FileText className="w-4 h-4 text-cyan-600" />
+                  <h3 className="text-sm font-bold text-slate-900">Session Flow</h3>
                 </div>
-                <p className="text-xs text-zinc-200/50">Outline how the sessions will be engaged and what topics will be covered.</p>
+                <p className="text-xs text-slate-500">Outline how the sessions will be engaged and what topics will be covered.</p>
                 
                 <div className="space-y-1.5">
-                  <Label className="text-zinc-200/80 text-xs">Session Flow Details</Label>
-                  <Textarea {...sessionFlowForm.register('session_flow_text')} rows={6} placeholder="Describe the session flow, topics covered, and engagement plan..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
+                  <Label className="text-slate-700 text-xs font-semibold">Session Flow Details</Label>
+                  <Textarea {...sessionFlowForm.register('session_flow_text')} rows={6} placeholder="Describe the session flow, topics covered, and engagement plan..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white rounded-xl resize-none" />
                 </div>
 
                 <div className="space-y-1.5 mt-4">
-                  <Label className="text-zinc-200/80 text-xs">Session Flow Document (Optional)</Label>
+                  <Label className="text-slate-700 text-xs font-semibold">Session Flow Document (Optional)</Label>
                   {sessionFlowDoc ? (
-                    <div className="flex items-center justify-between p-3 bg-ink/5 border border-cyan-500/30 rounded-lg">
-                      <div className="flex items-center gap-2 text-sm text-zinc-200 truncate">
-                        <FileText className="w-4 h-4 shrink-0 text-zinc-200/60" />
+                    <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                      <div className="flex items-center gap-2 text-sm text-slate-900 font-medium truncate">
+                        <FileText className="w-4 h-4 shrink-0 text-cyan-600" />
                         <span className="truncate">{sessionFlowDoc.name}</span>
                       </div>
-                      <button onClick={() => setSessionFlowDoc(null)} className="p-1.5 rounded-full hover:bg-red-50 text-zinc-200/40 hover:text-red-500 transition-colors">
+                      <button onClick={() => setSessionFlowDoc(null)} className="p-1.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -777,7 +777,7 @@ export function CourseCreatePage() {
                       <Input
                         type="file"
                         accept=".pdf,.doc,.docx,.txt"
-                        className="bg-ink/5 border-cyan-500/30 text-zinc-200 cursor-pointer"
+                        className="bg-slate-50 border-slate-200 text-slate-900 cursor-pointer rounded-xl h-10"
                         onChange={(e) => {
                           const file = e.target.files?.[0]
                           if (file) {
@@ -791,7 +791,7 @@ export function CourseCreatePage() {
                       />
                     </div>
                   )}
-                  <p className="text-[10px] text-zinc-200/40">Upload a PDF or Word document outlining the flow (max 20MB).</p>
+                  <p className="text-[10px] text-slate-400">Upload a PDF or Word document outlining the flow (max 20MB).</p>
                 </div>
               </CardContent>
             </Card>
@@ -800,55 +800,55 @@ export function CourseCreatePage() {
           {/* Step 4: Learning Objectives & Skills */}
           {step === 4 && (
             <div className="space-y-4">
-              <Card className="bg-[#040814] border-cyan-500/30">
+              <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-4 h-4 text-zinc-200/60" />
-                    <h3 className="text-sm font-semibold text-zinc-200">Learning Objectives</h3>
+                    <Target className="w-4 h-4 text-cyan-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Learning Objectives</h3>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">What will learners understand? *</Label>
-                    <Textarea {...objectivesForm.register('understand')} rows={3} placeholder="e.g. The principles of cyclone formation, warning systems..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
-                    {objectivesForm.formState.errors.understand && <p className="text-xs text-red-600">{objectivesForm.formState.errors.understand.message}</p>}
+                    <Label className="text-slate-700 text-xs font-semibold">What will learners understand? *</Label>
+                    <Textarea {...objectivesForm.register('understand')} rows={3} placeholder="e.g. The principles of cyclone formation, warning systems..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white rounded-xl resize-none" />
+                    {objectivesForm.formState.errors.understand && <p className="text-xs text-rose-600 font-medium">{objectivesForm.formState.errors.understand.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">What will learners be able to do? *</Label>
-                    <Textarea {...objectivesForm.register('able_to_do')} rows={3} placeholder="e.g. Interpret cyclone warnings, coordinate emergency responses..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
-                    {objectivesForm.formState.errors.able_to_do && <p className="text-xs text-red-600">{objectivesForm.formState.errors.able_to_do.message}</p>}
+                    <Label className="text-slate-700 text-xs font-semibold">What will learners be able to do? *</Label>
+                    <Textarea {...objectivesForm.register('able_to_do')} rows={3} placeholder="e.g. Interpret cyclone warnings, coordinate emergency responses..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white rounded-xl resize-none" />
+                    {objectivesForm.formState.errors.able_to_do && <p className="text-xs text-rose-600 font-medium">{objectivesForm.formState.errors.able_to_do.message}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-zinc-200/80 text-xs">Competencies this course builds *</Label>
-                    <Textarea {...objectivesForm.register('competencies_built')} rows={3} placeholder="e.g. Emergency coordination, public advisory preparation..." className="bg-ink/5 border-cyan-500/30 text-zinc-200" />
-                    {objectivesForm.formState.errors.competencies_built && <p className="text-xs text-red-600">{objectivesForm.formState.errors.competencies_built.message}</p>}
+                    <Label className="text-slate-700 text-xs font-semibold">Competencies this course builds *</Label>
+                    <Textarea {...objectivesForm.register('competencies_built')} rows={3} placeholder="e.g. Emergency coordination, public advisory preparation..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white rounded-xl resize-none" />
+                    {objectivesForm.formState.errors.competencies_built && <p className="text-xs text-rose-600 font-medium">{objectivesForm.formState.errors.competencies_built.message}</p>}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#040814] border-cyan-500/30">
+              <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-4 h-4 text-zinc-200/60" />
-                    <h3 className="text-sm font-semibold text-zinc-200">Required Skills</h3>
+                    <Target className="w-4 h-4 text-cyan-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Required Skills</h3>
                   </div>
-                  <p className="text-xs text-zinc-200/50">Select the skills this course requires or develops.</p>
+                  <p className="text-xs text-slate-500">Select the skills this course requires or develops.</p>
                   <div className="flex gap-2">
-                    <Input value={customSkillName} onChange={e => setCustomSkillName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill() } }} placeholder="Add a custom skill..." className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs" disabled={addingSkill} />
-                    <Button type="button" variant="outline" onClick={addCustomSkill} disabled={!customSkillName.trim() || addingSkill} className="border-cyan-500/30 text-zinc-200 h-9 px-3 shrink-0">
+                    <Input value={customSkillName} onChange={e => setCustomSkillName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill() } }} placeholder="Add a custom skill..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 text-xs rounded-xl" disabled={addingSkill} />
+                    <Button type="button" variant="outline" onClick={addCustomSkill} disabled={!customSkillName.trim() || addingSkill} className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-3.5 shrink-0 rounded-xl font-semibold">
                       {addingSkill ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                     </Button>
                   </div>
                   {skills.length === 0 ? (
-                    <p className="text-sm text-zinc-200/50 py-4 text-center">No skills yet. Add one above.</p>
+                    <p className="text-sm text-slate-400 py-4 text-center">No skills yet. Add one above.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {skills.map(s => (
-                        <button key={s.id} onClick={() => toggleSkill(s.id)} className={`px-3 py-1.5 rounded-full text-xs border transition-all ${selectedSkills.includes(s.id) ? 'bg-ink text-cream border-ink' : 'bg-ink/5 border-cyan-500/30 text-zinc-200/60 hover:text-zinc-200 hover:border-cyan-500/30'}`}>
+                        <button key={s.id} onClick={() => toggleSkill(s.id)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${selectedSkills.includes(s.id) ? 'bg-cyan-600 text-white border-cyan-600 shadow-xs' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}>
                           {s.name}
                         </button>
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-zinc-200/50">{selectedSkills.length} skill{selectedSkills.length !== 1 ? 's' : ''} selected</p>
+                  <p className="text-xs text-slate-500 font-medium">{selectedSkills.length} skill{selectedSkills.length !== 1 ? 's' : ''} selected</p>
                 </CardContent>
               </Card>
             </div>
@@ -857,21 +857,21 @@ export function CourseCreatePage() {
           {/* Step 5: Materials */}
           {step === 5 && (
             <div className="space-y-4">
-              <Card className="bg-[#040814] border-cyan-500/30">
+              <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-zinc-200/60" />
-                    <h3 className="text-sm font-semibold text-zinc-200">Course Materials</h3>
+                    <FileText className="w-4 h-4 text-cyan-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Course Materials</h3>
                   </div>
-                  <p className="text-xs text-zinc-200/50">Add documents, videos, and links. You can add more materials after the course is approved.</p>
+                  <p className="text-xs text-slate-500">Add documents, videos, and links. You can add more materials after the course is approved.</p>
 
                   {/* Tab Toggle */}
-                  <div className="flex gap-2 p-1 bg-ink/5 rounded-lg">
-                    <button onClick={() => setActiveTab('files')} className={`flex-1 py-2 text-xs font-medium rounded-md transition-all ${activeTab === 'files' ? 'bg-[#040814] text-zinc-200 shadow-sm' : 'text-zinc-200/50 hover:text-zinc-200'}`}>
-                      <FileText className="w-3.5 h-3.5 inline mr-1.5" /> Files & Videos
+                  <div className="flex gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                    <button onClick={() => setActiveTab('files')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'files' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}>
+                      <FileText className="w-3.5 h-3.5 inline mr-1.5 text-cyan-600" /> Files & Videos
                     </button>
-                    <button onClick={() => setActiveTab('links')} className={`flex-1 py-2 text-xs font-medium rounded-md transition-all ${activeTab === 'links' ? 'bg-[#040814] text-zinc-200 shadow-sm' : 'text-zinc-200/50 hover:text-zinc-200'}`}>
-                      <Globe className="w-3.5 h-3.5 inline mr-1.5" /> Links
+                    <button onClick={() => setActiveTab('links')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'links' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}>
+                      <Globe className="w-3.5 h-3.5 inline mr-1.5 text-cyan-600" /> Links
                     </button>
                   </div>
 
@@ -881,14 +881,14 @@ export function CourseCreatePage() {
                       onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                       onDragLeave={() => setDragOver(false)}
                       onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${dragOver ? 'border-ink bg-ink/5' : 'border-cyan-500/30 hover:border-cyan-500/30'}`}
+                      className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${dragOver ? 'border-cyan-500 bg-cyan-50/20' : 'border-slate-200 hover:border-cyan-400 bg-slate-50/50'}`}
                     >
                       <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.pptx,.ppt,.txt,.mp4,.webm,.mov,.png,.jpg,.jpeg,.gif,.webp" className="hidden" onChange={handleFileInput} />
-                      <Upload className="w-8 h-8 text-zinc-200/30 mx-auto mb-2" />
-                      <p className="text-sm text-zinc-200/60 mb-1">Drag & drop files here, or click to browse</p>
-                      <p className="text-[10px] text-zinc-200/40 mb-3">PDF, DOC, PPTX, MP4, images — up to 100MB each</p>
-                      <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="border-cyan-500/30 text-zinc-200">
-                        <Upload className="w-3.5 h-3.5 mr-1.5" /> Choose Files
+                      <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <p className="text-sm text-slate-700 font-semibold mb-1">Drag & drop files here, or click to browse</p>
+                      <p className="text-[10px] text-slate-400 mb-3">PDF, DOC, PPTX, MP4, images — up to 100MB each</p>
+                      <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="border-slate-200 text-slate-700 hover:bg-white font-semibold rounded-xl">
+                        <Upload className="w-3.5 h-3.5 mr-1.5 text-cyan-600" /> Choose Files
                       </Button>
                     </div>
                   )}
@@ -897,25 +897,25 @@ export function CourseCreatePage() {
                   {activeTab === 'links' && (
                     <div className="space-y-3">
                       <div className="space-y-1.5">
-                        <Label className="text-zinc-200/80 text-xs">URL *</Label>
-                        <Input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://example.com/video-or-document" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs" />
+                        <Label className="text-slate-700 text-xs font-semibold">URL *</Label>
+                        <Input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} placeholder="https://example.com/video-or-document" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 text-xs rounded-xl" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-zinc-200/80 text-xs">Title (optional)</Label>
-                        <Input value={linkTitle} onChange={e => setLinkTitle(e.target.value)} placeholder="Descriptive title" className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs" />
+                        <Label className="text-slate-700 text-xs font-semibold">Title (optional)</Label>
+                        <Input value={linkTitle} onChange={e => setLinkTitle(e.target.value)} placeholder="Descriptive title" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 text-xs rounded-xl" />
                       </div>
-                      <Button variant="outline" size="sm" onClick={addLinkMaterial} disabled={!linkUrl.trim()} className="border-cyan-500/30 text-zinc-200">
-                        <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Link
+                      <Button variant="outline" size="sm" onClick={addLinkMaterial} disabled={!linkUrl.trim()} className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
+                        <Plus className="w-3.5 h-3.5 mr-1.5 text-cyan-600" /> Add Link
                       </Button>
                     </div>
                   )}
 
                   {/* Material List */}
                   {pendingMaterials.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 pt-2">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-medium text-zinc-200">Added Materials ({pendingMaterials.length})</h4>
-                        <span className="text-[10px] text-zinc-200/40">{formatFileSize(totalMaterialSize)}</span>
+                        <h4 className="text-xs font-bold text-slate-900">Added Materials ({pendingMaterials.length})</h4>
+                        <span className="text-[10px] text-slate-400 font-semibold">{formatFileSize(totalMaterialSize)}</span>
                       </div>
                       <div className="space-y-1.5 max-h-60 overflow-y-auto">
                         {pendingMaterials.map(mat => {
@@ -923,20 +923,20 @@ export function CourseCreatePage() {
                             ? (mat.url?.includes('youtube') || mat.url?.includes('vimeo') ? Video : Globe)
                             : getFileIcon(mat.mimeType)
                           return (
-                            <div key={mat.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-ink/5 border border-cyan-500/30 group">
-                              <div className="w-8 h-8 rounded-md bg-ink/10 flex items-center justify-center shrink-0">
-                                <Icon className="w-4 h-4 text-zinc-200/60" />
+                            <div key={mat.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 group">
+                              <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                                <Icon className="w-4 h-4 text-cyan-600" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-zinc-200 truncate">{mat.fileName}</p>
-                                <p className="text-[10px] text-zinc-200/40">
+                                <p className="text-xs font-semibold text-slate-900 truncate">{mat.fileName}</p>
+                                <p className="text-[10px] text-slate-500">
                                   {mat.materialType === 'link' || mat.materialType === 'video' ? mat.url : formatFileSize(mat.fileSize)}
                                 </p>
                               </div>
-                              <Badge className={`text-[9px] h-4 ${mat.materialType === 'video' ? 'bg-ink/10 text-zinc-200 border-cyan-500/30' : mat.materialType === 'link' ? 'bg-ink/10 text-zinc-200 border-cyan-500/30' : 'bg-ink/10 text-zinc-200 border-cyan-500/30'}`}>
+                              <Badge className="text-[9px] h-5 bg-cyan-50 text-cyan-700 border-cyan-200 font-semibold capitalize">
                                 {mat.materialType}
                               </Badge>
-                              <button onClick={() => removeMaterial(mat.id)} className="p-1 rounded hover:bg-red-50 text-zinc-200/30 hover:text-red-500 transition-colors shrink-0">
+                              <button onClick={() => removeMaterial(mat.id)} className="p-1 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors shrink-0">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -953,97 +953,97 @@ export function CourseCreatePage() {
           {/* Step 6: Review */}
           {step === 6 && (
             <div className="space-y-4">
-              <Card className="bg-[#040814] border-cyan-500/30">
+              <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
                 <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Eye className="w-4 h-4 text-zinc-200/60" />
-                    <h3 className="text-sm font-semibold text-zinc-200">Review Course</h3>
+                    <Eye className="w-4 h-4 text-cyan-600" />
+                    <h3 className="text-sm font-bold text-slate-900">Review Course</h3>
                   </div>
-                  <p className="text-xs text-zinc-200/50">Review everything before creating the course.</p>
+                  <p className="text-xs text-slate-500">Review everything before creating the course.</p>
 
                   {/* Course Details */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
-                      <BookOpen className="w-3 h-3" /> Course Details
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <BookOpen className="w-3 h-3 text-cyan-600" /> Course Details
                     </div>
-                    <div className="bg-ink/5 rounded-lg p-3 space-y-2">
-                      <div><span className="text-[10px] text-zinc-200/40">Title</span><p className="text-sm font-medium text-zinc-200">{watchedValues.title || '—'}</p></div>
-                      <div><span className="text-[10px] text-zinc-200/40">Description</span><p className="text-xs text-zinc-200/60 line-clamp-2">{watchedValues.description || '—'}</p></div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div><span className="text-[10px] text-zinc-200/40">Type</span><p className="text-xs text-zinc-200 capitalize">{watchedValues.course_type}</p></div>
-                        <div><span className="text-[10px] text-zinc-200/40">Department</span><p className="text-xs text-zinc-200">{watchedValues.department || '—'}</p></div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                      <div><span className="text-[10px] font-semibold text-slate-400">Title</span><p className="text-sm font-bold text-slate-900">{watchedValues.title || '—'}</p></div>
+                      <div><span className="text-[10px] font-semibold text-slate-400">Description</span><p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{watchedValues.description || '—'}</p></div>
+                      <div className="grid grid-cols-2 gap-3 pt-1">
+                        <div><span className="text-[10px] font-semibold text-slate-400">Type</span><p className="text-xs font-semibold text-slate-800 capitalize">{watchedValues.course_type}</p></div>
+                        <div><span className="text-[10px] font-semibold text-slate-400">Department</span><p className="text-xs font-semibold text-slate-800">{watchedValues.department || '—'}</p></div>
                       </div>
                     </div>
                   </div>
 
                   {/* Settings */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
-                      <Settings className="w-3 h-3" /> Settings
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <Settings className="w-3 h-3 text-cyan-600" /> Settings
                     </div>
-                    <div className="bg-ink/5 rounded-lg p-3 grid grid-cols-2 gap-3">
-                      <div><span className="text-[10px] text-zinc-200/40">Duration</span><p className="text-xs text-zinc-200">{watchedValues.duration_hours ? `${watchedValues.duration_hours} hours` : 'Self-paced'}</p></div>
-                      <div><span className="text-[10px] text-zinc-200/40">Passing Score</span><p className="text-xs text-zinc-200">{watchedValues.passing_score || 60}%</p></div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 grid grid-cols-2 gap-3">
+                      <div><span className="text-[10px] font-semibold text-slate-400">Duration</span><p className="text-xs font-semibold text-slate-800">{watchedValues.duration_hours ? `${watchedValues.duration_hours} hours` : 'Self-paced'}</p></div>
+                      <div><span className="text-[10px] font-semibold text-slate-400">Passing Score</span><p className="text-xs font-semibold text-slate-800">{watchedValues.passing_score || 60}%</p></div>
                     </div>
                   </div>
 
                   {/* Learning Objectives */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
-                      <Target className="w-3 h-3" /> Learning Objectives
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <Target className="w-3 h-3 text-cyan-600" /> Learning Objectives
                     </div>
-                    <div className="bg-ink/5 rounded-lg p-3 space-y-1.5">
-                      <div><span className="text-[10px] text-zinc-200/40">Understand</span><p className="text-xs text-zinc-200/60">{watchedValues.understand || '—'}</p></div>
-                      <div><span className="text-[10px] text-zinc-200/40">Able to Do</span><p className="text-xs text-zinc-200/60">{watchedValues.able_to_do || '—'}</p></div>
-                      <div><span className="text-[10px] text-zinc-200/40">Competencies</span><p className="text-xs text-zinc-200/60">{watchedValues.competencies_built || '—'}</p></div>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                      <div><span className="text-[10px] font-semibold text-slate-400">Understand</span><p className="text-xs text-slate-600 leading-relaxed">{watchedValues.understand || '—'}</p></div>
+                      <div><span className="text-[10px] font-semibold text-slate-400">Able to Do</span><p className="text-xs text-slate-600 leading-relaxed">{watchedValues.able_to_do || '—'}</p></div>
+                      <div><span className="text-[10px] font-semibold text-slate-400">Competencies</span><p className="text-xs text-slate-600 leading-relaxed">{watchedValues.competencies_built || '—'}</p></div>
                     </div>
                   </div>
 
                   {/* Skills */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
-                      <Target className="w-3 h-3" /> Skills
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <Target className="w-3 h-3 text-cyan-600" /> Skills
                     </div>
-                    <div className="bg-ink/5 rounded-lg p-3">
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
                       {selectedSkills.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1.5">
                           {selectedSkills.map(id => {
                             const skill = skills.find(s => s.id === id)
-                            return skill ? <span key={id} className="px-2 py-0.5 rounded-full text-[10px] bg-ink/10 text-zinc-200">{skill.name}</span> : null
+                            return skill ? <span key={id} className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-50 border border-cyan-200 text-cyan-800">{skill.name}</span> : null
                           })}
                         </div>
-                      ) : <p className="text-xs text-zinc-200/40">No skills selected</p>}
+                      ) : <p className="text-xs text-slate-400">No skills selected</p>}
                     </div>
                   </div>
 
                   {/* Materials */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
-                      <FileText className="w-3 h-3" /> Materials ({pendingMaterials.length})
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <FileText className="w-3 h-3 text-cyan-600" /> Materials ({pendingMaterials.length})
                     </div>
-                    <div className="bg-ink/5 rounded-lg p-3">
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
                       {pendingMaterials.length > 0 ? (
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           {pendingMaterials.slice(0, 5).map(mat => (
-                            <div key={mat.id} className="flex items-center gap-2 text-xs text-zinc-200/60">
-                              <File className="w-3 h-3 shrink-0" />
+                            <div key={mat.id} className="flex items-center gap-2 text-xs text-slate-700 font-medium">
+                              <File className="w-3.5 h-3.5 shrink-0 text-cyan-600" />
                               <span className="truncate">{mat.fileName}</span>
                             </div>
                           ))}
-                          {pendingMaterials.length > 5 && <p className="text-[10px] text-zinc-200/40">+{pendingMaterials.length - 5} more</p>}
+                          {pendingMaterials.length > 5 && <p className="text-[10px] text-slate-400 font-semibold">+{pendingMaterials.length - 5} more</p>}
                         </div>
-                      ) : <p className="text-xs text-zinc-200/40">No materials added</p>}
+                      ) : <p className="text-xs text-slate-400">No materials added</p>}
                     </div>
                   </div>
 
                   {/* Thumbnail */}
                   {thumbnailPreview && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-200/50 uppercase tracking-wider">
-                        <Upload className="w-3 h-3" /> Thumbnail
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        <Upload className="w-3 h-3 text-cyan-600" /> Thumbnail
                       </div>
-                      <div className="bg-ink/5 rounded-lg p-3">
-                        <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-24 object-cover rounded" />
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                        <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-24 object-cover rounded-lg" />
                       </div>
                     </div>
                   )}
@@ -1051,10 +1051,10 @@ export function CourseCreatePage() {
               </Card>
 
               {/* Warning */}
-              <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-yellow-700 leading-relaxed">
-                  <p className="font-medium mb-1">After admin approval:</p>
+              <div className="flex items-start gap-2 p-3.5 bg-amber-50 border border-amber-200 rounded-2xl">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900 leading-relaxed">
+                  <p className="font-bold mb-0.5">After admin approval:</p>
                   <p>You can add more materials, generate AI assessment questions, and manage course content from the course materials page.</p>
                 </div>
               </div>
@@ -1064,20 +1064,20 @@ export function CourseCreatePage() {
 
         {/* Navigation */}
         <motion.div variants={fadeUp} className="flex items-center justify-between pt-2">
-          <Button variant="outline" onClick={handleBack} disabled={step === 1} className="border-cyan-500/30 text-zinc-200">
+          <Button variant="outline" onClick={handleBack} disabled={step === 1} className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
           <div className="flex items-center gap-3">
             {step < 6 ? (
-              <Button onClick={handleNext} className="bg-ink hover:bg-ink/90 text-cream">
+              <Button onClick={handleNext} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold shadow-md shadow-cyan-600/20 rounded-xl">
                 Next <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => handleSubmit('draft')} disabled={saving} className="border-cyan-500/30 text-zinc-200">
+                <Button variant="outline" onClick={() => handleSubmit('draft')} disabled={saving} className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Save as Draft
                 </Button>
-                <Button onClick={() => handleSubmit('pending_review')} disabled={saving} className="bg-ink hover:bg-ink/90 text-cream">
+                <Button onClick={() => handleSubmit('pending_review')} disabled={saving} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold shadow-md shadow-cyan-600/20 rounded-xl">
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Submit for Review
                 </Button>
               </div>
