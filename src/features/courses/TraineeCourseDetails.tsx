@@ -10,8 +10,11 @@ import {
   BookMarked, Layers, ChevronDown, ChevronUp, Play, FileText, Link2,
   Lock, Target, Calendar, Video, Download, ExternalLink, Users,
   GraduationCap, Award, PlayCircle,
-  ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle, BarChart3
+  ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle, BarChart3,
+  HelpCircle, Sparkles, CheckSquare, RotateCcw, Unlock, Image as ImageIcon, Check, Trophy
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -79,6 +82,10 @@ export function TraineeCourseDetails() {
   const queryClient = useQueryClient()
 
   const [openSessions, setOpenSessions] = useState<Set<string>>(new Set())
+  const [openModules, setOpenModules] = useState<Set<string>>(new Set())
+  const [completedModules, setCompletedModules] = useState<string[]>([])
+  const [moduleQuizAnswers, setModuleQuizAnswers] = useState<Record<string, Record<number, number>>>({})
+  const [moduleQuizScores, setModuleQuizScores] = useState<Record<string, { score: number; passed: boolean; submitted: boolean }>>({})
   const [previewMaterial, setPreviewMaterial] = useState<any | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -91,12 +98,154 @@ export function TraineeCourseDetails() {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
 
+  // Load completed modules from storage
+  useEffect(() => {
+    if (!courseId || !profile?.id) return
+    const stored = localStorage.getItem(`cc_mod_progress_${courseId}_${profile.id}`)
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed.completed)) setCompletedModules(parsed.completed)
+        if (parsed.scores) setModuleQuizScores(parsed.scores)
+      } catch (e) {
+        console.error('Error loading module progress:', e)
+      }
+    }
+  }, [courseId, profile?.id])
+
   const toggleSession = (id: string) => {
     setOpenSessions(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
+  }
+
+  const toggleModule = (id: string) => {
+    setOpenModules(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const handleSelectQuizAnswer = (moduleId: string, questionIdx: number, optionIdx: number) => {
+    setModuleQuizAnswers(prev => ({
+      ...prev,
+      [moduleId]: {
+        ...(prev[moduleId] || {}),
+        [questionIdx]: optionIdx
+      }
+    }))
+  }
+
+  const handleSubmitModuleQuiz = async (mod: any) => {
+    const questions = mod.quiz_questions || []
+    if (questions.length === 0) return
+
+    const userAnswers = moduleQuizAnswers[mod.id] || {}
+    const answeredCount = Object.keys(userAnswers).length
+    if (answeredCount < questions.length) {
+      toast.error(`Please answer all ${questions.length} questions before submitting.`)
+      return
+    }
+
+    let correctCount = 0
+    questions.forEach((q: any, idx: number) => {
+      if (userAnswers[idx] === q.correct_option) {
+        correctCount++
+      }
+    })
+
+    const scorePercent = Math.round((correctCount / questions.length) * 100)
+    const passed = scorePercent >= 80
+
+    const updatedScores = {
+      ...(moduleQuizScores || {}),
+      [mod.id]: {
+        score: scorePercent,
+        passed,
+        submitted: true
+      }
+    }
+    setModuleQuizScores(updatedScores)
+
+    if (passed) {
+      const newCompleted = Array.from(new Set([...completedModules, mod.id]))
+      setCompletedModules(newCompleted)
+
+      if (profile?.id && courseId) {
+        localStorage.setItem(`cc_mod_progress_${courseId}_${profile.id}`, JSON.stringify({
+          completed: newCompleted,
+          scores: updatedScores
+        }))
+      }
+
+      // Update progress in database
+      const totalMods = (course?.modules?.length) || 1
+      const progressPercent = Math.min(100, Math.round((newCompleted.length / totalMods) * 100))
+      
+      if (profile?.id) {
+        try {
+          await supabase
+            .from('enrollments')
+            .update({ progress_percent: progressPercent } as any)
+            .eq('course_id', courseId!)
+            .eq('user_id', profile.id)
+          queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile.id] })
+          queryClient.invalidateQueries({ queryKey: ['my_learning', profile.id] })
+        } catch (err) {
+          console.warn('Could not update enrollment progress', err)
+        }
+      }
+
+      toast.success(`🎉 Excellent! You scored ${scorePercent}% (${correctCount}/${questions.length} correct). Module passed! Next module is now unlocked!`, {
+        duration: 5000
+      })
+    } else {
+      toast.error(`⚠️ Score: ${scorePercent}% (${correctCount}/${questions.length} correct). Minimum 80% passing score is required to unlock the next module. Please review the module and try again.`, {
+        duration: 5000
+      })
+    }
+  }
+
+  const handleRetakeModuleQuiz = (moduleId: string) => {
+    setModuleQuizAnswers(prev => ({ ...prev, [moduleId]: {} }))
+    setModuleQuizScores(prev => {
+      const next = { ...prev }
+      delete next[moduleId]
+      return next
+    })
+    toast.info('Quiz reset. You can now choose your answers and try again!')
+  }
+
+  const handleCompleteContentModule = async (mod: any) => {
+    const newCompleted = Array.from(new Set([...completedModules, mod.id]))
+    setCompletedModules(newCompleted)
+
+    if (profile?.id && courseId) {
+      localStorage.setItem(`cc_mod_progress_${courseId}_${profile.id}`, JSON.stringify({
+        completed: newCompleted,
+        scores: moduleQuizScores
+      }))
+    }
+
+    const totalMods = (course?.modules?.length) || 1
+    const progressPercent = Math.min(100, Math.round((newCompleted.length / totalMods) * 100))
+    
+    try {
+      await supabase
+        .from('enrollments')
+        .update({ progress_percent: progressPercent } as any)
+        .eq('course_id', courseId!)
+        .eq('user_id', profile!.id)
+      queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile?.id] })
+      queryClient.invalidateQueries({ queryKey: ['my_learning', profile?.id] })
+    } catch (err) {
+      console.warn('Could not update enrollment progress', err)
+    }
+
+    toast.success(`Module "${mod.title}" marked complete! Next module unlocked.`)
   }
 
   const { data: course, isLoading: isCourseLoading } = useQuery({
@@ -108,6 +257,32 @@ export function TraineeCourseDetails() {
         .eq('id', courseId!)
         .single() as any
       if (error) throw error
+
+      let modulesList = (courseData.modules && Array.isArray(courseData.modules) && courseData.modules.length > 0)
+        ? courseData.modules
+        : []
+
+      if (modulesList.length === 0) {
+        try {
+          const { data: cmData } = await (supabase as any)
+            .from('course_modules')
+            .select('*')
+            .eq('course_id', courseId!)
+            .order('order_index')
+          if (cmData && cmData.length > 0) {
+            modulesList = cmData.map((m: any) => ({
+              id: m.id,
+              title: m.title,
+              description: m.description,
+              items: m.content_items || [],
+              quiz_questions: m.quiz_questions || [],
+              passing_score: m.passing_score ?? 80,
+            }))
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       const { data: sessionsData } = await supabase
         .from('course_sessions')
@@ -128,7 +303,13 @@ export function TraineeCourseDetails() {
         .eq('status', 'published')
         .order('created_at')
 
-      return { ...courseData, sessions: sessionsData || [], materials: materialsData || [], assessments: assessmentsData || [] }
+      return {
+        ...courseData,
+        modules: modulesList,
+        sessions: sessionsData || [],
+        materials: materialsData || [],
+        assessments: assessmentsData || []
+      }
     },
     enabled: !!courseId,
   })
@@ -729,6 +910,373 @@ export function TraineeCourseDetails() {
                             ))}
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Course Modules with Sequential Quiz Progression Gate (≥80% required) */}
+                  {course.modules && Array.isArray(course.modules) && course.modules.length > 0 && (
+                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-cyan-600" />
+                            <h2 className="text-sm font-bold text-slate-900">
+                              Course Modules & Learning Roadmap
+                            </h2>
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
+                              {course.modules.length} Modules
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Complete each module and score <strong>≥80%</strong> on the module quiz to unlock the next module.
+                          </p>
+                        </div>
+
+                        {/* Module completion badge */}
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-cyan-700">
+                              {completedModules.length} / {course.modules.length} Completed
+                            </span>
+                            <div className="w-28 h-2 bg-slate-100 rounded-full overflow-hidden mt-1 border border-slate-200">
+                              <div
+                                className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${Math.round((completedModules.length / course.modules.length) * 100)}%`
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Modules list */}
+                      <div className="space-y-3">
+                        {course.modules.map((mod: any, mIdx: number) => {
+                          const isCompleted = completedModules.includes(mod.id)
+                          // Unlocked if first module or previous module was completed
+                          const isUnlocked = mIdx === 0 || completedModules.includes(course.modules[mIdx - 1]?.id)
+                          const isLocked = !isUnlocked
+                          const isOpen = openModules.has(mod.id) || (isUnlocked && !isCompleted && mIdx === completedModules.length)
+                          
+                          const items = mod.items || mod.content_items || []
+                          const quizQuestions = mod.quiz_questions || []
+                          const quizResult = moduleQuizScores[mod.id]
+                          const userAnswers = moduleQuizAnswers[mod.id] || {}
+
+                          return (
+                            <div
+                              key={mod.id || mIdx}
+                              className={`border rounded-2xl overflow-hidden transition-all duration-200 ${
+                                isCompleted
+                                  ? 'border-emerald-200 bg-emerald-50/20 shadow-xs'
+                                  : isLocked
+                                  ? 'border-slate-200 bg-slate-50/60 opacity-75'
+                                  : 'border-cyan-300 ring-2 ring-cyan-100/50 bg-white shadow-sm'
+                              }`}
+                            >
+                              {/* Module Header */}
+                              <button
+                                onClick={() => !isLocked && toggleModule(mod.id)}
+                                disabled={isLocked}
+                                className={`w-full flex items-center gap-4 p-4 text-left transition-colors ${
+                                  isLocked
+                                    ? 'cursor-not-allowed bg-slate-50/80'
+                                    : isCompleted
+                                    ? 'bg-emerald-50/40 hover:bg-emerald-50/60'
+                                    : 'bg-white hover:bg-cyan-50/30'
+                                }`}
+                              >
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-all ${
+                                  isCompleted
+                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                    : isLocked
+                                    ? 'bg-slate-200 text-slate-400'
+                                    : 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white shadow-xs'
+                                }`}>
+                                  {isCompleted ? <Check className="w-4 h-4" /> : isLocked ? <Lock className="w-3.5 h-3.5" /> : mIdx + 1}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                    <p className={`text-sm font-bold truncate ${isLocked ? 'text-slate-500' : 'text-slate-900'}`}>
+                                      {mod.title}
+                                    </p>
+                                    {isCompleted ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                        Completed {quizResult?.score !== undefined ? `(${quizResult.score}%)` : ''}
+                                      </span>
+                                    ) : isLocked ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-500 border-slate-200 flex items-center gap-1">
+                                        <Lock className="w-3 h-3" /> Locked
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-cyan-50 text-cyan-700 border-cyan-200 flex items-center gap-1 animate-pulse">
+                                        <Sparkles className="w-3 h-3 text-cyan-600" /> In Progress
+                                      </span>
+                                    )}
+                                    {quizQuestions.length > 0 && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                                        <HelpCircle className="w-3 h-3 text-amber-600" />
+                                        {quizQuestions.length} Q Quiz (≥80% to Unlock Next)
+                                      </span>
+                                    )}
+                                  </div>
+                                  {isLocked && (
+                                    <p className="text-[11px] text-slate-400">
+                                      Complete Module {mIdx} with a score of 80% or higher to unlock this module.
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {items.length > 0 && (
+                                    <span className="text-[11px] text-slate-600 font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                                      {items.length} lesson item{items.length !== 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                  {!isLocked && (
+                                    isOpen
+                                      ? <ChevronUp className="w-4 h-4 text-cyan-600 shrink-0" />
+                                      : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                                  )}
+                                </div>
+                              </button>
+
+                              {/* Module Body */}
+                              <AnimatePresence initial={false}>
+                                {isOpen && !isLocked && (
+                                  <motion.div
+                                    key="mod-body"
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                                    style={{ overflow: 'hidden' }}
+                                  >
+                                    <div className="px-5 pb-5 pt-3 bg-white border-t border-slate-100 space-y-4">
+                                      {mod.description && (
+                                        <p className="text-xs text-slate-600 leading-relaxed">{mod.description}</p>
+                                      )}
+
+                                      {/* Content Items */}
+                                      {items.length > 0 && (
+                                        <div className="space-y-2">
+                                          <Label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                            <FileText className="w-3.5 h-3.5 text-cyan-600" />
+                                            Module Resources & Lessons ({items.length})
+                                          </Label>
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {items.map((item: any, iIdx: number) => (
+                                              <div
+                                                key={item.id || iIdx}
+                                                onClick={() => {
+                                                  if (item.url) window.open(item.url, '_blank')
+                                                  else if (item.previewUrl) {
+                                                    setPreviewMaterial({ file_name: item.title, material_type: 'image' })
+                                                    setPreviewUrl(item.previewUrl)
+                                                  }
+                                                }}
+                                                className="p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-cyan-300 hover:shadow-xs transition-all cursor-pointer flex items-center gap-3"
+                                              >
+                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                                                  {item.type === 'photo' && <ImageIcon className="w-4 h-4 text-cyan-600" />}
+                                                  {item.type === 'video' && <Video className="w-4 h-4 text-blue-600" />}
+                                                  {item.type === 'link' && <ExternalLink className="w-4 h-4 text-emerald-600" />}
+                                                  {item.type === 'text' && <FileText className="w-4 h-4 text-purple-600" />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="text-xs font-bold text-slate-900 truncate">{item.title}</p>
+                                                  {item.content && (
+                                                    <p className="text-[10px] text-slate-500 line-clamp-1">{item.content}</p>
+                                                  )}
+                                                  {item.url && (
+                                                    <p className="text-[10px] text-cyan-600 truncate font-medium">{item.url}</p>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Quiz Section */}
+                                      {quizQuestions.length > 0 ? (
+                                        <div className="pt-3 border-t border-slate-100 space-y-4">
+                                          <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-200">
+                                            <div className="flex items-center gap-2">
+                                              <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                              <div>
+                                                <h4 className="text-xs font-bold text-amber-950">Module Mastery Quiz</h4>
+                                                <p className="text-[11px] text-amber-800">
+                                                  Minimum passing score: <strong>80%</strong>. Score 80%+ to unlock Module {mIdx + 2}.
+                                                </p>
+                                              </div>
+                                            </div>
+                                            {quizResult && (
+                                              <Badge className={`text-xs font-bold px-3 py-1 ${
+                                                quizResult.passed
+                                                  ? 'bg-emerald-600 text-white'
+                                                  : 'bg-rose-600 text-white'
+                                              }`}>
+                                                {quizResult.passed ? '✓ PASSED: ' : '✗ FAILED: '}{quizResult.score}%
+                                              </Badge>
+                                            )}
+                                          </div>
+
+                                          {/* Quiz Score Alert if failed */}
+                                          {quizResult && !quizResult.passed && (
+                                            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                              <div className="flex items-center gap-2.5 text-rose-900">
+                                                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                                                <div>
+                                                  <p className="text-xs font-bold">You scored {quizResult.score}% (Under 80% Requirement)</p>
+                                                  <p className="text-[11px] text-rose-700">
+                                                    Review the explanations below and retake the quiz to unlock the next module.
+                                                  </p>
+                                                </div>
+                                              </div>
+                                              <Button
+                                                type="button"
+                                                size="sm"
+                                                onClick={() => handleRetakeModuleQuiz(mod.id)}
+                                                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shrink-0 gap-1.5"
+                                              >
+                                                <RotateCcw className="w-3.5 h-3.5" /> Retake Quiz
+                                              </Button>
+                                            </div>
+                                          )}
+
+                                          {/* Quiz Questions List */}
+                                          <div className="space-y-4">
+                                            {quizQuestions.map((q: any, qIdx: number) => {
+                                              const selectedOption = userAnswers[qIdx]
+                                              const isGraded = quizResult?.submitted
+                                              const isQuestionCorrect = selectedOption === q.correct_option
+
+                                              return (
+                                                <div
+                                                  key={q.id || qIdx}
+                                                  className={`p-4 rounded-2xl border transition-all ${
+                                                    isGraded
+                                                      ? isQuestionCorrect
+                                                        ? 'bg-emerald-50/40 border-emerald-200'
+                                                        : 'bg-rose-50/30 border-rose-200'
+                                                      : 'bg-slate-50 border-slate-200'
+                                                  }`}
+                                                >
+                                                  <div className="flex items-start gap-2.5 mb-3">
+                                                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
+                                                      {qIdx + 1}
+                                                    </span>
+                                                    <p className="text-xs font-bold text-slate-900 leading-relaxed flex-1">
+                                                      {q.question}
+                                                    </p>
+                                                  </div>
+
+                                                  <div className="space-y-2 pl-8">
+                                                    {q.options?.map((opt: string, optIdx: number) => {
+                                                      const isSelected = selectedOption === optIdx
+                                                      const isOptionCorrect = optIdx === q.correct_option
+
+                                                      return (
+                                                        <button
+                                                          key={optIdx}
+                                                          type="button"
+                                                          disabled={quizResult?.passed}
+                                                          onClick={() => handleSelectQuizAnswer(mod.id, qIdx, optIdx)}
+                                                          className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-xs text-left transition-all ${
+                                                            isGraded
+                                                              ? isOptionCorrect
+                                                                ? 'bg-emerald-100/80 border-emerald-400 text-emerald-950 font-bold'
+                                                                : isSelected
+                                                                ? 'bg-rose-100/80 border-rose-400 text-rose-950 font-semibold'
+                                                                : 'bg-white border-slate-200 text-slate-600 opacity-60'
+                                                              : isSelected
+                                                              ? 'bg-cyan-50 border-cyan-400 text-cyan-950 font-bold ring-2 ring-cyan-200'
+                                                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100/80'
+                                                          }`}
+                                                        >
+                                                          <span className={`w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center shrink-0 ${
+                                                            isGraded && isOptionCorrect
+                                                              ? 'bg-emerald-600 text-white'
+                                                              : isGraded && isSelected
+                                                              ? 'bg-rose-600 text-white'
+                                                              : isSelected
+                                                              ? 'bg-cyan-600 text-white'
+                                                              : 'bg-slate-100 text-slate-600'
+                                                          }`}>
+                                                            {String.fromCharCode(65 + optIdx)}
+                                                          </span>
+                                                          <span className="flex-1">{opt}</span>
+                                                          {isGraded && isOptionCorrect && (
+                                                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-200/70 px-2 py-0.5 rounded-full">
+                                                              Correct Answer
+                                                            </span>
+                                                          )}
+                                                          {isGraded && isSelected && !isOptionCorrect && (
+                                                            <span className="text-[10px] font-bold text-rose-700 bg-rose-200/70 px-2 py-0.5 rounded-full">
+                                                              Your Choice
+                                                            </span>
+                                                          )}
+                                                        </button>
+                                                      )
+                                                    })}
+                                                  </div>
+
+                                                  {isGraded && q.explanation && (
+                                                    <div className="mt-3 ml-8 p-2.5 rounded-xl bg-white/80 border border-slate-200 text-xs text-slate-600">
+                                                      <span className="font-bold text-slate-800">Explanation: </span>
+                                                      {q.explanation}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+
+                                          {/* Submit Quiz CTA */}
+                                          {!quizResult?.passed && (
+                                            <div className="flex items-center justify-end pt-2">
+                                              <Button
+                                                type="button"
+                                                onClick={() => handleSubmitModuleQuiz(mod)}
+                                                className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl px-6 py-2.5 shadow-md shadow-cyan-600/20 gap-2 text-xs"
+                                              >
+                                                <CheckSquare className="w-4 h-4" />
+                                                Submit Module Quiz (80% Required)
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        /* Content-only module completion button */
+                                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                                          <p className="text-xs text-slate-500">Review all materials in this module to proceed.</p>
+                                          {!isCompleted ? (
+                                            <Button
+                                              type="button"
+                                              onClick={() => handleCompleteContentModule(mod)}
+                                              className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 text-white font-bold text-xs rounded-xl gap-2"
+                                            >
+                                              <CheckCircle2 className="w-4 h-4" /> Mark as Completed & Unlock Next Module →
+                                            </Button>
+                                          ) : (
+                                            <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                                              <CheckCircle2 className="w-4 h-4" /> Module Completed
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   )}

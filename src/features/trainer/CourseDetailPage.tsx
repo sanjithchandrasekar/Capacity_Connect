@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar, Video, BookOpen, CheckCircle2, XCircle, UserCheck, Layers, Trophy, Globe, Image as ImageIcon, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar, Video, BookOpen, CheckCircle2, XCircle, UserCheck, Layers, Trophy, Globe, Image as ImageIcon, ExternalLink, HelpCircle } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import {
@@ -529,21 +529,29 @@ export function CourseDetailPage() {
                 <div className="space-y-3">
                   {(course as any).modules.map((m: any, idx: number) => {
                     const items = m.items || m.content_items || []
+                    const quizQuestions = m.quiz_questions || []
                     return (
                       <div
                         key={m.id || idx}
-                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 transition-all"
+                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 transition-all space-y-3"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-900">{m.title}</span>
                           </div>
-                          <span className="text-[10px] text-slate-400 font-semibold">
-                            {items.length} item{items.length !== 1 ? 's' : ''}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400 font-semibold">
+                              {items.length} item{items.length !== 1 ? 's' : ''}
+                            </span>
+                            {quizQuestions.length > 0 && (
+                              <Badge className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-bold">
+                                {quizQuestions.length} Quiz Qs (≥80% Pass Gate)
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         {m.description && (
-                          <p className="text-xs text-slate-600 mb-3 leading-relaxed">{m.description}</p>
+                          <p className="text-xs text-slate-600 leading-relaxed">{m.description}</p>
                         )}
                         {items.length > 0 && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
@@ -561,6 +569,24 @@ export function CourseDetailPage() {
                                 )}
                               </div>
                             ))}
+                          </div>
+                        )}
+                        {quizQuestions.length > 0 && (
+                          <div className="pt-2 border-t border-slate-200/60 space-y-2">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                              <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Quiz Checkpoint ({quizQuestions.length} Questions)</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {quizQuestions.map((q: any, qIndex: number) => (
+                                <div key={q.id || qIndex} className="p-2 rounded-lg bg-white border border-slate-200 text-xs">
+                                  <p className="font-semibold text-slate-800">Q{qIndex + 1}: {q.question}</p>
+                                  <p className="text-[11px] text-emerald-700 mt-0.5 font-medium">
+                                    ✓ Correct Answer: {q.options?.[q.correct_option ?? 0] || 'Option 1'}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>

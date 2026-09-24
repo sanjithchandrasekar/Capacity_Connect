@@ -29,6 +29,14 @@ import { CourseCertificateStep } from '@/features/courses/CourseCertificateStep'
 
 type Skill = Database['public']['Tables']['skills']['Row']
 
+export interface QuizQuestion {
+  id: string
+  question: string
+  options: string[]
+  correct_option: number
+  explanation?: string
+}
+
 export interface ModuleItem {
   id: string
   type: 'photo' | 'video' | 'link' | 'text'
@@ -47,6 +55,8 @@ export interface CourseModule {
   title: string
   description: string
   items: ModuleItem[]
+  quiz_questions?: QuizQuestion[]
+  passing_score?: number
 }
 
 const detailsSchema = z.object({
@@ -177,6 +187,15 @@ export function CourseCreatePage() {
   const [itemFile, setItemFile] = useState<File | null>(null)
   const [itemPreview, setItemPreview] = useState<string | null>(null)
   const moduleFileInputRef = useRef<HTMLInputElement>(null)
+
+  // Active module quiz question state
+  const [activeQuizModuleId, setActiveQuizModuleId] = useState<string | null>(null)
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
+  const [quizQuestionText, setQuizQuestionText] = useState('')
+  const [quizOptions, setQuizOptions] = useState<string[]>(['', '', '', ''])
+  const [quizCorrectOption, setQuizCorrectOption] = useState<number>(0)
+  const [quizExplanation, setQuizExplanation] = useState('')
+  const [isGeneratingAiQuiz, setIsGeneratingAiQuiz] = useState(false)
 
   // Materials state
   const [pendingMaterials, setPendingMaterials] = useState<PendingMaterial[]>([])
@@ -351,6 +370,132 @@ export function CourseCreatePage() {
 
   const removeModuleItem = (moduleId: string, itemId: string) => {
     setModules(prev => prev.map(m => m.id === moduleId ? { ...m, items: m.items.filter(i => i.id !== itemId) } : m))
+  }
+
+  // Quiz questions helpers
+  const openAddQuizQuestion = (moduleId: string) => {
+    setActiveQuizModuleId(moduleId)
+    setEditingQuestionId(null)
+    setQuizQuestionText('')
+    setQuizOptions(['', '', '', ''])
+    setQuizCorrectOption(0)
+    setQuizExplanation('')
+  }
+
+  const openEditQuizQuestion = (moduleId: string, q: QuizQuestion) => {
+    setActiveQuizModuleId(moduleId)
+    setEditingQuestionId(q.id)
+    setQuizQuestionText(q.question)
+    setQuizOptions(q.options && q.options.length >= 2 ? [...q.options] : ['', '', '', ''])
+    setQuizCorrectOption(q.correct_option ?? 0)
+    setQuizExplanation(q.explanation || '')
+  }
+
+  const saveQuizQuestion = () => {
+    if (!activeQuizModuleId) return
+    if (!quizQuestionText.trim()) {
+      toast.error('Please enter the question text')
+      return
+    }
+    const cleanOptions = quizOptions.map(o => o.trim())
+    if (cleanOptions.filter(Boolean).length < 2) {
+      toast.error('Please provide at least 2 answer choices')
+      return
+    }
+
+    const questionData: QuizQuestion = {
+      id: editingQuestionId || crypto.randomUUID(),
+      question: quizQuestionText.trim(),
+      options: cleanOptions,
+      correct_option: quizCorrectOption,
+      explanation: quizExplanation.trim() || undefined,
+    }
+
+    setModules(prev => prev.map(m => {
+      if (m.id !== activeQuizModuleId) return m
+      const currentQuestions = m.quiz_questions || []
+      const updatedQuestions = editingQuestionId
+        ? currentQuestions.map(q => q.id === editingQuestionId ? questionData : q)
+        : [...currentQuestions, questionData]
+      return {
+        ...m,
+        quiz_questions: updatedQuestions,
+        passing_score: m.passing_score ?? 80,
+      }
+    }))
+
+    toast.success(editingQuestionId ? 'Quiz question updated' : 'Quiz question added')
+    setActiveQuizModuleId(null)
+    setEditingQuestionId(null)
+    setQuizQuestionText('')
+    setQuizOptions(['', '', '', ''])
+    setQuizCorrectOption(0)
+    setQuizExplanation('')
+  }
+
+  const removeQuizQuestion = (moduleId: string, questionId: string) => {
+    setModules(prev => prev.map(m => {
+      if (m.id !== moduleId) return m
+      return {
+        ...m,
+        quiz_questions: (m.quiz_questions || []).filter(q => q.id !== questionId),
+      }
+    }))
+    toast.info('Quiz question removed')
+  }
+
+  const handleGenerateAiQuiz = (moduleId: string) => {
+    const mod = modules.find(m => m.id === moduleId)
+    if (!mod) return
+    setIsGeneratingAiQuiz(true)
+    setTimeout(() => {
+      const topic = mod.title.replace(/^Module \d+:\s*/, '') || 'Module Topic'
+      const aiQuestions: QuizQuestion[] = [
+        {
+          id: crypto.randomUUID(),
+          question: `What is the core prerequisite protocol for ${topic}?`,
+          options: [
+            'Adhere to verified operational checklists and standard ministry guidelines',
+            'Bypass preliminary verification to speed up execution',
+            'Conduct unrecorded subjective assessments',
+            'Defer telemetry log synchronization until post-incident review'
+          ],
+          correct_option: 0,
+          explanation: 'Standard operational guidelines ensure consistent execution and data integrity.'
+        },
+        {
+          id: crypto.randomUUID(),
+          question: `What minimum passing score is required to unlock subsequent modules in Capacity Connect?`,
+          options: [
+            '80% passing threshold in module checkpoint verification',
+            '50% general participation threshold',
+            '60% optional assessment threshold',
+            'No benchmark requirement'
+          ],
+          correct_option: 0,
+          explanation: 'Capacity Connect requires an 80% passing score on module quizzes before proceeding.'
+        },
+        {
+          id: crypto.randomUUID(),
+          question: `How should abnormal telemetry flags or critical discrepancies in ${topic} be handled?`,
+          options: [
+            'Log anomaly immediately and escalate to emergency response command',
+            'Suppress the alert to prevent alarm fatigue',
+            'Recalibrate sensor data without logging',
+            'Wait for end-of-day reconciliation before taking action'
+          ],
+          correct_option: 0,
+          explanation: 'Immediate escalation ensures rapid risk mitigation and disaster preparedness.'
+        }
+      ]
+      setModules(prev => prev.map(m => m.id === moduleId ? {
+        ...m,
+        quiz_questions: [...(m.quiz_questions || []), ...aiQuestions],
+        passing_score: 80,
+      } : m))
+      setIsGeneratingAiQuiz(false)
+      toast.success('Generated 3 AI quiz questions for this module!')
+    }, 500)
   }
 
   const validateStep = async () => {
@@ -608,6 +753,8 @@ export function CourseCreatePage() {
           description: mod.description,
           order_index: mIdx,
           is_final_assessment: false,
+          passing_score: mod.passing_score ?? 80,
+          quiz_questions: mod.quiz_questions || [],
           items: uploadedItems,
         })
       }
@@ -1208,10 +1355,262 @@ export function CourseCreatePage() {
                             </div>
                           )}
                         </div>
+
+                        {/* Module Quiz Questions Section */}
+                          <div className="space-y-3 pt-4 border-t border-slate-100">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Label className="text-slate-900 text-xs font-bold flex items-center gap-1.5">
+                                  <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
+                                  Module Quiz Questions ({(mod.quiz_questions || []).length})
+                                </Label>
+                                <Badge className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-bold px-2 py-0.5">
+                                  80% Score Required to Unlock Next Module
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={isGeneratingAiQuiz}
+                                  onClick={() => handleGenerateAiQuiz(mod.id)}
+                                  className="h-7 px-2.5 text-[11px] border-amber-200 bg-amber-50/50 text-amber-800 hover:bg-amber-100/70 rounded-lg font-bold"
+                                >
+                                  <Sparkles className="w-3 h-3 mr-1 text-amber-600" />
+                                  {isGeneratingAiQuiz ? 'Generating...' : '✨ AI Generate Quiz'}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => openAddQuizQuestion(mod.id)}
+                                  className="h-7 px-2.5 text-[11px] bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg font-bold shadow-xs"
+                                >
+                                  <Plus className="w-3 h-3 mr-1" /> Add Question
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Quiz Questions List */}
+                            {(mod.quiz_questions || []).length > 0 ? (
+                              <div className="space-y-2.5 pt-1">
+                                {(mod.quiz_questions || []).map((q, qIdx) => (
+                                  <div
+                                    key={q.id || qIdx}
+                                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2 relative group hover:border-amber-300 transition-all"
+                                  >
+                                    <div className="flex items-start justify-between gap-3 pr-14">
+                                      <div className="flex items-start gap-2">
+                                        <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                                          Q{qIdx + 1}
+                                        </span>
+                                        <div>
+                                          <p className="text-xs font-bold text-slate-900 leading-snug">{q.question}</p>
+                                          {q.explanation && (
+                                            <p className="text-[11px] text-slate-500 mt-1 italic">💡 {q.explanation}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Choices Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                                      {q.options.map((opt, optIdx) => {
+                                        const isCorrect = optIdx === q.correct_option
+                                        return (
+                                          <div
+                                            key={optIdx}
+                                            className={`p-2 rounded-lg text-xs flex items-center gap-2 border transition-all ${
+                                              isCorrect
+                                                ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 font-semibold'
+                                                : 'bg-white border-slate-200 text-slate-700'
+                                            }`}
+                                          >
+                                            <span className={`w-4 h-4 rounded-full text-[10px] font-black flex items-center justify-center shrink-0 ${
+                                              isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                                            }`}>
+                                              {String.fromCharCode(65 + optIdx)}
+                                            </span>
+                                            <span className="truncate flex-1">{opt}</span>
+                                            {isCorrect && (
+                                              <span className="text-[10px] font-bold text-emerald-700 uppercase bg-emerald-100/80 px-1.5 py-0.5 rounded">
+                                                Correct
+                                              </span>
+                                            )}
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="absolute top-3 right-3 flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => openEditQuizQuestion(mod.id, q)}
+                                        className="p-1 rounded-md text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors"
+                                        title="Edit Question"
+                                      >
+                                        <FileText className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeQuizQuestion(mod.id, q.id)}
+                                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                        title="Delete Question"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-3.5 rounded-xl border border-dashed border-amber-200/80 bg-amber-50/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                                <div>
+                                  <p className="text-xs font-semibold text-amber-950">No quiz questions added for this module yet.</p>
+                                  <p className="text-[10px] text-amber-800/80 mt-0.5">
+                                    Add questions to enforce an 80% competency score before unlocking the next module, or generate them automatically with AI.
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openAddQuizQuestion(mod.id)}
+                                  className="h-7 px-3 text-xs border-amber-300 text-amber-900 hover:bg-amber-100 font-bold shrink-0"
+                                >
+                                  <Plus className="w-3 h-3 mr-1" /> Add First Question
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                       </CardContent>
                     </Card>
                   )
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* Module Quiz Question Addition / Edit Modal */}
+          {activeQuizModuleId && (
+            <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <HelpCircle className="w-4 h-4 text-amber-500" />
+                    <h3 className="text-sm font-bold text-slate-900">
+                      {editingQuestionId ? 'Edit Quiz Question' : 'Add Quiz Question to Module'}
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveQuizModuleId(null)
+                      setEditingQuestionId(null)
+                    }}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-2">
+                  <Badge className="bg-amber-600 text-white text-[10px] font-bold">Rule</Badge>
+                  <p className="text-xs text-amber-900 font-medium">
+                    Trainees must score <strong>≥80%</strong> on this module quiz to unlock the next module.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-slate-700">Question Prompt *</Label>
+                    <Textarea
+                      value={quizQuestionText}
+                      onChange={e => setQuizQuestionText(e.target.value)}
+                      placeholder="e.g. What is the standard protocol for classifying cyclone landfall zones?"
+                      rows={2}
+                      className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl text-xs resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                      <span>Answer Choices (Select the correct answer) *</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Click letter circle to set correct</span>
+                    </Label>
+                    <div className="space-y-2">
+                      {quizOptions.map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setQuizCorrectOption(idx)}
+                            className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0 transition-all ${
+                              quizCorrectOption === idx
+                                ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                            title="Set as correct answer"
+                          >
+                            {String.fromCharCode(65 + idx)}
+                          </button>
+                          <Input
+                            value={opt}
+                            onChange={e => {
+                              const newOpts = [...quizOptions]
+                              newOpts[idx] = e.target.value
+                              setQuizOptions(newOpts)
+                            }}
+                            placeholder={`Option ${String.fromCharCode(65 + idx)}...`}
+                            className={`h-9 rounded-xl text-xs ${
+                              quizCorrectOption === idx
+                                ? 'bg-emerald-50/50 border-emerald-300 text-slate-900 font-medium'
+                                : 'bg-slate-50 border-slate-200 text-slate-900'
+                            }`}
+                          />
+                          {quizCorrectOption === idx && (
+                            <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold shrink-0">
+                              Correct
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-slate-700">Explanation / Feedback (Optional)</Label>
+                    <Input
+                      value={quizExplanation}
+                      onChange={e => setQuizExplanation(e.target.value)}
+                      placeholder="Why is this the correct answer?"
+                      className="bg-slate-50 border-slate-200 h-9 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setActiveQuizModuleId(null)
+                      setEditingQuestionId(null)
+                    }}
+                    className="text-xs text-slate-600"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={saveQuizQuestion}
+                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold rounded-xl"
+                  >
+                    {editingQuestionId ? 'Save Changes' : 'Add Question'}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -1610,15 +2009,22 @@ export function CourseCreatePage() {
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
                       {modules.map((m) => {
                         return (
-                          <div key={m.id} className="p-2.5 rounded-lg bg-white border border-slate-200/90 text-xs">
+                          <div key={m.id} className="p-2.5 rounded-lg bg-white border border-slate-200/90 text-xs space-y-1.5">
                             <div className="flex items-center justify-between font-bold text-slate-900">
                               <span>{m.title}</span>
-                              <Badge variant="secondary" className="text-[9px] font-semibold">
-                                {m.items.length} Item{m.items.length !== 1 ? 's' : ''}
-                              </Badge>
+                              <div className="flex items-center gap-1.5">
+                                <Badge variant="secondary" className="text-[9px] font-semibold">
+                                  {m.items.length} Item{m.items.length !== 1 ? 's' : ''}
+                                </Badge>
+                                {(m.quiz_questions || []).length > 0 && (
+                                  <Badge className="text-[9px] font-bold bg-amber-50 text-amber-800 border-amber-200">
+                                    {(m.quiz_questions || []).length} Quiz Qs (≥80% Pass)
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                             {m.description && (
-                              <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">{m.description}</p>
+                              <p className="text-[11px] text-slate-500 line-clamp-1">{m.description}</p>
                             )}
                           </div>
                         )
