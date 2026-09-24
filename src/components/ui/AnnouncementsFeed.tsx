@@ -13,13 +13,18 @@ export function AnnouncementsFeed() {
       if (!profile || !user) return
       setLoading(true)
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('announcements')
           .select('*, author:admins!author_id(full_name)')
           .eq('is_active', true)
-          .in('target_audience', ['all', profile.role])
+          
+        if (profile.role !== 'admin' && profile.role !== 'super_admin') {
+          query = query.in('target_audience', ['all', profile.role])
+        }
+          
+        const { data, error } = await query
           .order('created_at', { ascending: false })
-          .limit(20) // Fetch a bit more to account for cleared ones
+          .limit(20)
 
         if (error) throw error
 

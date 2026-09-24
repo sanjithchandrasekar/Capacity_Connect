@@ -35,7 +35,7 @@ export function CourseDetailPage() {
   const [courseSkills, setCourseSkills] = useState<CourseSkill[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
-  const [assessment, setAssessment] = useState<Assessment | null>(null)
+  const [assessmentCount, setAssessmentCount] = useState(0)
   const [enrollmentCount, setEnrollmentCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
@@ -56,12 +56,12 @@ export function CourseDetailPage() {
         supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single(),
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', courseId),
         supabase.from('materials').select('*').eq('course_id', courseId),
-        supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).single(),
+        supabase.from('assessments').select('id', { count: 'exact', head: true }).eq('course_id', courseId).eq('created_by', user.id),
         supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId).in('status', ['enrolled', 'in_progress', 'completed']),
         supabase.from('course_sessions').select('*').eq('course_id', courseId).order('order_index'),
         supabase.from('enrollments').select('*').eq('course_id', courseId).order('enrolled_at', { ascending: false }),
       ])
-      
+
       let mergedEnrollments: any[] = []
       if (enrollmentsRes.error) {
         console.error('Error fetching enrollments:', enrollmentsRes.error)
@@ -69,7 +69,7 @@ export function CourseDetailPage() {
         const userIds = enrollmentsRes.data.map(e => e.user_id)
         const { data: traineesData, error: traineesError } = await supabase.from('trainees').select('id, full_name, email').in('id', userIds)
         if (traineesError) console.error('Error fetching trainees:', traineesError)
-        
+
         mergedEnrollments = enrollmentsRes.data.map(e => ({
           ...e,
           trainee: traineesData?.find(t => t.id === e.user_id) || { full_name: 'Unknown Trainee', email: '' }
@@ -79,7 +79,7 @@ export function CourseDetailPage() {
       if (cRes.data) setCourse(cRes.data)
       if (csRes.data) setCourseSkills(csRes.data as any)
       if (mRes.data) setMaterials(mRes.data)
-      if (aRes.data) setAssessment(aRes.data)
+      if (aRes.count !== null) setAssessmentCount(aRes.count)
       setEnrollmentCount(eRes.count ?? 0)
       if (sRes.data) setSessions(sRes.data)
       setAllEnrollments(mergedEnrollments)
@@ -96,7 +96,7 @@ export function CourseDetailPage() {
     setIsProcessingId(enrollmentId)
     try {
       const newStatus = action === 'approve' ? 'enrolled' : 'rejected'
-      
+
       const { error: updateError } = await supabase
         .from('enrollments')
         .update({ status: newStatus })
@@ -294,12 +294,11 @@ export function CourseDetailPage() {
                             <p className="text-[10px] text-slate-400">{enrollment.trainee?.email}</p>
                           </div>
                           <div>
-                            <Badge variant="outline" className={`text-[10px] font-semibold capitalize ${
-                              ['enrolled', 'in_progress', 'completed'].includes(enrollment.status) ? 'border-emerald-200 text-emerald-700 bg-emerald-50' :
-                              enrollment.status === 'waitlisted' ? 'border-amber-200 text-amber-700 bg-amber-50' :
-                              enrollment.status === 'rejected' ? 'border-rose-200 text-rose-700 bg-rose-50' :
-                              'border-slate-200 text-slate-600 bg-slate-100'
-                            }`}>
+                            <Badge variant="outline" className={`text-[10px] font-semibold capitalize ${['enrolled', 'in_progress', 'completed'].includes(enrollment.status) ? 'border-emerald-200 text-emerald-700 bg-emerald-50' :
+                                enrollment.status === 'waitlisted' ? 'border-amber-200 text-amber-700 bg-amber-50' :
+                                  enrollment.status === 'rejected' ? 'border-rose-200 text-rose-700 bg-rose-50' :
+                                    'border-slate-200 text-slate-600 bg-slate-100'
+                              }`}>
                               {enrollment.status.replace('_', ' ')}
                             </Badge>
                           </div>
@@ -318,9 +317,9 @@ export function CourseDetailPage() {
                 <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2"><Calendar className="w-4 h-4 text-cyan-600" /> Schedule & Dates</h4>
                 {(course.start_date || course.end_date) && (
                   <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <span className="font-semibold text-slate-800 w-24">Course Span:</span> 
-                    {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'TBD'} 
-                    {' - '} 
+                    <span className="font-semibold text-slate-800 w-24">Course Span:</span>
+                    {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'TBD'}
+                    {' - '}
                     {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'TBD'}
                     {course.start_date && course.end_date && (
                       <span className="ml-2 text-cyan-700 font-bold">
@@ -331,7 +330,7 @@ export function CourseDetailPage() {
                 )}
                 {course.meet_link && (
                   <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <span className="font-semibold text-slate-800 w-24">Meeting Link:</span> 
+                    <span className="font-semibold text-slate-800 w-24">Meeting Link:</span>
                     <a href={course.meet_link} target="_blank" rel="noreferrer" className="text-cyan-600 hover:underline break-all font-medium">
                       {course.meet_link}
                     </a>
@@ -367,8 +366,8 @@ export function CourseDetailPage() {
                           <span>{new Date(course.final_test_date).toLocaleDateString()}</span>
                           {(course.final_test_start_time || course.final_test_end_time) && (
                             <span className="text-xs text-slate-500 font-semibold">
-                              {course.final_test_start_time ? new Date(`2000-01-01T${course.final_test_start_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} 
-                              {course.final_test_end_time ? ` - ${new Date(`2000-01-01T${course.final_test_end_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}
+                              {course.final_test_start_time ? new Date(`2000-01-01T${course.final_test_start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                              {course.final_test_end_time ? ` - ${new Date(`2000-01-01T${course.final_test_end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
                             </span>
                           )}
                         </div>

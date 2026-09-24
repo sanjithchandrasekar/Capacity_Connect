@@ -887,6 +887,7 @@ export interface Database {
           sender_id: string
           content: string
           is_private: boolean
+          recipient_id: string | null
           created_at: string
         }
         Insert: {
@@ -895,6 +896,7 @@ export interface Database {
           sender_id: string
           content: string
           is_private?: boolean
+          recipient_id?: string | null
           created_at?: string
         }
         Update: {
@@ -903,6 +905,7 @@ export interface Database {
           sender_id?: string
           content?: string
           is_private?: boolean
+          recipient_id?: string | null
           created_at?: string
         }
         Relationships: [

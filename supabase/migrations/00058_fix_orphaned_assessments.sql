@@ -1,0 +1,1 @@
+UPDATE public.assessments SET created_by = (SELECT trainer_id FROM public.courses WHERE public.courses.id = public.assessments.course_id) WHERE created_by IS NULL OR created_by != (SELECT trainer_id FROM public.courses WHERE public.courses.id = public.assessments.course_id);
