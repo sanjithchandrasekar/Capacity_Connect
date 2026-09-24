@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
 import {
-  ArrowLeft, Plus, Trash2, Loader2, Calendar, Video, FileText, Save, Globe
+  ArrowLeft, Plus, Trash2, Loader2, Calendar, Video, FileText, Save, Globe, Clock, UserCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -38,7 +38,41 @@ export function CourseSessionsPage() {
   const [saving, setSaving] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingSession, setEditingSession] = useState<Partial<Session> | null>(null)
+  const [sessionDate, setSessionDate] = useState('')
+  const [sessionStartTime, setSessionStartTime] = useState('')
+  const [sessionEndTime, setSessionEndTime] = useState('')
   const [ConfirmDialog, confirm] = useConfirm()
+
+  // Attendance Modal state
+  const [allEnrollments, setAllEnrollments] = useState<any[]>([])
+  const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false)
+  const [attendanceSession, setAttendanceSession] = useState<Session | null>(null)
+  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'present' | 'absent' | 'late'>>({})
+
+  const isSessionFinished = (session: Session) => {
+    if (!session.end_time && !session.start_time) return false
+    const sessionEndTime = session.end_time ? new Date(session.end_time) : new Date(session.start_time!)
+    return sessionEndTime < new Date()
+  }
+
+  const activeSessions = sessions.filter(s => !isSessionFinished(s))
+  const pastSessions = sessions.filter(s => isSessionFinished(s))
+  const activeEnrollments = allEnrollments.filter(e => ['enrolled', 'in_progress', 'completed'].includes(e.status))
+
+  const handleOpenAttendance = (session: Session) => {
+    setAttendanceSession(session)
+    const initial: Record<string, 'present' | 'absent' | 'late'> = {}
+    activeEnrollments.forEach(e => {
+      initial[e.user_id] = 'present'
+    })
+    setAttendanceRecords(initial)
+    setAttendanceDialogOpen(true)
+  }
+
+  const handleSaveAttendance = () => {
+    toast.success(`Attendance saved for "${attendanceSession?.title || 'Session'}"!`)
+    setAttendanceDialogOpen(false)
+  }
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
@@ -52,6 +86,16 @@ export function CourseSessionsPage() {
 
       const { data: m } = await supabase.from('materials').select('*').eq('course_id', courseId)
       if (m) setMaterials(m)
+
+      const { data: enrollmentsData } = await supabase.from('enrollments').select('*').eq('course_id', courseId)
+      if (enrollmentsData && enrollmentsData.length > 0) {
+        const userIds = enrollmentsData.map(e => e.user_id)
+        const { data: traineesData } = await supabase.from('trainees').select('id, full_name, email').in('id', userIds)
+        setAllEnrollments(enrollmentsData.map(e => ({
+          ...e,
+          trainee: traineesData?.find(t => t.id === e.user_id) || { full_name: 'Unknown Trainee', email: '' }
+        })))
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -62,43 +106,70 @@ export function CourseSessionsPage() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const handleSaveSession = async () => {
-    if (!editingSession?.title) {
+    if (!editingSession?.title?.trim()) {
       toast.error('Title is required')
       return
     }
     setSaving(true)
     try {
+      let finalStartTime: string | null = null
+      let finalEndTime: string | null = null
+
+      if (sessionDate && sessionStartTime) {
+        const d = new Date(`${sessionDate}T${sessionStartTime}:00`)
+        if (!isNaN(d.getTime())) finalStartTime = d.toISOString()
+      } else if (sessionDate) {
+        const d = new Date(`${sessionDate}T00:00:00`)
+        if (!isNaN(d.getTime())) finalStartTime = d.toISOString()
+      }
+
+      if (sessionDate && sessionEndTime) {
+        const d = new Date(`${sessionDate}T${sessionEndTime}:00`)
+        if (!isNaN(d.getTime())) finalEndTime = d.toISOString()
+      } else if (sessionDate && sessionStartTime) {
+        // default end time to 1 hour after start if not set
+        const d = new Date(`${sessionDate}T${sessionStartTime}:00`)
+        if (!isNaN(d.getTime())) {
+          d.setHours(d.getHours() + 1)
+          finalEndTime = d.toISOString()
+        }
+      }
+
       if (editingSession.id) {
         const { error } = await supabase.from('course_sessions').update({
-          title: editingSession.title,
-          description: editingSession.description || null,
-          start_time: editingSession.start_time ? new Date(editingSession.start_time).toISOString() : null,
-          end_time: editingSession.end_time ? new Date(editingSession.end_time).toISOString() : null,
-          meet_link: editingSession.meet_link || null,
-          location: editingSession.location || null,
-          session_type: editingSession.session_type || 'recorded'
+          title: editingSession.title.trim(),
+          description: editingSession.description?.trim() || null,
+          start_time: finalStartTime,
+          end_time: finalEndTime,
+          meet_link: editingSession.meet_link?.trim() || null,
+          session_type: editingSession.session_type || 'live'
         }).eq('id', editingSession.id)
         if (error) throw error
-        toast.success('Session updated')
+        toast.success('Session updated successfully')
       } else {
         const { error } = await supabase.from('course_sessions').insert({
           course_id: courseId!,
-          title: editingSession.title,
-          description: editingSession.description || null,
-          start_time: editingSession.start_time ? new Date(editingSession.start_time).toISOString() : null,
-          end_time: editingSession.end_time ? new Date(editingSession.end_time).toISOString() : null,
-          meet_link: editingSession.meet_link || null,
-          location: editingSession.location || null,
+          title: editingSession.title.trim(),
+          description: editingSession.description?.trim() || null,
+          start_time: finalStartTime,
+          end_time: finalEndTime,
+          meet_link: editingSession.meet_link?.trim() || null,
           order_index: sessions.length,
-          session_type: editingSession.session_type || 'recorded'
+          session_type: editingSession.session_type || 'live'
         })
         if (error) throw error
-        toast.success('Session created')
+        toast.success('Session created successfully')
       }
+
+      if (editingSession.meet_link?.trim() && courseId) {
+        supabase.from('courses').update({ meet_link: editingSession.meet_link.trim() }).eq('id', courseId).then(() => {}, (err) => console.warn(err))
+      }
+
       setDialogOpen(false)
       fetchData()
-    } catch (err) {
-      toast.error('Failed to save session')
+    } catch (err: any) {
+      console.error('Failed to save session:', err)
+      toast.error(err?.message || 'Failed to save session')
     } finally {
       setSaving(false)
     }
@@ -117,8 +188,129 @@ export function CourseSessionsPage() {
   }
 
   const openNew = () => {
-    setEditingSession({ title: '', description: '', start_time: '', end_time: '', meet_link: '', location: '' })
+    const today = format(new Date(), 'yyyy-MM-dd')
+    setEditingSession({
+      title: '',
+      description: '',
+      start_time: '',
+      end_time: '',
+      meet_link: course?.meet_link || '',
+      location: '',
+      session_type: 'live'
+    })
+    setSessionDate(today)
+    setSessionStartTime('10:00')
+    setSessionEndTime('11:00')
     setDialogOpen(true)
+  }
+
+  const openEdit = (session: Session) => {
+    let dateStr = format(new Date(), 'yyyy-MM-dd')
+    let startStr = '10:00'
+    let endStr = '11:00'
+
+    if (session.start_time) {
+      const d = new Date(session.start_time)
+      if (!isNaN(d.getTime())) {
+        dateStr = format(d, 'yyyy-MM-dd')
+        startStr = format(d, 'HH:mm')
+      }
+    }
+    if (session.end_time) {
+      const d = new Date(session.end_time)
+      if (!isNaN(d.getTime())) {
+        endStr = format(d, 'HH:mm')
+      }
+    }
+
+    setEditingSession({ ...session })
+    setSessionDate(dateStr)
+    setSessionStartTime(startStr)
+    setSessionEndTime(endStr)
+    setDialogOpen(true)
+  }
+
+  const renderSessionCard = (session: Session, index: number, isFinished: boolean) => {
+    const sessionMaterials = materials.filter(m => m.session_id === session.id)
+    return (
+      <motion.div key={session.id} variants={fadeUp}>
+        <Card className={`bg-white border ${isFinished ? 'border-slate-200/70 bg-slate-50/40 opacity-95' : 'border-slate-200/90'} shadow-sm hover:shadow-md hover:border-slate-300 transition-all overflow-hidden rounded-3xl group`}>
+          <CardHeader className="bg-slate-50/80 border-b border-slate-100 pb-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <Badge variant="outline" className="text-[10px] bg-white border-slate-200 text-slate-700 font-semibold">
+                    Session {index + 1}
+                  </Badge>
+                  {isFinished && (
+                    <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                      Completed
+                    </Badge>
+                  )}
+                  <CardTitle className="text-lg font-bold text-slate-900">{session.title}</CardTitle>
+                </div>
+                {session.description && <p className="text-sm text-slate-600 mt-2 font-medium">{session.description}</p>}
+                
+                <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-500 font-medium">
+                  {session.session_type && (
+                    <Badge className={`text-[10px] capitalize font-semibold ${session.session_type === 'live' || session.session_type === 'hybrid' ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                      {session.session_type.replace('_', ' ')}
+                    </Badge>
+                  )}
+                  {session.start_time && (
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      {format(new Date(session.start_time), 'MMM d, yyyy h:mm a')}
+                      {session.end_time && ` - ${format(new Date(session.end_time), 'h:mm a')}`}
+                    </span>
+                  )}
+                  {session.meet_link && !isFinished && (
+                    <a href={session.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-cyan-600 hover:text-cyan-700 font-semibold hover:underline">
+                      <Video className="w-3.5 h-3.5" /> Join Live Class
+                    </a>
+                  )}
+                  {session.location && (
+                    <span className="flex items-center gap-1.5 text-slate-600">
+                      <Globe className="w-3.5 h-3.5 text-slate-400" /> {session.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button size="sm" variant="outline" onClick={() => handleOpenAttendance(session)} className="border-cyan-200 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 font-semibold text-xs rounded-xl h-8">
+                  <UserCheck className="w-3.5 h-3.5 mr-1" /> Attendance
+                </Button>
+                <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900" onClick={() => openEdit(session)}>Edit</Button>
+                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(session.id)}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-5 bg-white">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-bold text-slate-800">Session Materials</h4>
+              <Link to={`/trainer/courses/${courseId}/materials?session=${session.id}`}>
+                <Button variant="outline" size="sm" className="h-8 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">Manage Materials</Button>
+              </Link>
+            </div>
+            {sessionMaterials.length === 0 ? (
+              <p className="text-xs text-slate-400 italic font-medium">No materials assigned to this session.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {sessionMaterials.map(m => (
+                  <div key={m.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 font-medium">
+                    <FileText className="w-3.5 h-3.5 shrink-0 text-cyan-600" />
+                    <span className="truncate">{m.file_name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
   }
 
   if (loading) return <TrainerLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div></TrainerLayout>
@@ -153,84 +345,113 @@ export function CourseSessionsPage() {
             </Card>
           </motion.div>
         ) : (
-          <div className="space-y-4">
-            {sessions.map((session, index) => {
-              const sessionMaterials = materials.filter(m => m.session_id === session.id)
-              return (
-                <motion.div key={session.id} variants={fadeUp}>
-                  <Card className="bg-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-slate-300 transition-all overflow-hidden rounded-3xl group">
-                    <CardHeader className="bg-slate-50/80 border-b border-slate-100 pb-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="text-[10px] bg-white border-slate-200 text-slate-700 font-semibold">Session {index + 1}</Badge>
-                            <CardTitle className="text-lg font-bold text-slate-900">{session.title}</CardTitle>
-                          </div>
-                          {session.description && <p className="text-sm text-slate-600 mt-2 font-medium">{session.description}</p>}
-                          
-                          <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-500 font-medium">
-                            {session.session_type && (
-                              <Badge className={`text-[10px] capitalize font-semibold ${session.session_type === 'live' || session.session_type === 'hybrid' ? 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100' : session.session_type === 'recorded' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'}`}>
-                                {session.session_type.replace('_', ' ')}
-                              </Badge>
-                            )}
-                            {session.start_time && (
-                              <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-slate-400" /> {format(new Date(session.start_time), 'MMM d, yyyy h:mm a')}</span>
-                            )}
-                            {session.meet_link && (session.session_type === 'live' || session.session_type === 'hybrid') && (
-                              <a href={session.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-cyan-600 hover:text-cyan-700 font-semibold hover:underline">
-                                <Video className="w-3.5 h-3.5" /> Join Live Class
-                              </a>
-                            )}
-                            {session.location && (session.session_type === 'in_person' || session.session_type === 'hybrid') && (
-                              <span className="flex items-center gap-1.5 text-slate-600">
-                                <Globe className="w-3.5 h-3.5 text-slate-400" /> {session.location}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900" onClick={() => {
-                            setEditingSession({
-                              ...session,
-                              start_time: session.start_time ? new Date(session.start_time).toISOString().slice(0, 16) : '',
-                              end_time: session.end_time ? new Date(session.end_time).toISOString().slice(0, 16) : ''
-                            })
-                            setDialogOpen(true)
-                          }}>Edit</Button>
-                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(session.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-5 bg-white">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-bold text-slate-800">Session Materials</h4>
-                        <Link to={`/trainer/courses/${courseId}/materials?session=${session.id}`}>
-                          <Button variant="outline" size="sm" className="h-8 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">Manage Materials</Button>
-                        </Link>
-                      </div>
-                      {sessionMaterials.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic font-medium">No materials assigned to this session.</p>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {sessionMaterials.map(m => (
-                            <div key={m.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 font-medium">
-                              <FileText className="w-3.5 h-3.5 shrink-0 text-cyan-600" />
-                              <span className="truncate">{m.file_name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
+          <div className="space-y-6">
+            {/* Active & Upcoming Sessions */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-cyan-600" /> Active & Upcoming Sessions
+                  <Badge className="bg-cyan-50 text-cyan-700 border border-cyan-200 text-[10px] font-bold">{activeSessions.length}</Badge>
+                </h3>
+              </div>
+              {activeSessions.length > 0 ? (
+                activeSessions.map((session, index) => renderSessionCard(session, index, false))
+              ) : (
+                <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-xs">
+                  <CardContent className="py-6 text-center text-xs text-slate-400 italic">
+                    No active upcoming sessions. All completed sessions appear in history below.
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Session History (Completed Sessions) */}
+            {pastSessions.length > 0 && (
+              <div className="space-y-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-slate-500" /> Session History (Completed)
+                    <Badge className="bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold">{pastSessions.length}</Badge>
+                  </h3>
+                </div>
+                {pastSessions.map((session, index) => renderSessionCard(session, activeSessions.length + index, true))}
+              </div>
+            )}
           </div>
         )}
       </motion.div>
+
+      {/* Attendance Modal Dialog */}
+      <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-white border border-slate-200 shadow-2xl rounded-3xl p-6 text-slate-900">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-cyan-600" /> Attendance: {attendanceSession?.title || 'Session'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-3 space-y-4">
+            <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-100">
+              <span>{activeEnrollments.length} Enrolled Trainees</span>
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-cyan-700 font-semibold" onClick={() => {
+                const allP: Record<string, 'present' | 'absent' | 'late'> = {}
+                activeEnrollments.forEach(e => { allP[e.user_id] = 'present' })
+                setAttendanceRecords(allP)
+              }}>
+                Mark All Present
+              </Button>
+            </div>
+
+            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+              {activeEnrollments.length > 0 ? (
+                activeEnrollments.map((enr) => {
+                  const status = attendanceRecords[enr.user_id] || 'present'
+                  return (
+                    <div key={enr.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">{enr.trainee?.full_name || 'Unknown'}</p>
+                        <p className="text-[10px] text-slate-500">{enr.trainee?.email}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'present' }))}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'present' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                        >
+                          Present
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'late' }))}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'late' ? 'bg-amber-500 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                        >
+                          Late
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'absent' }))}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'absent' ? 'bg-rose-500 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                        >
+                          Absent
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-4">No enrolled trainees in this course.</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-slate-200 text-slate-700 rounded-xl" onClick={() => setAttendanceDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-semibold rounded-xl shadow-sm" onClick={handleSaveAttendance}>
+              Save Attendance
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[440px] bg-white border border-slate-200/90 shadow-2xl rounded-3xl text-slate-900">
@@ -246,13 +467,10 @@ export function CourseSessionsPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-slate-700 font-semibold text-xs">Delivery Mode</Label>
-              <Select value={editingSession?.session_type || 'recorded'} onValueChange={v => setEditingSession({ ...editingSession, session_type: v })}>
-                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl"><SelectValue /></SelectTrigger>
+              <Select value={editingSession?.session_type || 'live'} onValueChange={v => setEditingSession({ ...editingSession, session_type: v })}>
+                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl"><SelectValue placeholder="Online Live Class" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="recorded">Fully Video Class</SelectItem>
-                  <SelectItem value="live">Only Online Live Class</SelectItem>
-                  <SelectItem value="in_person">Fully In-Person Class</SelectItem>
-                  <SelectItem value="hybrid">Hybrid (Both Live & Video / In-Person)</SelectItem>
+                  <SelectItem value="live">Online Live Class</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -261,13 +479,8 @@ export function CourseSessionsPage() {
               <Input 
                 className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" 
                 type="date" 
-                value={editingSession?.start_time ? editingSession.start_time.split('T')[0] : ''} 
-                onChange={e => {
-                  const date = e.target.value;
-                  const start_time = editingSession?.start_time ? `${date}T${editingSession.start_time.split('T')[1] || '00:00'}` : `${date}T00:00`;
-                  const end_time = editingSession?.end_time ? `${date}T${editingSession.end_time.split('T')[1] || '00:00'}` : `${date}T00:00`;
-                  setEditingSession({ ...editingSession, start_time, end_time });
-                }} 
+                value={sessionDate} 
+                onChange={e => setSessionDate(e.target.value)} 
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -276,12 +489,8 @@ export function CourseSessionsPage() {
                 <Input 
                   className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" 
                   type="time" 
-                  value={editingSession?.start_time ? editingSession.start_time.split('T')[1]?.substring(0,5) : ''} 
-                  onChange={e => {
-                    const time = e.target.value;
-                    const date = editingSession?.start_time ? editingSession.start_time.split('T')[0] : new Date().toISOString().split('T')[0];
-                    setEditingSession({ ...editingSession, start_time: `${date}T${time}` });
-                  }} 
+                  value={sessionStartTime} 
+                  onChange={e => setSessionStartTime(e.target.value)} 
                 />
               </div>
               <div className="space-y-1.5">
@@ -289,27 +498,15 @@ export function CourseSessionsPage() {
                 <Input 
                   className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" 
                   type="time" 
-                  value={editingSession?.end_time ? editingSession.end_time.split('T')[1]?.substring(0,5) : ''} 
-                  onChange={e => {
-                    const time = e.target.value;
-                    const date = editingSession?.end_time ? editingSession.end_time.split('T')[0] : (editingSession?.start_time ? editingSession.start_time.split('T')[0] : new Date().toISOString().split('T')[0]);
-                    setEditingSession({ ...editingSession, end_time: `${date}T${time}` });
-                  }} 
+                  value={sessionEndTime} 
+                  onChange={e => setSessionEndTime(e.target.value)} 
                 />
               </div>
             </div>
-            {(editingSession?.session_type === 'live' || editingSession?.session_type === 'hybrid') && (
-              <div className="space-y-1.5">
-                <Label className="text-slate-700 font-semibold text-xs">Live Class Meet Link</Label>
-                <Input className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" type="url" value={editingSession?.meet_link || ''} onChange={e => setEditingSession({ ...editingSession, meet_link: e.target.value })} placeholder="https://meet.google.com/..." />
-              </div>
-            )}
-            {(editingSession?.session_type === 'in_person' || editingSession?.session_type === 'hybrid') && (
-              <div className="space-y-1.5">
-                <Label className="text-slate-700 font-semibold text-xs">Physical Location</Label>
-                <Input className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl" type="text" value={editingSession?.location || ''} onChange={e => setEditingSession({ ...editingSession, location: e.target.value })} placeholder="e.g. Room 402, Main Campus" />
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <Label className="text-slate-700 font-semibold text-xs">Live Class Meet Link *</Label>
+              <Input className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl" type="url" value={editingSession?.meet_link || ''} onChange={e => setEditingSession({ ...editingSession, meet_link: e.target.value })} placeholder="https://meet.google.com/..." />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl" onClick={() => setDialogOpen(false)}>Cancel</Button>

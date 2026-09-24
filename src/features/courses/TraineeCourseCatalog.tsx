@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { DashboardShell } from '@/pages/Dashboards'
-import { Compass, BookOpen, Clock, Search, BookMarked, ArrowRight, Sparkles, FileCheck } from 'lucide-react'
+import { Compass, BookOpen, Clock, Search, BookMarked, ArrowRight, Sparkles, FileCheck, User, BarChart3 } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 
 const fadeUp = {
@@ -59,10 +59,11 @@ export function TraineeCourseCatalog() {
       title="Course Catalog"
       icon={Compass}
       navLinks={[
-        { to: '/trainee', label: 'Overview', icon: BookMarked },
+        { to: '/trainee', label: 'Dashboard', icon: BarChart3 },
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
         { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+        { to: '/trainee/profile', label: 'Profile', icon: User },
       ]}
     >
       <div className="max-w-6xl space-y-6">

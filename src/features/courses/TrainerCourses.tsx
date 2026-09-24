@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { PlusCircle, MoreHorizontal, BookOpen, Clock, Target, BarChart3 } from 'lucide-react'
+import { PlusCircle, MoreHorizontal, BookOpen, Clock, Target, BarChart3, User } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -100,8 +100,9 @@ export function TrainerCourses() {
       title="Trainer — My Courses"
       icon={BookOpen}
       navLinks={[
-        { to: '/trainer', label: 'Overview', icon: BarChart3 },
+        { to: '/trainer', label: 'Dashboard', icon: BarChart3 },
         { to: '/trainer/courses', label: 'My Courses', icon: BookOpen },
+        { to: '/trainer/profile', label: 'Profile', icon: User },
       ]}
     >
       <div className="space-y-6">

@@ -18,7 +18,7 @@ import {
   Globe, LogOut, Users, BookOpen, BarChart3, Shield,
   GraduationCap, ChevronRight, CheckCircle, Search,
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
-  Award, Target, FileText, Settings,
+  Award, Target, FileText, Settings, User,
   RefreshCw, Star, MessageSquare,
   Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone, FileCheck
 } from 'lucide-react'
@@ -298,8 +298,8 @@ export function DashboardShell({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Link to={`/${profile?.role}/settings`} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all">
-              <Settings className="w-4 h-4" />
+            <Link to={`/${profile?.role}/profile`} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all" title="Profile">
+              <User className="w-4 h-4" />
             </Link>
           </div>
         </header>
@@ -580,10 +580,11 @@ export function TraineeDashboard() {
       title="Trainee Dashboard"
       icon={GraduationCap}
       navLinks={[
-        { to: '/trainee', label: 'Overview', icon: BarChart3 },
+        { to: '/trainee', label: 'Dashboard', icon: BarChart3 },
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
         { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+        { to: '/trainee/profile', label: 'Profile', icon: User },
       ]}
     >
       <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6 max-w-full">
@@ -857,7 +858,7 @@ export function TrainerDashboard() {
       title="Trainer Dashboard"
       icon={BookOpen}
       navLinks={[
-        { to: '/trainer', label: 'Overview', icon: BarChart3 },
+        { to: '/trainer', label: 'Dashboard', icon: BarChart3 },
         { to: '/trainer/courses', label: 'My Courses', icon: BookOpen },
       ]}
     >
@@ -1197,7 +1198,7 @@ export function AdminDashboard() {
   const isSuperAdmin = profile?.role === 'super_admin'
 
   const tabs = [
-    { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { key: 'overview', label: 'Dashboard', icon: LayoutDashboard },
     { key: 'trainees', label: 'Trainees', icon: Users },
     { key: 'trainers', label: 'Trainers', icon: Users },
     ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins', icon: Shield }] : []),

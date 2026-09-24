@@ -71,7 +71,7 @@ export function AdminCourses() {
   const [pendingEnrollments, setPendingEnrollments] = useState<any[]>([])
   const [updating, setUpdating] = useState<string | null>(null)
   const [isProcessingId, setIsProcessingId] = useState<string | null>(null)
-  
+
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [editMaxTrainees, setEditMaxTrainees] = useState(false)
@@ -92,7 +92,7 @@ export function AdminCourses() {
       const { data: assignmentsData, error: assignmentsError } = await (supabase as any)
         .from('course_assignments')
         .select('id, course_id')
-      
+
       const assignments = assignmentsError ? [] : (assignmentsData ?? [])
 
       const coursesWithAssignments = (coursesData ?? []).map(course => ({
@@ -125,7 +125,7 @@ export function AdminCourses() {
         supabase.from('course_sessions').select('*').eq('course_id', course.id).order('order_index'),
         supabase.from('enrollments').select('*').eq('course_id', course.id).eq('status', 'pending_approval'),
       ])
-      
+
       let mergedPending: any[] = []
       if (pRes.data && pRes.data.length > 0) {
         const userIds = pRes.data.map(e => e.user_id)
@@ -152,18 +152,18 @@ export function AdminCourses() {
     setIsProcessingId(enrollmentId)
     try {
       const newStatus = action === 'approve' ? 'enrolled' : 'rejected'
-      
+
       const { error: updateError } = await supabase
         .from('enrollments')
         .update({ status: newStatus })
         .eq('id', enrollmentId)
-      
+
       if (updateError) throw updateError
 
       await supabase.from('notifications').insert({
         user_id: trainee.id,
         title: action === 'approve' ? 'Enrollment Approved! 🎉' : 'Enrollment Update',
-        message: action === 'approve' 
+        message: action === 'approve'
           ? `Your enrollment for ${course.title} has been approved. You can now access all course materials.`
           : `Your enrollment request for ${course.title} was not approved.`,
         type: 'enrollment'
@@ -245,15 +245,14 @@ export function AdminCourses() {
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Course
             </Button>
           </div>
-          
+
           <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-fit">
             {(['all', 'admin_created', 'trainer_submitted'] as const).map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filter === f ? 'bg-white text-cyan-700 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                }`}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === f ? 'bg-white text-cyan-700 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
               >
                 {f === 'all' ? 'All Courses' : f === 'admin_created' ? 'Admin Created' : 'Trainer Submitted'}
               </button>
@@ -286,81 +285,81 @@ export function AdminCourses() {
                   return 0;
                 })
                 .map(course => {
-                const trainer = (course as any).trainer
-                return (
-                  <div key={course.id} className={`flex items-center gap-4 p-4 rounded-2xl ${course.isUrgent ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-50/70 hover:bg-slate-50 border-slate-200'} border transition-all`}>
-                    {/* Thumbnail */}
-                    <div className="w-20 h-16 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
-                      <Thumbnail path={course.thumbnail_path} alt={course.title} fallbackIcon={<BookOpen className="w-6 h-6 text-cyan-600" />} />
-                    </div>
-                    
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-bold text-slate-900 truncate">{course.title}</h3>
-                        <StatusBadge status={course.status} />
-                        {course.isUrgent && <Badge className="bg-rose-100 text-rose-700 border-rose-200 text-[10px]">🚨 URGENT</Badge>}
+                  const trainer = (course as any).trainer
+                  return (
+                    <div key={course.id} className={`flex items-center gap-4 p-4 rounded-2xl ${course.isUrgent ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-50/70 hover:bg-slate-50 border-slate-200'} border transition-all`}>
+                      {/* Thumbnail */}
+                      <div className="w-20 h-16 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                        <Thumbnail path={course.thumbnail_path} alt={course.title} fallbackIcon={<BookOpen className="w-6 h-6 text-cyan-600" />} />
                       </div>
-                      <p className="text-xs text-slate-500 line-clamp-1 mb-1.5">{course.description || 'No description provided.'}</p>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
-                        <span className="capitalize px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">{course.course_type}</span>
-                        <span>{course.department || 'General'}</span>
-                        {trainer?.full_name && <span>taught by {trainer.full_name}</span>}
-                        {((course as any).course_assignments && (course as any).course_assignments.length > 0) && (
-                          <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[9px] font-bold tracking-wider uppercase">Admin Created</span>
-                        )}
-                        <span>{course.created_at ? formatDistanceToNow(new Date(course.created_at), { addSuffix: true }) : ''}</span>
-                      </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openCourseDetail(course)}
-                        className="border-slate-200 text-slate-700 hover:bg-slate-100 h-8 rounded-xl text-xs font-semibold"
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" /> View
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 rounded-xl hover:bg-slate-100">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white border-slate-200 rounded-2xl shadow-lg text-slate-800">
-                          {course.status === 'pending_review' && (
-                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')} className="text-emerald-700 font-medium">
-                              Approve & Publish
-                            </DropdownMenuItem>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-sm font-bold text-slate-900 truncate">{course.title}</h3>
+                          <StatusBadge status={course.status} />
+                          {course.isUrgent && <Badge className="bg-rose-100 text-rose-700 border-rose-200 text-[10px]">🚨 URGENT</Badge>}
+                        </div>
+                        <p className="text-xs text-slate-500 line-clamp-1 mb-1.5">{course.description || 'No description provided.'}</p>
+                        <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
+                          <span className="capitalize px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">{course.course_type}</span>
+                          <span>{course.department || 'General'}</span>
+                          {trainer?.full_name && <span>taught by {trainer.full_name}</span>}
+                          {((course as any).course_assignments && (course as any).course_assignments.length > 0) && (
+                            <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[9px] font-bold tracking-wider uppercase">Admin Created</span>
                           )}
-                          {course.status === 'pending_review' && (
-                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'draft')}>
-                              Return to Draft
-                            </DropdownMenuItem>
-                          )}
-                          {course.status === 'published' && (
-                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'archived')} className="text-rose-600">
-                              Archive
-                            </DropdownMenuItem>
-                          )}
-                          {course.status === 'archived' && (
-                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')}>
-                              Re-publish
-                            </DropdownMenuItem>
-                          )}
-                          {course.status === 'draft' && (
-                            <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')}>
-                              Publish Directly
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          <span>{course.created_at ? formatDistanceToNow(new Date(course.created_at), { addSuffix: true }) : ''}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openCourseDetail(course)}
+                          className="border-slate-200 text-slate-700 hover:bg-slate-100 h-8 rounded-xl text-xs font-semibold"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" /> View
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 rounded-xl hover:bg-slate-100">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white border-slate-200 rounded-2xl shadow-lg text-slate-800">
+                            {course.status === 'pending_review' && (
+                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')} className="text-emerald-700 font-medium">
+                                Approve & Publish
+                              </DropdownMenuItem>
+                            )}
+                            {course.status === 'pending_review' && (
+                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'draft')}>
+                                Return to Draft
+                              </DropdownMenuItem>
+                            )}
+                            {course.status === 'published' && (
+                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'archived')} className="text-rose-600">
+                                Archive
+                              </DropdownMenuItem>
+                            )}
+                            {course.status === 'archived' && (
+                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')}>
+                                Re-publish
+                              </DropdownMenuItem>
+                            )}
+                            {course.status === 'draft' && (
+                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')}>
+                                Publish Directly
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
             </div>
           )}
         </CardContent>
@@ -434,9 +433,9 @@ export function AdminCourses() {
                         <span className="text-slate-500 block text-xs">Max Trainees</span>
                         {editMaxTrainees ? (
                           <div className="flex items-center gap-2 mt-1">
-                            <Input 
-                              type="number" 
-                              value={newMaxTrainees} 
+                            <Input
+                              type="number"
+                              value={newMaxTrainees}
                               onChange={e => setNewMaxTrainees(e.target.value)}
                               className="w-24 h-8 text-sm bg-white"
                             />
@@ -538,7 +537,7 @@ export function AdminCourses() {
                   {((selectedCourse.planned_assessments_count || 0) > 0 || (selectedCourse.planned_mock_tests_count || 0) > 0 || selectedCourse.final_test_date) && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        <Target className="w-3.5 h-3.5" /> Test & Assessment Plan
+                        <Target className="w-3.5 h-3.5" /> Assessment Plan
                       </div>
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 grid grid-cols-2 gap-4 text-sm">
                         {(selectedCourse.planned_assessments_count || 0) > 0 && (
@@ -560,8 +559,8 @@ export function AdminCourses() {
                               <span>{new Date(selectedCourse.final_test_date).toLocaleDateString()}</span>
                               {(selectedCourse.final_test_start_time || selectedCourse.final_test_end_time) && (
                                 <span className="text-xs text-slate-600">
-                                  {selectedCourse.final_test_start_time ? new Date(`2000-01-01T${selectedCourse.final_test_start_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} 
-                                  {selectedCourse.final_test_end_time ? ` - ${new Date(`2000-01-01T${selectedCourse.final_test_end_time}`).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` : ''}
+                                  {selectedCourse.final_test_start_time ? new Date(`2000-01-01T${selectedCourse.final_test_start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                  {selectedCourse.final_test_end_time ? ` - ${new Date(`2000-01-01T${selectedCourse.final_test_end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
                                 </span>
                               )}
                             </div>
@@ -571,11 +570,11 @@ export function AdminCourses() {
                     </div>
                   )}
 
-                  {/* Session Flow */}
+                  {/* Course Outline */}
                   {(selectedCourse.session_flow_text || selectedCourse.session_flow_document_path) && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        <BookOpen className="w-3.5 h-3.5" /> Session Flow
+                        <BookOpen className="w-3.5 h-3.5" /> Course Outline
                       </div>
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm space-y-3">
                         {selectedCourse.session_flow_text && (
@@ -588,14 +587,14 @@ export function AdminCourses() {
                               if (error) throw error
                               if (data?.signedUrl) {
                                 setPreviewUrl(data.signedUrl)
-                                setPreviewMaterial({ file_name: 'Session Flow Document', material_type: 'file', storage_path: selectedCourse.session_flow_document_path } as any)
+                                setPreviewMaterial({ file_name: 'Course Outline Document', material_type: 'file', storage_path: selectedCourse.session_flow_document_path } as any)
                               }
                             } catch {
                               toast.error('Failed to open document')
                             }
                           }}>
                             <FileText className="w-4 h-4 mr-2" />
-                            View Session Flow Document
+                            View Course Outline Document
                           </Button>
                         )}
                       </div>
@@ -609,14 +608,24 @@ export function AdminCourses() {
                         <Target className="w-3.5 h-3.5" /> Learning Objectives
                       </div>
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
-                        {objectives.understand && (
-                          <div><span className="text-[10px] text-slate-500 uppercase font-semibold">Understand</span><p className="text-sm text-slate-800">{objectives.understand}</p></div>
-                        )}
-                        {objectives.able_to_do && (
-                          <div><span className="text-[10px] text-slate-500 uppercase font-semibold">Able to Do</span><p className="text-sm text-slate-800">{objectives.able_to_do}</p></div>
-                        )}
-                        {objectives.competencies_built && (
-                          <div><span className="text-[10px] text-slate-500 uppercase font-semibold">Competencies</span><p className="text-sm text-slate-800">{objectives.competencies_built}</p></div>
+                        {typeof objectives === 'string' ? (
+                          <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{objectives}</p>
+                        ) : (objectives as any).description ? (
+                          <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{(objectives as any).description}</p>
+                        ) : !(objectives as any).able_to_do && !(objectives as any).competencies_built && (objectives as any).understand ? (
+                          <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{(objectives as any).understand}</p>
+                        ) : (
+                          <>
+                            {objectives.understand && (
+                              <div><span className="text-[10px] text-slate-500 uppercase font-semibold">Understand</span><p className="text-sm text-slate-800">{objectives.understand}</p></div>
+                            )}
+                            {objectives.able_to_do && (
+                              <div><span className="text-[10px] text-slate-500 uppercase font-semibold">Able to Do</span><p className="text-sm text-slate-800">{objectives.able_to_do}</p></div>
+                            )}
+                            {objectives.competencies_built && (
+                              <div><span className="text-[10px] text-slate-500 uppercase font-semibold">Competencies</span><p className="text-sm text-slate-800">{objectives.competencies_built}</p></div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -626,7 +635,7 @@ export function AdminCourses() {
                   {skills.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        <Target className="w-3.5 h-3.5" /> Required Skills
+                        <Target className="w-3.5 h-3.5" /> Outcomes of Learning (Skills Developed)
                       </div>
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                         <div className="flex flex-wrap gap-1.5">
@@ -659,9 +668,16 @@ export function AdminCourses() {
                                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(session.start_time).toLocaleString()}</span>
                               )}
                               {session.meet_link && (
-                                <a href={session.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
-                                  <Video className="w-3 h-3" /> Live Class
-                                </a>
+                                (() => {
+                                  const isPast = session.end_time ? new Date(session.end_time) < new Date() : (session.start_time ? new Date(session.start_time) < new Date() : false)
+                                  return !isPast ? (
+                                    <a href={session.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline font-semibold">
+                                      <Video className="w-3 h-3" /> Live Class
+                                    </a>
+                                  ) : (
+                                    <span className="text-slate-400 font-medium">Class Ended</span>
+                                  )
+                                })()
                               )}
                             </div>
                           </div>
@@ -696,11 +712,10 @@ export function AdminCourses() {
                                   {mat.material_type || 'file'}
                                 </Badge>
                                 {!isLink && mat.extraction_status && (
-                                  <Badge className={`text-[9px] h-4 ${
-                                    mat.extraction_status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                    mat.extraction_status === 'failed' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                    'bg-slate-100 text-slate-700 border-slate-200'
-                                  }`}>
+                                  <Badge className={`text-[9px] h-4 ${mat.extraction_status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                      mat.extraction_status === 'failed' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                        'bg-slate-100 text-slate-700 border-slate-200'
+                                    }`}>
                                     {mat.extraction_status}
                                   </Badge>
                                 )}

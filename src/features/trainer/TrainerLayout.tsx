@@ -14,7 +14,6 @@ const navItems = [
   { to: '/trainer/courses/new', label: 'Create Course', icon: PlusCircle },
   { to: '/trainer/notifications', label: 'Notifications', icon: Bell },
   { to: '/trainer/profile', label: 'Profile', icon: User },
-  { to: '/trainer/settings', label: 'Settings', icon: Settings },
 ]
 
 export const fadeUp = {
@@ -148,8 +147,8 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
               )}
             </Link>
-            <Link to="/trainer/settings" className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all">
-              <Settings className="w-4 h-4" />
+            <Link to="/trainer/profile" className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all" title="Profile">
+              <User className="w-4 h-4" />
             </Link>
           </div>
         </header>

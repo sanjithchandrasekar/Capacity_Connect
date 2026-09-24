@@ -45,7 +45,8 @@ const TrainerSkills = lazy(() => import('./features/trainer/TrainerSkills').then
 const NotificationsPage = lazy(() => import('./features/trainer/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
 const CourseDetailPage = lazy(() => import('./features/trainer/CourseDetailPage').then((m) => ({ default: m.CourseDetailPage })))
 
-// Public & Settings pages
+// Public & Profile/Settings pages
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const PublicCourseCatalog = lazy(() => import('./pages/PublicCourseCatalog').then((m) => ({ default: m.PublicCourseCatalog })))
 const PublicCourseDetails = lazy(() => import('./pages/PublicCourseDetails').then((m) => ({ default: m.PublicCourseDetails })))
@@ -170,7 +171,8 @@ function AnimatedAppRoutes() {
                     <Route path="/trainee/courses/:courseId/assessments/:assessmentId" element={<TraineeAssessmentTest />} />
                     <Route path="/trainee/assessments" element={<TraineeAssessmentsHub />} />
                     <Route path="/trainee/my-learning" element={<TraineeMyLearning />} />
-                    <Route path="/trainee/settings" element={<SettingsPage />} />
+                    <Route path="/trainee/profile" element={<ProfilePage />} />
+                    <Route path="/trainee/settings" element={<Navigate to="/trainee/profile" replace />} />
                   </Route>
 
                   {/* Trainer routes */}
@@ -185,8 +187,8 @@ function AnimatedAppRoutes() {
                     <Route path="/trainer/courses/:courseId/assessments" element={<AssessmentsPage />} />
                     <Route path="/trainer/courses/:courseId/performance" element={<PerformancePage />} />
                     <Route path="/trainer/notifications" element={<NotificationsPage />} />
-                    <Route path="/trainer/settings" element={<SettingsPage />} />
-                    <Route path="/trainer/profile" element={<TrainerProfile />} />
+                    <Route path="/trainer/profile" element={<ProfilePage />} />
+                    <Route path="/trainer/settings" element={<Navigate to="/trainer/profile" replace />} />
                     <Route path="/trainer/skills" element={<TrainerSkills />} />
                   </Route>
 
@@ -195,13 +197,15 @@ function AnimatedAppRoutes() {
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/courses/new" element={<AdminCourseCreatePage />} />
                     <Route path="/admin/courses/:courseId/edit" element={<AdminCourseEditPage />} />
-                    <Route path="/admin/settings" element={<SettingsPage />} />
+                    <Route path="/admin/profile" element={<ProfilePage />} />
+                    <Route path="/admin/settings" element={<Navigate to="/admin/profile" replace />} />
                   </Route>
 
                   {/* Super Admin routes */}
                   <Route element={<RoleRoute allowedRoles={['super_admin']} />}>
                     <Route path="/super-admin" element={<SuperAdminDashboard />} />
-                    <Route path="/super-admin/settings" element={<SettingsPage />} />
+                    <Route path="/super-admin/profile" element={<ProfilePage />} />
+                    <Route path="/super-admin/settings" element={<Navigate to="/super-admin/profile" replace />} />
                   </Route>
 
                 </Route>

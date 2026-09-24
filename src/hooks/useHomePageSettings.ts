@@ -197,8 +197,8 @@ export const defaultHomePageSettings: HomePageSettings = {
 
   // Section 2
   announcements_bar_enabled: true,
-  announcements_bar_label: 'Announcements',
-  announcements_bar_speed: 24,
+  announcements_bar_label: 'Updates',
+  announcements_bar_speed: 65,
   announcements_items: defaultAnnouncementItems,
 
   // Section 3
@@ -291,8 +291,8 @@ export function useHomePageSettings() {
         featured_programs_items: updated.featured_programs_items || [],
 
         announcements_bar_enabled: updated.announcements_bar_enabled ?? true,
-        announcements_bar_label: updated.announcements_bar_label || 'Announcements',
-        announcements_bar_speed: updated.announcements_bar_speed || 24,
+        announcements_bar_label: updated.announcements_bar_label || 'Updates',
+        announcements_bar_speed: updated.announcements_bar_speed || 65,
         announcements_items: updated.announcements_items || [],
 
         upcoming_tracks_enabled: updated.upcoming_tracks_enabled ?? true,
