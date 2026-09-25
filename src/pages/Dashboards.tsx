@@ -1000,7 +1000,7 @@ export function AdminDashboard() {
         supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(50),
         supabase.from('courses').select('id', { count: 'exact' }).eq('status', 'pending_review'),
         supabase.from('courses').select('id, title, status, delivery_mode, department, course_type, created_at'),
-        supabase.from('enrollments').select('id, course_id, status, progress_pct, completed_at, created_at'),
+        supabase.from('enrollments').select('id, course_id, user_id, status, progress_percent, completed_at, enrolled_at'),
       ])
 
       const allUsers = [
@@ -1024,16 +1024,23 @@ export function AdminDashboard() {
 
   const platformAnalytics = useMemo(() => {
     const totalEnrollments = enrollmentsList.length
-    const completedEnrollments = enrollmentsList.filter(e => e.status === 'completed').length
-    const activeEnrollments = enrollmentsList.filter(e => e.status === 'in_progress' || e.status === 'enrolled').length
+    const completedEnrollments = enrollmentsList.filter(e => e.status === 'completed' || (e.progress_percent ?? 0) >= 100).length
+    const activeEnrollments = enrollmentsList.filter(e => e.status === 'in_progress' || e.status === 'enrolled' || ((e.progress_percent ?? 0) > 0 && (e.progress_percent ?? 0) < 100)).length
     const completionRate = totalEnrollments > 0 ? Math.round((completedEnrollments / totalEnrollments) * 100) : 0
     
-    const totalProgress = enrollmentsList.reduce((acc, curr) => acc + (Number(curr.progress_pct) || 0), 0)
+    const totalProgress = enrollmentsList.reduce((acc, curr) => acc + (Number(curr.progress_percent) || 0), 0)
     const avgProgress = totalEnrollments > 0 ? Math.round(totalProgress / totalEnrollments) : 0
 
+    // Department grouping - normalized to aggregate clean institutional units
     const deptMap: Record<string, number> = {}
     users.forEach(u => {
-      const d = (u.department || 'MoES HQ').trim()
+      let d = (u.department || 'MoES HQ').trim()
+      if (d) {
+        const upper = d.toUpperCase()
+        if (upper === 'CSE' || upper === 'IMD' || upper === 'NCMRWF' || upper === 'INCOIS' || upper === 'IITM' || upper === 'NIOT' || upper === 'NCPOR') {
+          d = upper
+        }
+      }
       deptMap[d] = (deptMap[d] || 0) + 1
     })
     const deptArray = Object.entries(deptMap)
@@ -1246,12 +1253,146 @@ export function AdminDashboard() {
     { label: 'Approved Users', value: users.filter(u => u.approval_status === 'approved').length, icon: CheckCircle, gradient: 'from-emerald-500 to-teal-700', badgeText: 'Verified' },
   ]
 
-  const activities = [
-    { icon: Users, title: 'New Registration', desc: 'user@example.com registered as Trainee', time: '30m ago', iconBg: 'bg-cyan-100 text-cyan-700' },
-    { icon: CheckCircle, title: 'User Approved', desc: 'Amit Kumar — Trainer role', time: '2h ago', iconBg: 'bg-emerald-100 text-emerald-700' },
-    { icon: Ban, title: 'User Suspended', desc: 'Inactive account — 90 days', time: '5h ago', iconBg: 'bg-rose-100 text-rose-700' },
-    { icon: Shield, title: 'Role Updated', desc: 'Priya Singh — Trainee → Trainer', time: '1d ago', iconBg: 'bg-purple-100 text-purple-700' },
-  ]
+  const activities = useMemo(() => {
+    const list: Array<{
+      id: string
+      icon: React.ElementType
+      title: string
+      desc: string
+      time: string
+      iconBg: string
+      timestamp: number
+    }> = []
+
+    // 1. From real audit_logs
+    if (logs && logs.length > 0) {
+      logs.forEach((log) => {
+        let icon = Shield
+        let iconBg = 'bg-slate-100 text-slate-700'
+        let title = log.action || 'System Event'
+        let desc = log.entity_type ? `${log.entity_type} event` : 'Audit log recorded'
+
+        const actionLower = (log.action || '').toLowerCase()
+        if (actionLower.includes('create') || actionLower.includes('register') || actionLower.includes('insert')) {
+          icon = Users
+          iconBg = 'bg-cyan-100 text-cyan-700'
+          title = 'Registration / Creation'
+        } else if (actionLower.includes('approve') || actionLower.includes('verify') || actionLower.includes('complete')) {
+          icon = CheckCircle
+          iconBg = 'bg-emerald-100 text-emerald-700'
+          title = 'Account Approved'
+        } else if (actionLower.includes('suspend') || actionLower.includes('reject') || actionLower.includes('delete') || actionLower.includes('ban')) {
+          icon = Ban
+          iconBg = 'bg-rose-100 text-rose-700'
+          title = 'Security & Status'
+        } else if (actionLower.includes('course') || actionLower.includes('publish')) {
+          icon = BookOpen
+          iconBg = 'bg-blue-100 text-blue-700'
+          title = 'Course Updated'
+        }
+
+        if (log.metadata && typeof log.metadata === 'object') {
+          const meta = log.metadata as any
+          if (meta.email) desc = `${meta.email} — ${log.action}`
+          else if (meta.title) desc = `"${meta.title}" — ${log.action}`
+          else if (meta.target_user_id) desc = `User ${meta.target_user_id.slice(0, 8)}... — ${log.action}`
+        }
+
+        const createdAt = log.created_at ? new Date(log.created_at) : new Date()
+        list.push({
+          id: `log-${log.id}`,
+          icon,
+          title,
+          desc,
+          time: formatDistanceToNow(createdAt, { addSuffix: true }),
+          iconBg,
+          timestamp: createdAt.getTime(),
+        })
+      })
+    }
+
+    // 2. From real users (new registrations / status changes)
+    users.forEach((u) => {
+      const createdAt = u.created_at ? new Date(u.created_at) : null
+      if (createdAt) {
+        let icon = Users
+        let iconBg = 'bg-cyan-100 text-cyan-700'
+        let title = `${u.role === 'trainer' ? 'Trainer' : u.role === 'admin' || u.role === 'super_admin' ? 'Admin' : 'Trainee'} Registered`
+        let desc = `${u.full_name || u.email} ${u.department ? `(${u.department})` : ''}`
+
+        if (u.approval_status === 'approved') {
+          icon = CheckCircle
+          iconBg = 'bg-emerald-100 text-emerald-700'
+          title = `${u.role === 'trainer' ? 'Trainer' : 'User'} Verified`
+          desc = `${u.full_name || u.email} is active`
+        } else if (u.approval_status === 'suspended') {
+          icon = Ban
+          iconBg = 'bg-rose-100 text-rose-700'
+          title = 'User Suspended'
+          desc = `${u.full_name || u.email} suspended`
+        } else if (u.approval_status === 'pending') {
+          icon = Clock
+          iconBg = 'bg-amber-100 text-amber-700'
+          title = 'Application Pending'
+          desc = `${u.full_name || u.email} awaiting review`
+        }
+
+        list.push({
+          id: `user-${u.id}-${u.approval_status}`,
+          icon,
+          title,
+          desc,
+          time: formatDistanceToNow(createdAt, { addSuffix: true }),
+          iconBg,
+          timestamp: createdAt.getTime(),
+        })
+      }
+    })
+
+    // 3. From real courses created
+    coursesList.forEach((c) => {
+      const createdAt = c.created_at ? new Date(c.created_at) : null
+      if (createdAt) {
+        list.push({
+          id: `course-${c.id}`,
+          icon: BookOpen,
+          title: c.status === 'published' ? 'Course Published' : 'Course Created',
+          desc: `"${c.title}" (${c.delivery_mode || 'recorded'})`,
+          time: formatDistanceToNow(createdAt, { addSuffix: true }),
+          iconBg: c.status === 'published' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700',
+          timestamp: createdAt.getTime(),
+        })
+      }
+    })
+
+    // 4. From real enrollments
+    enrollmentsList.forEach((e) => {
+      const enrolledAt = e.enrolled_at ? new Date(e.enrolled_at) : null
+      if (enrolledAt) {
+        const isDone = e.status === 'completed' || (e.progress_percent ?? 0) >= 100
+        list.push({
+          id: `enroll-${e.id}`,
+          icon: isDone ? Award : GraduationCap,
+          title: isDone ? 'Certification Completed' : 'Program Enrollment',
+          desc: isDone ? `Trainee completed certification (100%)` : `Trainee enrolled in course (${e.progress_percent ?? 0}% progress)`,
+          time: formatDistanceToNow(enrolledAt, { addSuffix: true }),
+          iconBg: isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
+          timestamp: enrolledAt.getTime(),
+        })
+      }
+    })
+
+    // Deduplicate and sort by newest
+    const seen = new Set()
+    const unique = list.filter(item => {
+      if (seen.has(item.id)) return false
+      seen.add(item.id)
+      return true
+    })
+
+    unique.sort((a, b) => b.timestamp - a.timestamp)
+    return unique.slice(0, 6)
+  }, [logs, users, coursesList, enrollmentsList])
 
   return (
     <>
@@ -1382,21 +1523,25 @@ export function AdminDashboard() {
                     <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm overflow-hidden">
                       <div className="pb-4 border-b border-slate-100 mb-4">
                         <h3 className="text-base font-bold text-slate-900">Recent Activity</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Latest actions across the platform.</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Live platform activity & system logs.</p>
                       </div>
                       <div className="space-y-4">
-                        {activities.map((act, i) => (
-                          <div key={i} className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${act.iconBg}`}>
-                              <act.icon className="w-5 h-5" />
+                        {activities.length === 0 ? (
+                          <p className="text-xs text-slate-400 py-4 text-center">No platform activity recorded yet.</p>
+                        ) : (
+                          activities.map((act) => (
+                            <div key={act.id} className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${act.iconBg}`}>
+                                <act.icon className="w-5 h-5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-slate-900 truncate">{act.title}</p>
+                                <p className="text-xs text-slate-500 truncate">{act.desc}</p>
+                              </div>
+                              <span className="text-xs text-slate-400 font-medium whitespace-nowrap">{act.time}</span>
                             </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-bold text-slate-900">{act.title}</p>
-                              <p className="text-xs text-slate-500">{act.desc}</p>
-                            </div>
-                            <span className="text-xs text-slate-400 font-medium">{act.time}</span>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -1865,9 +2010,13 @@ export function AdminDashboard() {
                   <p className="text-xs text-slate-500">Live audit events</p>
                 </div>
                 <div className="py-2 space-y-1 flex-1">
-                  {activities.map((act, i) => (
-                    <ActivityItem key={i} {...act} />
-                  ))}
+                  {activities.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-6 text-center">No live events logged.</p>
+                  ) : (
+                    activities.map((act) => (
+                      <ActivityItem key={act.id} {...act} />
+                    ))
+                  )}
                 </div>
               </motion.div>
             )}
