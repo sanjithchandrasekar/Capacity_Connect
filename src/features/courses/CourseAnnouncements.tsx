@@ -62,6 +62,32 @@ export function CourseAnnouncements({ courseId, isTrainer }: { courseId: string;
         content: content.trim()
       }).select()
       if (error) throw error
+
+      // Direct notification dispatch to enrolled trainees
+      try {
+        const { data: enrollments } = await supabase
+          .from('enrollments')
+          .select('user_id')
+          .eq('course_id', courseId)
+          .in('status', ['enrolled', 'in_progress', 'completed'])
+
+        if (enrollments && enrollments.length > 0) {
+          const notifs = enrollments
+            .filter(e => e.user_id !== profile.id)
+            .map(e => ({
+              user_id: e.user_id,
+              type: `course_announcement:${courseId}`,
+              title: `📢 Announcement: ${title.trim()}`,
+              message: `New update posted: ${content.trim().substring(0, 120)}`
+            }))
+          if (notifs.length > 0) {
+            await supabase.from('notifications').insert(notifs)
+          }
+        }
+      } catch (nErr) {
+        console.warn('Direct notification insertion handled or skipped:', nErr)
+      }
+
       return data
     },
     onSuccess: () => {

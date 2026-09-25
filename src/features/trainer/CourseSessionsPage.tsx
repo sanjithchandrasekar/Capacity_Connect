@@ -161,6 +161,36 @@ export function CourseSessionsPage() {
         toast.success('Session created successfully')
       }
 
+      // Direct notification dispatch for enrolled trainees
+      try {
+        const { data: enrollments } = await supabase
+          .from('enrollments')
+          .select('user_id')
+          .eq('course_id', courseId!)
+          .in('status', ['enrolled', 'in_progress', 'completed'])
+
+        if (enrollments && enrollments.length > 0) {
+          const sessionTitle = editingSession.title.trim()
+          const timeText = finalStartTime ? ` on ${new Date(finalStartTime).toLocaleDateString()} at ${new Date(finalStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''
+          const isEdit = !!editingSession.id
+
+          const notifs = enrollments
+            .filter(e => e.user_id !== user?.id)
+            .map(e => ({
+              user_id: e.user_id,
+              type: `course_session:${courseId}`,
+              title: isEdit ? `📅 Session Updated: ${sessionTitle}` : `📅 New Session: ${sessionTitle}`,
+              message: `A session has been scheduled in "${course?.title || 'your course'}"${timeText}.`
+            }))
+
+          if (notifs.length > 0) {
+            await supabase.from('notifications').insert(notifs)
+          }
+        }
+      } catch (nErr) {
+        console.warn('Direct notification insertion handled or skipped:', nErr)
+      }
+
       if (editingSession.meet_link?.trim() && courseId) {
         supabase.from('courses').update({ meet_link: editingSession.meet_link.trim() }).eq('id', courseId).then(() => {}, (err) => console.warn(err))
       }
