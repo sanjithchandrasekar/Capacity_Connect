@@ -419,15 +419,103 @@ function ProgressBar({ value, max = 100, color = 'from-cyan-600 to-blue-600' }: 
 export function TraineeDashboard() {
   const { profile } = useAuth()
 
-  // Mock IMD-specific competency data for Digital Twin
-  const competencyData = [
-    { subject: 'Forecasting', A: 85, B: 90, fullMark: 100 },
-    { subject: 'Radar Ops', A: 60, B: 85, fullMark: 100 },
-    { subject: 'Climate Mod', A: 90, B: 80, fullMark: 100 },
-    { subject: 'Aviation Met', A: 75, B: 80, fullMark: 100 },
-    { subject: 'Marine Met', A: 45, B: 75, fullMark: 100 },
-    { subject: 'Data Analysis', A: 80, B: 85, fullMark: 100 },
-  ];
+  // Fetch real skills from Supabase (User's acquired skills)
+  const { data: dbSkills = [], isLoading: skillsLoading } = useQuery({
+    queryKey: ['trainee-skills', profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_skills')
+        .select(`
+          level,
+          skill:skills (name, category)
+        `)
+        .eq('user_id', profile!.id);
+      
+      if (error) {
+        console.error("Error fetching user skills:", error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  // Fetch ALL available skills to dynamically build the radar axes
+  const { data: allSkills = [], isLoading: allSkillsLoading } = useQuery({
+    queryKey: ['all-available-skills'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('skills').select('*').order('name');
+      if (error) {
+        console.error("Error fetching all skills:", error);
+        return [];
+      }
+      return data || [];
+    }
+  });
+
+  // Calculate competency data merging live DB data with dynamically fetched baseline
+  const competencyData = React.useMemo(() => {
+    let baseline: any[] = [];
+    
+    if (allSkills && allSkills.length > 0) {
+      baseline = allSkills.map((s: any) => ({
+        subject: s.name,
+        A: 0,
+        B: 85, // Default target
+        fullMark: 100
+      }));
+    } else {
+      // Fallback if the skills table is completely empty
+      baseline = [
+        { subject: 'All Courses', A: 0, B: 85, fullMark: 100 },
+        { subject: 'Standard Courses', A: 0, B: 85, fullMark: 100 },
+        { subject: 'Scenario Courses', A: 0, B: 85, fullMark: 100 }
+      ];
+    }
+
+    if (!dbSkills || dbSkills.length === 0) {
+      return baseline.slice(0, 5);
+    }
+
+    // Merge DB skills into baseline
+    const merged = [...baseline];
+    
+    dbSkills.forEach((ds: any) => {
+      const skillName = ds.skill?.name;
+      if (!skillName) return;
+      
+      const existingIdx = merged.findIndex(m => m.subject.toLowerCase() === skillName.toLowerCase());
+      if (existingIdx >= 0) {
+        merged[existingIdx].A = ds.level || 0;
+      } else {
+        // Add completely new skills from DB that aren't in baseline
+        merged.push({
+          subject: skillName,
+          A: ds.level || 0,
+          B: 85, // Default target
+          fullMark: 100
+        });
+      }
+    });
+
+    // Sort to prioritize skills where the user has a level > 0, then by name
+    merged.sort((a, b) => {
+      if (b.A !== a.A) return b.A - a.A;
+      return a.subject.localeCompare(b.subject);
+    });
+
+    // Limit to exactly 5 items for a basic, clean pentagon shape (prevents any overlap)
+    return merged.slice(0, 5);
+  }, [dbSkills, allSkills]);
+
+  // Find top gaps for recommendations
+  const topGaps = React.useMemo(() => {
+    return [...competencyData]
+      .map(c => ({ ...c, gap: Math.max(0, c.B - c.A) }))
+      .filter(c => c.gap > 0)
+      .sort((a, b) => b.gap - a.gap)
+      .slice(0, 2);
+  }, [competencyData]);
 
   const handleResetPassword = async () => {
     if (!profile?.email) return;
@@ -730,35 +818,76 @@ export function TraineeDashboard() {
         {/* Trainee Digital Twin */}
         <motion.div variants={fadeUp} className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm overflow-hidden relative">
           <div className="relative z-10 flex flex-col lg:flex-row gap-8 items-center">
-            <div className="lg:w-1/3 space-y-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 text-xs font-bold mb-1">
-                <Target className="w-3.5 h-3.5" />
-                <span>AI Competency Mapping</span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 leading-tight">Your Digital Twin</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Compare your current meteorological skills against the required competencies for your role. Focus your learning on <strong>Marine Met</strong> and <strong>Radar Ops</strong> to close the gap.
-              </p>
-              <div className="space-y-2 mt-2">
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <div className="w-3 h-3 rounded-full bg-cyan-600" /> Your Current Skill Level
+            <div className="lg:w-1/2 space-y-5">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 text-xs font-bold mb-2">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>AI Skill Analysis</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" /> Role Requirement
+                <h3 className="text-xl font-bold text-slate-900 leading-tight">Your Skill Profile</h3>
+                <p className="text-sm text-slate-600 leading-relaxed mt-2">
+                  See how your current skills compare to your target goals.
+                  {topGaps.length > 0 && (
+                    <span> We recommend focusing on <strong className="text-cyan-700">{topGaps.map(g => g.subject).join(' and ')}</strong> to improve.</span>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-700">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-cyan-600 shadow-sm" /> Your Current Level
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" /> Target Level
                 </div>
               </div>
+
+              {/* Actionable Insights */}
+              {topGaps.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Top Areas for Improvement</h4>
+                  {topGaps.map((gap, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{gap.subject}</p>
+                        <p className="text-xs text-slate-500">Current: {gap.A}% <span className="mx-1 text-slate-300">•</span> Target: {gap.B}%</p>
+                      </div>
+                      <Link to={`/trainee/courses?search=${encodeURIComponent(gap.subject)}`}>
+                        <Button variant="outline" size="sm" className="h-8 text-xs bg-white border-slate-200 text-cyan-700 hover:bg-cyan-50 hover:border-cyan-200">
+                          Find Course <ChevronRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="lg:w-2/3 h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={competencyData}>
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                  <Radar name="Your Score" dataKey="A" stroke="#0284c7" strokeWidth={2} fill="#0ea5e9" fillOpacity={0.4} />
-                  <Radar name="Required" dataKey="B" stroke="#f59e0b" strokeWidth={2} fill="#f59e0b" fillOpacity={0.15} />
-                  <Tooltip wrapperStyle={{ borderRadius: '12px' }} contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }} />
-                </RadarChart>
-              </ResponsiveContainer>
+            <div className="lg:w-1/2 h-80 w-full relative">
+              {(skillsLoading || allSkillsLoading) && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-20 backdrop-blur-sm rounded-3xl">
+                  <Loader2 className="w-8 h-8 text-cyan-600 animate-spin" />
+                </div>
+              )}
+              {competencyData.length >= 3 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={competencyData}>
+                    <PolarGrid stroke="#f1f5f9" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <Radar name="Current Level" dataKey="A" stroke="#0ea5e9" strokeWidth={2} fill="#0ea5e9" fillOpacity={0.2} />
+                    <Radar name="Target Level" dataKey="B" stroke="#cbd5e1" strokeWidth={2} fill="none" />
+                    <Tooltip 
+                      wrapperStyle={{ outline: 'none' }} 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} 
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                  <Target className="w-12 h-12 mb-3 text-slate-200" />
+                  <p className="text-sm font-medium">Add more skills to view chart</p>
+                  <p className="text-xs text-slate-400 max-w-[200px] text-center mt-1">Add at least 2 skill categories to display the chart.</p>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
