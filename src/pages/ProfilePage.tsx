@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { TrainerLayout } from '@/features/trainer/TrainerLayout'
@@ -16,7 +18,8 @@ import {
   User, Mail, Phone, MapPin, GraduationCap, Briefcase, Sparkles,
   Shield, Key, Globe, Save, Loader2, Plus, X,
   CheckCircle2, Compass, BookOpen, BarChart3, Award, Calendar,
-  Building, Layers, Lock, FileText, Check, Code, ExternalLink
+  Building, Layers, Lock, FileText, Check, Code, ExternalLink,
+  Trophy, Medal, Star, ChevronRight, ArrowRight, Eye, EyeOff
 } from 'lucide-react'
 
 function LinkedinIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -61,6 +64,95 @@ export function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [passwordLoading, setPasswordLoading] = useState(false)
 
+  // Fetch completed course enrollments for Badges section
+  const { data: completedEnrollments = [], isLoading: badgesLoading } = useQuery({
+    queryKey: ['trainee-profile-completed-badges', profile?.id, user?.id],
+    queryFn: async () => {
+      const uid = profile?.id || user?.id
+      if (!uid) return []
+      
+      let enrollmentsList: any[] = []
+      try {
+        const { data: enrollmentsData, error } = await supabase
+          .from('enrollments')
+          .select(`
+            id, status, progress_percent, enrolled_at, course_id, user_id,
+            course:courses!enrollments_course_id_fkey(
+              id, title, course_type, thumbnail_path, duration_minutes, modules,
+              trainer:trainers!courses_trainer_id_fkey(full_name)
+            )
+          `)
+          .eq('user_id', uid)
+          .order('enrolled_at', { ascending: false })
+
+        if (!error && enrollmentsData && enrollmentsData.length > 0) {
+          enrollmentsList = enrollmentsData
+        } else {
+          // Resilient fallback query
+          const { data: fallbackEnrs } = await supabase
+            .from('enrollments')
+            .select('*')
+            .eq('user_id', uid)
+          
+          if (fallbackEnrs && fallbackEnrs.length > 0) {
+            const courseIds = fallbackEnrs.map((e: any) => e.course_id).filter(Boolean)
+            const { data: coursesData } = await supabase
+              .from('courses')
+              .select('id, title, course_type, thumbnail_path, duration_minutes, modules, trainer:trainers!courses_trainer_id_fkey(full_name)')
+              .in('id', courseIds)
+
+            const courseMap = new Map((coursesData || []).map((c: any) => [c.id, c]))
+            enrollmentsList = fallbackEnrs.map((e: any) => ({
+              ...e,
+              course: courseMap.get(e.course_id)
+            }))
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching enrollments for badges:', err)
+      }
+
+      // Also check certificates if any
+      const { data: certsData } = await supabase
+        .from('certificates')
+        .select('course_id')
+        .eq('user_id', uid)
+
+      const certCourseIds = new Set((certsData || []).map((c: any) => c.course_id))
+
+      const list = (enrollmentsList || []).filter((e: any) => {
+        if (!e.course && !e.course_id) return false
+        if (e.status === 'completed' || (e.progress_percent ?? 0) >= 100) return true
+        if (certCourseIds.has(e.course_id || e.course?.id)) return true
+        
+        try {
+          const keysToCheck = [
+            `cc_mod_progress_${e.course_id}_${uid}`,
+            `cc_mod_progress_${e.course?.id}_${uid}`,
+            `cc_mod_progress_${e.course_id}_${user?.id}`,
+            `cc_mod_progress_${e.course?.id}_${user?.id}`,
+          ]
+          for (const k of keysToCheck) {
+            const raw = localStorage.getItem(k)
+            if (raw) {
+              const parsed = JSON.parse(raw)
+              const totalMods = Array.isArray(e.course?.modules) ? e.course.modules.length : 0
+              if (totalMods > 0 && Array.isArray(parsed.completed) && parsed.completed.length >= totalMods) {
+                return true
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+        return false
+      })
+
+      return list
+    },
+    enabled: !!(profile?.id || user?.id) && (profile?.role === 'trainee' || !profile?.role),
+  })
+
   // Profile Form State
   const [form, setForm] = useState({
     full_name: '',
@@ -92,8 +184,12 @@ export function ProfilePage() {
   const [newInterestInput, setNewInterestInput] = useState('')
 
   // Password update states
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // Load profile data
   const loadProfile = useCallback(async () => {
@@ -232,24 +328,60 @@ export function ProfilePage() {
   // Update Password Handler
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!currentPassword) {
+      toast.error('Please enter your current password')
+      return
+    }
     if (!newPassword) {
       toast.error('Please enter a new password')
       return
     }
     if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters')
+      toast.error('New password must be at least 6 characters')
+      return
+    }
+    if (newPassword === currentPassword) {
+      toast.error('New password must be different from your current password')
       return
     }
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match')
+      toast.error('New passwords do not match')
+      return
+    }
+
+    const userEmail = user?.email || form.email
+    if (!userEmail) {
+      toast.error('Account email not found')
       return
     }
 
     setPasswordLoading(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
-      if (error) throw error
-      toast.success('Password updated securely!')
+      // 1. Verify current password by signing in
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: currentPassword,
+      })
+      if (verifyErr) {
+        toast.error('Current password is incorrect. Please check and try again.')
+        setPasswordLoading(false)
+        return
+      }
+
+      // 2. Update to new password
+      const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword })
+      if (updateErr) throw updateErr
+
+      // 3. Keep role tables in sync if needed
+      try {
+        const table = profile?.role === 'trainer' ? 'trainers' : profile?.role === 'trainee' ? 'trainees' : 'admins'
+        await (supabase.from(table as any) as any).update({ password: newPassword }).eq('id', user!.id)
+      } catch {
+        // non-fatal
+      }
+
+      toast.success('Password updated successfully! 🔒')
+      setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
     } catch (err: any) {
@@ -326,6 +458,145 @@ export function ProfilePage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Trainee Course Badges Section */}
+      {profile?.role === 'trainee' && (
+        <motion.div variants={fadeUp}>
+          <Card className="bg-white border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
+            <CardHeader className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-amber-500/10 via-cyan-500/5 to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-amber-500/25 shrink-0">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base sm:text-lg font-black text-slate-900">
+                      Earned Course Badges
+                    </CardTitle>
+                    <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-extrabold px-2">
+                      {completedEnrollments.length} Earned
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs text-slate-500 mt-0.5">
+                    Official milestone achievement credentials awarded for 100% course curriculum completion.
+                  </CardDescription>
+                </div>
+              </div>
+
+              <Link
+                to="/trainee/my-learning"
+                className="text-xs font-bold text-cyan-700 hover:text-cyan-800 flex items-center gap-1 shrink-0 group transition-colors"
+              >
+                <span>View All in My Learning</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </CardHeader>
+
+            <CardContent className="p-5 sm:p-6">
+              {badgesLoading ? (
+                <div className="flex items-center justify-center py-8 text-slate-400 gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-cyan-600" />
+                  <span className="text-xs font-semibold">Loading badges...</span>
+                </div>
+              ) : completedEnrollments.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {completedEnrollments.map((enr: any, idx: number) => {
+                    const course = enr.course
+                    if (!course) return null
+
+                    const colorThemes = [
+                      {
+                        bg: 'from-amber-500/15 via-orange-500/5 to-amber-500/10 border-amber-200/90 hover:border-amber-400',
+                        medal: 'from-amber-400 via-amber-500 to-orange-500 text-white shadow-amber-500/30',
+                        tag: 'bg-amber-100 text-amber-900 border-amber-300',
+                        icon: Trophy,
+                        tier: 'Mastery Badge',
+                      },
+                      {
+                        bg: 'from-emerald-500/15 via-teal-500/5 to-emerald-500/10 border-emerald-200/90 hover:border-emerald-400',
+                        medal: 'from-emerald-400 via-teal-500 to-emerald-600 text-white shadow-emerald-500/30',
+                        tag: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+                        icon: Award,
+                        tier: 'Certified Specialist',
+                      },
+                      {
+                        bg: 'from-cyan-500/15 via-blue-500/5 to-cyan-500/10 border-cyan-200/90 hover:border-cyan-400',
+                        medal: 'from-cyan-400 via-sky-500 to-blue-600 text-white shadow-cyan-500/30',
+                        tag: 'bg-cyan-100 text-cyan-900 border-cyan-300',
+                        icon: Medal,
+                        tier: 'Graduate Badge',
+                      },
+                      {
+                        bg: 'from-purple-500/15 via-indigo-500/5 to-purple-500/10 border-purple-200/90 hover:border-purple-400',
+                        medal: 'from-purple-400 via-indigo-500 to-violet-600 text-white shadow-purple-500/30',
+                        tag: 'bg-purple-100 text-purple-900 border-purple-300',
+                        icon: Star,
+                        tier: 'Excellence Award',
+                      },
+                    ]
+                    const theme = colorThemes[idx % colorThemes.length]
+                    const IconComp = theme.icon
+
+                    return (
+                      <div
+                        key={enr.id}
+                        className={`p-4 rounded-2xl border bg-gradient-to-br transition-all duration-200 shadow-xs hover:shadow-md flex items-start gap-3.5 group relative ${theme.bg}`}
+                      >
+                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-md shrink-0 group-hover:scale-105 transition-transform ${theme.medal}`}>
+                          <IconComp className="w-6 h-6" />
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${theme.tag}`}>
+                              {theme.tier}
+                            </span>
+                            {course.department && (
+                              <span className="text-[10px] text-slate-500 font-semibold truncate">
+                                • {course.department}
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-cyan-700 transition-colors">
+                            {course.title}
+                          </h4>
+
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[11px] text-emerald-600 font-extrabold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Completed
+                            </span>
+                            <Link
+                              to={`/trainee/learn/${course.id}`}
+                              className="text-[11px] font-bold text-slate-600 hover:text-cyan-600 flex items-center gap-0.5"
+                            >
+                              Review <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="p-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 text-center space-y-2">
+                  <div className="flex justify-center items-center gap-2 text-slate-300">
+                    <Trophy className="w-8 h-8 opacity-40" />
+                    <Award className="w-9 h-9 opacity-60 text-amber-400" />
+                    <Star className="w-8 h-8 opacity-40" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">No Course Badges Earned Yet</p>
+                    <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                      Complete all modules in your enrolled courses and score at least 80% on module quizzes to unlock your official skill achievement badges here.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Tabs Navigation Bar */}
       <motion.div variants={fadeUp}>
@@ -904,33 +1175,77 @@ export function ProfilePage() {
               <CardContent className="p-6">
                 <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700">New Password</Label>
-                    <Input
-                      type="password"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      minLength={6}
-                      className="bg-slate-50 border-slate-200 rounded-xl h-10 text-slate-900"
-                    />
+                    <Label className="text-xs font-bold text-slate-700">Current Password</Label>
+                    <div className="relative">
+                      <Input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={e => setCurrentPassword(e.target.value)}
+                        placeholder="Enter your current password"
+                        required
+                        className="bg-slate-50 border-slate-200 rounded-xl h-10 pr-10 text-slate-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(prev => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        title={showCurrentPassword ? "Hide password" : "Show password"}
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">New Password</Label>
+                    <div className="relative">
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        placeholder="At least 6 characters"
+                        required
+                        minLength={6}
+                        className="bg-slate-50 border-slate-200 rounded-xl h-10 pr-10 text-slate-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(prev => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        title={showNewPassword ? "Hide password" : "Show password"}
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700">Confirm New Password</Label>
-                    <Input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      minLength={6}
-                      className="bg-slate-50 border-slate-200 rounded-xl h-10 text-slate-900"
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="Re-enter new password"
+                        required
+                        minLength={6}
+                        className="bg-slate-50 border-slate-200 rounded-xl h-10 pr-10 text-slate-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(prev => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        title={showConfirmPassword ? "Hide password" : "Show password"}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
+
                   <Button
                     type="submit"
                     disabled={passwordLoading}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl px-5 h-10 shadow-sm"
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl px-5 h-10 shadow-sm cursor-pointer"
                   >
                     {passwordLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lock className="w-4 h-4 mr-2" />}
                     Update Password

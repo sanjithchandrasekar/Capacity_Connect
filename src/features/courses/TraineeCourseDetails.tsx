@@ -12,7 +12,7 @@ import {
   GraduationCap, Award, PlayCircle,
   ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle, BarChart3,
   HelpCircle, Sparkles, CheckSquare, RotateCcw, Unlock, Image as ImageIcon, Check, Trophy,
-  Eye, Film, Camera, AlignLeft
+  Eye, Film, Camera, AlignLeft, Globe
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -37,6 +37,22 @@ function getYouTubeEmbedUrl(url?: string): string | null {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
   const match = url.match(regExp)
   return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null
+}
+
+function LinkedinIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+    </svg>
+  )
+}
+
+function GithubIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+    </svg>
+  )
 }
 
 function getMaterialIcon(type: string) {
@@ -206,11 +222,15 @@ export function TraineeCourseDetails() {
         try {
           await supabase
             .from('enrollments')
-            .update({ progress_percent: progressPercent } as any)
+            .update({
+              progress_percent: progressPercent,
+              status: progressPercent === 100 ? 'completed' : 'in_progress'
+            } as any)
             .eq('course_id', courseId!)
             .eq('user_id', profile.id)
           queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile.id] })
           queryClient.invalidateQueries({ queryKey: ['my_learning', profile.id] })
+          queryClient.invalidateQueries({ queryKey: ['trainee-profile-completed-badges'] })
         } catch (err) {
           console.warn('Could not update enrollment progress', err)
         }
@@ -253,11 +273,15 @@ export function TraineeCourseDetails() {
     try {
       await supabase
         .from('enrollments')
-        .update({ progress_percent: progressPercent } as any)
+        .update({
+          progress_percent: progressPercent,
+          status: progressPercent === 100 ? 'completed' : 'in_progress'
+        } as any)
         .eq('course_id', courseId!)
         .eq('user_id', profile!.id)
       queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile?.id] })
       queryClient.invalidateQueries({ queryKey: ['my_learning', profile?.id] })
+      queryClient.invalidateQueries({ queryKey: ['trainee-profile-completed-badges'] })
     } catch (err) {
       console.warn('Could not update enrollment progress', err)
     }
@@ -270,7 +294,7 @@ export function TraineeCourseDetails() {
     queryFn: async () => {
       const { data: courseData, error } = await supabase
         .from('courses')
-        .select(`*, trainer:trainers!courses_trainer_id_fkey(full_name, bio, years_of_experience, qualifications, email, study_details, work_experience, expertise_areas)`)
+        .select(`*, trainer:trainers!courses_trainer_id_fkey(full_name, bio, years_of_experience, qualifications, email, study_details, work_experience, expertise_areas, linkedin_url, website_url, github_url)`)
         .eq('id', courseId!)
         .single() as any
       if (error) throw error
@@ -811,23 +835,6 @@ export function TraineeCourseDetails() {
                       <Layers className="w-4 h-4 text-sky-400 shrink-0" />
                       <span>{course.sessions?.length || 0} Sessions</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Video className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span className="capitalize">{course.delivery_mode || 'Recorded'} Delivery</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Pass: {course.passing_score}%</span>
-                    </div>
-                    {enrollmentCounts !== undefined && (
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-cyan-300 shrink-0" />
-                        <span>{enrollmentCounts.active} enrolled / {seatLimit}</span>
-                        {enrollmentCounts.waitlisted > 0 && (
-                          <span className="text-amber-300 ml-1">({enrollmentCounts.waitlisted} waitlisted)</span>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   {/* Progress bar for enrolled users */}
@@ -869,11 +876,11 @@ export function TraineeCourseDetails() {
                         </Button>
                         <Button
                           onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
-                          variant="outline"
-                          className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3 flex items-center gap-2"
+                          className="bg-white/10 hover:bg-white/20 text-white border border-white/25 backdrop-blur-md font-bold rounded-2xl px-6 py-3 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-sm"
                         >
-                          <PlayCircle className="w-4 h-4" /> Review Modules (New Tab)
-                          <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                          <PlayCircle className="w-4 h-4 text-cyan-300" />
+                          <span>Review Modules (New Tab)</span>
+                          <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                         </Button>
                       </div>
                     ) : isApprovedTrainee ? (
@@ -891,10 +898,9 @@ export function TraineeCourseDetails() {
                           <Button
                             onClick={() => handleInitiateOtp('drop')}
                             disabled={!canDrop || dropMutation.isPending}
-                            variant="outline"
-                            className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                            className="bg-white/10 hover:bg-rose-500/20 text-white border border-white/20 hover:border-rose-400/40 backdrop-blur-md font-bold rounded-2xl px-6 py-3 transition-all"
                           >
-                            {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                            {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2 text-rose-400" />}
                             Drop Course
                           </Button>
                           {!canDrop && course?.start_date && (
@@ -918,10 +924,9 @@ export function TraineeCourseDetails() {
                         <Button
                           onClick={() => handleInitiateOtp('drop')}
                           disabled={dropMutation.isPending}
-                          variant="outline"
-                          className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                          className="bg-white/10 hover:bg-rose-500/20 text-white border border-white/20 hover:border-rose-400/40 backdrop-blur-md font-bold rounded-2xl px-6 py-3 transition-all"
                         >
-                          {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                          {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2 text-rose-400" />}
                           Quit Waitlist
                         </Button>
                       </div>
@@ -979,36 +984,64 @@ export function TraineeCourseDetails() {
                     </div>
                   )}
 
-                  {/* 2. Resume Learning Action Banner (for Approved Trainees) */}
-                  {isApprovedTrainee && (
-                    <div className="bg-gradient-to-r from-[#0c162c] via-[#091224] to-[#040814] border border-cyan-500/30 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
-                      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                              Active Learning Session
-                            </span>
+                  {/* 2. Resume Learning Action Banner / Completed Banner (for Approved Trainees) */}
+                  {isApprovedTrainee && (() => {
+                    const isCourseFullyCompleted = Boolean(
+                      (enrollment?.progress_percent ?? 0) >= 100 ||
+                      (course.modules?.length > 0 && completedModules.length >= course.modules.length) ||
+                      enrollment?.status === 'completed'
+                    )
+
+                    return (
+                      <div className={`border rounded-3xl p-6 shadow-xl relative overflow-hidden transition-all ${
+                        isCourseFullyCompleted
+                          ? 'bg-gradient-to-r from-[#061c14] via-[#08281b] to-[#04120c] border-emerald-500/40 shadow-emerald-950/30'
+                          : 'bg-gradient-to-r from-[#0c162c] via-[#091224] to-[#040814] border-cyan-500/30'
+                      }`}>
+                        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl pointer-events-none ${
+                          isCourseFullyCompleted ? 'bg-emerald-500/15' : 'bg-cyan-500/15'
+                        }`} />
+                        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              {isCourseFullyCompleted ? (
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                              ) : (
+                                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                              )}
+                              <span className={`text-xs font-bold uppercase tracking-wider ${
+                                isCourseFullyCompleted ? 'text-emerald-400' : 'text-cyan-400'
+                              }`}>
+                                {isCourseFullyCompleted ? 'Course Completed 🎉' : 'Active Learning Session'}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-bold text-white">
+                              {isCourseFullyCompleted
+                                ? "Course Completed! You've mastered all modules"
+                                : 'Ready to learn? Resume your course modules'}
+                            </h3>
+                            <p className="text-xs text-slate-300">
+                              {isCourseFullyCompleted
+                                ? `All ${course.modules?.length || completedModules.length} modules completed • 100% overall progress`
+                                : `${completedModules.length} of ${course.modules?.length || 0} modules completed • ${enrollment?.progress_percent ?? 0}% overall progress`}
+                            </p>
                           </div>
-                          <h3 className="text-lg font-bold text-white">
-                            Ready to learn? Resume your course modules
-                          </h3>
-                          <p className="text-xs text-slate-300">
-                            {completedModules.length} of {course.modules?.length || 0} modules completed • {enrollment?.progress_percent ?? 0}% overall progress
-                          </p>
+                          <Button
+                            onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
+                            className={`text-white font-extrabold text-sm rounded-2xl px-6 py-3.5 shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shrink-0 ${
+                              isCourseFullyCompleted
+                                ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 shadow-emerald-500/25'
+                                : 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-500/30'
+                            }`}
+                          >
+                            {isCourseFullyCompleted ? <BookOpen className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+                            <span>{isCourseFullyCompleted ? 'Review Modules' : 'Resume Learning'}</span>
+                            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                          </Button>
                         </div>
-                        <Button
-                          onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
-                          className="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-extrabold text-sm rounded-2xl px-6 py-3.5 shadow-lg shadow-cyan-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shrink-0"
-                        >
-                          <PlayCircle className="w-4 h-4" />
-                          <span>Resume Learning</span>
-                          <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-                        </Button>
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
 
                   {/* About */}
                   {course.description && (
@@ -1019,8 +1052,6 @@ export function TraineeCourseDetails() {
                       <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{course.description}</p>
                     </div>
                   )}
-
-
 
                   {/* 1. Course Outline & Learning Roadmap Overview */}
                   <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-6">
@@ -1049,15 +1080,6 @@ export function TraineeCourseDetails() {
                             View Syllabus Doc
                           </Button>
                         )}
-                        {isApprovedTrainee ? (
-                          <Button
-                            size="sm"
-                            onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
-                            className="h-8 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white text-xs font-bold gap-1.5 shadow-sm"
-                          >
-                            <PlayCircle className="w-3.5 h-3.5" /> Resume Learning (New Tab)
-                          </Button>
-                        ) : null}
                       </div>
                     </div>
 
@@ -1469,15 +1491,72 @@ export function TraineeCourseDetails() {
                   {/* Instructor */}
                   <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm">
                     <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-4">Instructor</h3>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-base shadow-xs shrink-0">
+                    <div className="flex items-start gap-3.5 mb-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-cyan-600/20 shrink-0">
                         {course.trainer?.full_name?.charAt(0) || 'T'}
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900">{course.trainer?.full_name || 'Assigned Instructor'}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-slate-900 leading-tight">{course.trainer?.full_name || 'Assigned Instructor'}</p>
                         {course.trainer?.years_of_experience && (
-                          <p className="text-xs text-slate-500 font-medium">{course.trainer.years_of_experience} yrs experience</p>
+                          <p className="text-xs text-slate-500 font-medium mt-0.5">{course.trainer.years_of_experience} yrs experience</p>
                         )}
+
+                        {/* Trainer Social Links below name */}
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          <a
+                            href={
+                              course.trainer?.linkedin_url
+                                ? (course.trainer.linkedin_url.startsWith('http') ? course.trainer.linkedin_url : `https://${course.trainer.linkedin_url}`)
+                                : `https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(course.trainer?.full_name || 'MoES Trainer')}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition-all shadow-2xs hover:scale-105"
+                            title={course.trainer?.linkedin_url ? "LinkedIn Profile" : "Search LinkedIn Profile"}
+                          >
+                            <LinkedinIcon className="w-3.5 h-3.5" />
+                            <span>LinkedIn</span>
+                          </a>
+
+                          <a
+                            href={
+                              course.trainer?.github_url
+                                ? (course.trainer.github_url.startsWith('http') ? course.trainer.github_url : `https://${course.trainer.github_url}`)
+                                : `https://github.com/search?q=${encodeURIComponent(course.trainer?.full_name || 'MoES')}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-[11px] font-bold transition-all shadow-2xs hover:scale-105"
+                            title={course.trainer?.github_url ? "GitHub / Research Profile" : "Search GitHub Profile"}
+                          >
+                            <GithubIcon className="w-3.5 h-3.5" />
+                            <span>GitHub</span>
+                          </a>
+
+                          <a
+                            href={
+                              course.trainer?.website_url
+                                ? (course.trainer.website_url.startsWith('http') ? course.trainer.website_url : `https://${course.trainer.website_url}`)
+                                : 'https://moes.gov.in'
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold transition-all shadow-2xs hover:scale-105"
+                            title="Official Website / Portal"
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>Website</span>
+                          </a>
+
+                          <a
+                            href={`mailto:${course.trainer?.email || 'trainer@capacityconnect.in'}?subject=Regarding: ${encodeURIComponent(course.title || 'Course')}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-[11px] font-bold transition-all shadow-2xs hover:scale-105"
+                            title="Email Instructor"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            <span>Email</span>
+                          </a>
+                        </div>
                       </div>
                     </div>
 
@@ -1509,7 +1588,7 @@ export function TraineeCourseDetails() {
 
                     {/* Expertise Areas */}
                     {course.trainer?.expertise_areas && course.trainer.expertise_areas.length > 0 && (
-                      <div className="mb-4">
+                      <div className="mt-3.5">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Expertise</p>
                         <div className="flex flex-wrap gap-1.5">
                           {course.trainer.expertise_areas.map((skill: string, idx: number) => (
@@ -1519,23 +1598,6 @@ export function TraineeCourseDetails() {
                           ))}
                         </div>
                       </div>
-                    )}
-
-                    {/* Contact email */}
-                    {course.trainer?.email && (
-                      <a
-                        href={`mailto:${course.trainer.email}?subject=Regarding: ${encodeURIComponent(course.title)}`}
-                        className="flex items-center gap-2.5 p-3 rounded-xl bg-cyan-50/70 border border-cyan-200 hover:bg-cyan-50 hover:shadow-xs transition-all group"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-white border border-cyan-200 flex items-center justify-center shrink-0">
-                          <Mail className="w-3.5 h-3.5 text-cyan-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-wide">Contact Instructor</p>
-                          <p className="text-xs text-slate-900 font-semibold truncate">{course.trainer.email}</p>
-                        </div>
-                        <Send className="w-3.5 h-3.5 text-cyan-600 transition-colors shrink-0" />
-                      </a>
                     )}
                   </div>
 

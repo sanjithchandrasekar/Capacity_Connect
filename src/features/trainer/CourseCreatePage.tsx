@@ -21,7 +21,7 @@ import {
   ArrowLeft, ArrowRight, CheckCircle, Check, Loader2, Plus, Upload, X,
   BookOpen, Settings, Target, Eye, AlertCircle, FileText, File, Image,
   Video, Link2, ExternalLink, Globe, Trash2, Layers, Trophy, Film, Camera,
-  Sparkles, AlignLeft, HelpCircle, CheckSquare, Award, ArrowUp, ArrowDown, Edit3, GripVertical
+  Sparkles, AlignLeft, HelpCircle, CheckSquare, Award, ArrowUp, ArrowDown, Edit3, GripVertical, Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
@@ -43,6 +43,8 @@ export interface ModuleItem {
   title: string
   content?: string
   url?: string
+  duration_minutes?: number
+  duration_seconds?: number
   file?: File
   previewUrl?: string
   storagePath?: string
@@ -186,6 +188,7 @@ export function CourseCreatePage() {
   const [itemTitle, setItemTitle] = useState('')
   const [itemContent, setItemContent] = useState('')
   const [itemUrl, setItemUrl] = useState('')
+  const [itemDurationMinutes, setItemDurationMinutes] = useState<string>('5')
   const [itemFile, setItemFile] = useState<File | null>(null)
   const [itemPreview, setItemPreview] = useState<string | null>(null)
   const moduleFileInputRef = useRef<HTMLInputElement>(null)
@@ -349,6 +352,7 @@ export function CourseCreatePage() {
     setItemTitle('')
     setItemContent('')
     setItemUrl('')
+    setItemDurationMinutes('5')
     setItemFile(null)
     setItemPreview(null)
   }
@@ -372,6 +376,13 @@ export function CourseCreatePage() {
     setItemTitle(item.title)
     setItemContent(item.content || '')
     setItemUrl(item.url || '')
+    setItemDurationMinutes(
+      item.duration_minutes
+        ? String(item.duration_minutes)
+        : item.duration_seconds
+        ? String(Math.round(item.duration_seconds / 60))
+        : '5'
+    )
     setItemFile(item.file || null)
     setItemPreview(item.previewUrl || null)
   }
@@ -399,6 +410,9 @@ export function CourseCreatePage() {
       return
     }
 
+    const durationMin = addingItemType === 'video' ? Math.max(0.5, parseFloat(itemDurationMinutes) || 5) : undefined
+    const durationSec = durationMin ? Math.round(durationMin * 60) : undefined
+
     setModules(prev => prev.map(m => {
       if (m.id !== activeModuleId) return m
 
@@ -411,6 +425,8 @@ export function CourseCreatePage() {
             title: itemTitle.trim() || itemFile?.name || (addingItemType === 'link' ? itemUrl : 'Untitled Item'),
             content: itemContent.trim() || undefined,
             url: itemUrl.trim() || undefined,
+            duration_minutes: durationMin,
+            duration_seconds: durationSec,
             file: itemFile || item.file || undefined,
             previewUrl: itemPreview || item.previewUrl || (itemFile && itemFile.type.startsWith('image/') ? URL.createObjectURL(itemFile) : undefined),
             fileName: itemFile?.name || item.fileName,
@@ -425,6 +441,8 @@ export function CourseCreatePage() {
         title: itemTitle.trim() || itemFile?.name || (addingItemType === 'link' ? itemUrl : 'Untitled Item'),
         content: itemContent.trim() || undefined,
         url: itemUrl.trim() || undefined,
+        duration_minutes: durationMin,
+        duration_seconds: durationSec,
         file: itemFile || undefined,
         previewUrl: itemPreview || (itemFile && itemFile.type.startsWith('image/') ? URL.createObjectURL(itemFile) : undefined),
         fileName: itemFile?.name,
@@ -446,6 +464,7 @@ export function CourseCreatePage() {
     setItemTitle('')
     setItemContent('')
     setItemUrl('')
+    setItemDurationMinutes('5')
   }
 
   const removeModuleItem = (moduleId: string, itemId: string) => {
@@ -856,9 +875,12 @@ export function CourseCreatePage() {
               title: item.title,
               content: item.content || '',
               url: publicUrlData?.publicUrl || item.url || '',
+              duration_minutes: item.duration_minutes,
+              duration_seconds: item.duration_seconds,
               storagePath: storagePath,
               fileName: item.fileName,
               fileSize: item.fileSize,
+              quiz_data: item.quiz_data,
             })
           } else {
             uploadedItems.push({
@@ -867,7 +889,11 @@ export function CourseCreatePage() {
               title: item.title,
               content: item.content || '',
               url: item.url || '',
+              duration_minutes: item.duration_minutes,
+              duration_seconds: item.duration_seconds,
               fileName: item.fileName,
+              fileSize: item.fileSize,
+              quiz_data: item.quiz_data,
             })
           }
         }
@@ -1647,6 +1673,13 @@ export function CourseCreatePage() {
                                           <span className="capitalize">{item.type === 'quiz' ? 'Quiz Question' : item.type === 'text' ? 'Text / Notes' : item.type}</span>
                                         </Badge>
 
+                                        {item.type === 'video' && (
+                                          <Badge className="bg-blue-100/80 text-blue-800 border-blue-300 text-[10px] font-bold flex items-center gap-1">
+                                            <Clock className="w-2.5 h-2.5" />
+                                            {item.duration_minutes || (item.duration_seconds ? Math.round(item.duration_seconds / 60) : 5)} min (90% required)
+                                          </Badge>
+                                        )}
+
                                         <p className="text-xs font-bold text-slate-900 truncate">
                                           {item.title}
                                         </p>
@@ -1979,43 +2012,69 @@ export function CourseCreatePage() {
                   )}
 
                   {addingItemType === 'video' && (
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-slate-700">Video Link (YouTube, Vimeo, MP4)</Label>
-                      <Input
-                        value={itemUrl}
-                        onChange={e => setItemUrl(e.target.value)}
-                        placeholder="e.g. https://www.youtube.com/watch?v=... or https://example.com/video.mp4"
-                        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-9 rounded-xl text-xs font-medium"
-                      />
-                      <div className="text-center text-[10px] text-slate-400 font-semibold">— OR UPLOAD VIDEO FILE —</div>
-                      <input
-                        ref={moduleFileInputRef}
-                        type="file"
-                        accept="video/mp4,video/webm,video/quicktime"
-                        className="hidden"
-                        onChange={handleModuleFileSelect}
-                      />
-                      {itemFile ? (
-                        <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
-                          <span className="truncate">{itemFile.name} ({formatFileSize(itemFile.size)})</span>
+                    <div className="space-y-3">
+                      <div className="space-y-1.5 p-3 rounded-xl bg-blue-50/70 border border-blue-200/80">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-blue-600" /> Video Length / Duration (Minutes) *
+                          </Label>
+                          <Badge className="bg-blue-600 text-white text-[10px] font-extrabold shadow-xs">90% Gate</Badge>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            min="0.5"
+                            step="0.5"
+                            value={itemDurationMinutes}
+                            onChange={e => setItemDurationMinutes(e.target.value)}
+                            placeholder="e.g. 5"
+                            className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-9 rounded-xl text-xs font-semibold pr-16"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">minutes</span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 leading-snug">
+                          Trainees must watch at least <strong className="text-blue-700 font-bold">90%</strong> ({itemDurationMinutes ? (parseFloat(itemDurationMinutes) * 0.9).toFixed(1) : '4.5'} min) of this video before they can finish this module and submit the quiz.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-700">Video Link (YouTube, Vimeo, MP4)</Label>
+                        <Input
+                          value={itemUrl}
+                          onChange={e => setItemUrl(e.target.value)}
+                          placeholder="e.g. https://www.youtube.com/watch?v=... or https://example.com/video.mp4"
+                          className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-9 rounded-xl text-xs font-medium"
+                        />
+                        <div className="text-center text-[10px] text-slate-400 font-semibold">— OR UPLOAD VIDEO FILE —</div>
+                        <input
+                          ref={moduleFileInputRef}
+                          type="file"
+                          accept="video/mp4,video/webm,video/quicktime"
+                          className="hidden"
+                          onChange={handleModuleFileSelect}
+                        />
+                        {itemFile ? (
+                          <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+                            <span className="truncate">{itemFile.name} ({formatFileSize(itemFile.size)})</span>
+                            <button
+                              type="button"
+                              onClick={() => setItemFile(null)}
+                              className="p-1 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-600"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
                           <button
                             type="button"
-                            onClick={() => setItemFile(null)}
-                            className="p-1 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-600"
+                            onClick={() => moduleFileInputRef.current?.click()}
+                            className="w-full h-16 border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:text-blue-600 bg-slate-50/50"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <Upload className="w-4 h-4" />
+                            <span className="text-xs font-semibold">Upload MP4/WebM file (max 100MB)</span>
                           </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => moduleFileInputRef.current?.click()}
-                          className="w-full h-16 border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:text-blue-600 bg-slate-50/50"
-                        >
-                          <Upload className="w-4 h-4" />
-                          <span className="text-xs font-semibold">Upload MP4/WebM file (max 100MB)</span>
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
                   )}
 

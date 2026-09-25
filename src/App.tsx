@@ -51,6 +51,8 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ defa
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const PublicCourseCatalog = lazy(() => import('./pages/PublicCourseCatalog').then((m) => ({ default: m.PublicCourseCatalog })))
 const PublicCourseDetails = lazy(() => import('./pages/PublicCourseDetails').then((m) => ({ default: m.PublicCourseDetails })))
+const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })))
+const ContactPage = lazy(() => import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })))
 const AdminCourseCreatePage = lazy(() => import('./features/admin/AdminCourseCreatePage').then((m) => ({ default: m.AdminCourseCreatePage })))
 const AdminCourseEditPage = lazy(() => import('./features/admin/AdminCourseEditPage').then((m) => ({ default: m.AdminCourseEditPage })))
 const ChatBot = lazy(() => import('./components/ChatBot').then((m) => ({ default: m.ChatBot })))
@@ -151,9 +153,11 @@ function AnimatedAppRoutes() {
               <Route path="/supabase-test" element={<SupabaseTest />} />
               <Route path="/db" element={<SupabaseTest />} />
               
-              {/* Public Course Pages */}
+              {/* Public Course Pages & About */}
               <Route path="/courses" element={<PublicCourseCatalog />} />
               <Route path="/courses/:courseId" element={<PublicCourseDetails />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
               
               {/* Auth Fallbacks */}
               <Route path="/pending-approval" element={<PendingApprovalPage />} />

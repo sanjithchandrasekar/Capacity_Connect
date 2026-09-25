@@ -9,6 +9,7 @@ import { AdminCourses } from '@/features/courses/AdminCourses'
 import { TrainerAssignmentBanner } from '@/features/admin/TrainerAssignmentBanner'
 import { AdminAnnouncements } from '@/features/admin/AdminAnnouncements'
 import { AdminHomePageSettings } from '@/features/admin/AdminHomePageSettings'
+import { AdminContactMessages } from '@/features/admin/AdminContactMessages'
 import { Button } from '@/components/ui/button'
 import { ResponsiveContainer, Tooltip, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
@@ -18,7 +19,7 @@ import {
   Globe, LogOut, Users, BookOpen, BarChart3, Shield,
   GraduationCap, ChevronRight, CheckCircle, Search,
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
-  Award, Target, FileText, Settings, User,
+  Award, Target, FileText, Settings, User, Mail,
   RefreshCw, Star, MessageSquare,
   Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone, FileCheck
 } from 'lucide-react'
@@ -491,7 +492,9 @@ export function TraineeDashboard() {
   })
 
   const enrolledCount = enrollments.length
-  const completedEnrollments = enrollments.filter((e: any) => e.status === 'completed')
+  const completedEnrollments = enrollments.filter(
+    (e: any) => e.status === 'completed' || (e.progress_percent ?? 0) === 100
+  )
   const completionRate = enrolledCount > 0
     ? Math.round((completedEnrollments.length / enrolledCount) * 100)
     : 0
@@ -501,6 +504,10 @@ export function TraineeDashboard() {
     return sum + Math.round(mins * pct)
   }, 0)
   const hoursLearned = Math.round(totalMinutes / 60)
+  const earnedCertificatesCount = Math.max(
+    certificates.length,
+    completedEnrollments.length
+  )
 
   const stats = [
     {
@@ -509,7 +516,7 @@ export function TraineeDashboard() {
       icon: BookOpen,
       gradient: 'from-cyan-600 to-blue-700',
       badgeText: 'Active',
-      subtext: enrolledCount === 0 ? 'No courses yet' : `${enrollments.filter((e: any) => e.status !== 'completed' && e.status !== 'withdrawn').length} active`,
+      subtext: enrolledCount === 0 ? 'No courses yet' : `${enrollments.filter((e: any) => e.status !== 'completed' && e.status !== 'withdrawn' && (e.progress_percent ?? 0) < 100).length} active`,
     },
     {
       label: 'Hours Learned',
@@ -521,11 +528,11 @@ export function TraineeDashboard() {
     },
     {
       label: 'Certificates',
-      value: certLoading ? '…' : String(certificates.length),
+      value: certLoading && enrollmentsLoading ? '…' : String(earnedCertificatesCount),
       icon: Award,
       gradient: 'from-amber-500 to-orange-600',
-      badgeText: 'Verified',
-      subtext: certificates.length === 0 ? 'None yet' : 'Ready to share',
+      badgeText: earnedCertificatesCount > 0 ? 'Verified' : 'Pending',
+      subtext: earnedCertificatesCount === 0 ? 'None yet' : `${earnedCertificatesCount} earned • Ready to view`,
     },
     {
       label: 'Completion Rate',
@@ -544,9 +551,9 @@ export function TraineeDashboard() {
       id: e.course?.id,
       title: e.course?.title ?? 'Untitled Course',
       progress: e.progress_percent ?? 0,
-      status: e.status === 'completed' ? 'Completed' : 'In Progress',
+      status: e.status === 'completed' || (e.progress_percent ?? 0) === 100 ? 'Completed' : 'In Progress',
       instructor: e.course?.trainer?.full_name ?? 'Instructor',
-      duration: e.status === 'completed'
+      duration: e.status === 'completed' || (e.progress_percent ?? 0) === 100
         ? 'Completed'
         : e.course?.duration_minutes
           ? `${Math.round(e.course.duration_minutes * (1 - (e.progress_percent ?? 0) / 100))} min left`
@@ -568,11 +575,11 @@ export function TraineeDashboard() {
           : 'bg-blue-100 text-blue-700',
       }))
     : enrollments.slice(0, 4).map((e: any) => ({
-        icon: e.status === 'completed' ? CheckCircle : BookOpen,
-        title: e.status === 'completed' ? 'Completed Course' : 'Enrolled in Course',
+        icon: e.status === 'completed' || (e.progress_percent ?? 0) === 100 ? CheckCircle : BookOpen,
+        title: e.status === 'completed' || (e.progress_percent ?? 0) === 100 ? 'Completed Course' : 'Enrolled in Course',
         desc: e.course?.title ?? 'Course',
         time: formatDistanceToNow(new Date(e.enrolled_at), { addSuffix: true }),
-        iconBg: e.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-100 text-cyan-700',
+        iconBg: e.status === 'completed' || (e.progress_percent ?? 0) === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-100 text-cyan-700',
       }))
 
   return (
@@ -778,45 +785,6 @@ export function TraineeDashboard() {
             </Link>
           ))}
         </motion.div>
-
-        {/* Profile Card */}
-        <motion.div variants={fadeUp} className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Account Overview</h3>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
-              Trainee Profile
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: 'Full Name', value: profile?.full_name },
-              { label: 'Email Address', value: profile?.email },
-              { label: 'Department', value: profile?.department ?? '—' },
-              { label: 'Designation', value: profile?.designation ?? '—' },
-            ].map(item => (
-              <div key={item.label} className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                <p className="text-[11px] font-semibold text-slate-500 mb-0.5">{item.label}</p>
-                <p className="text-sm font-bold text-slate-900 truncate">{item.value || 'Not provided'}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Verification Status:</span>
-              <StatusBadge status={profile?.approval_status ?? 'pending'} />
-            </div>
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={handleResetPassword}
-                className="text-xs font-semibold text-cyan-700 hover:text-cyan-800 transition-colors flex items-center gap-1.5 bg-cyan-50 hover:bg-cyan-100 px-3 py-1.5 rounded-lg border border-cyan-200"
-              >
-                <Shield className="w-3.5 h-3.5" />
-                Reset Password
-              </button>
-              <span className="text-xs text-slate-400">MoES Capacity Connect</span>
-            </div>
-          </div>
-        </motion.div>
       </motion.div>
     </DashboardShell>
   )
@@ -1008,7 +976,7 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<Profile[]>([])
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements' | 'home_page'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements' | 'messages' | 'home_page'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended' | 'rejected'>('all')
   const [ConfirmDialog, confirm] = useConfirm()
@@ -1204,6 +1172,7 @@ export function AdminDashboard() {
     ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins', icon: Shield }] : []),
     { key: 'courses', label: 'Courses', icon: BookOpen },
     { key: 'announcements', label: 'Announcements', icon: Megaphone },
+    { key: 'messages', label: 'Messages', icon: Mail },
     { key: 'home_page', label: 'Home Page', icon: Globe },
     ...(isSuperAdmin ? [{ key: 'logs', label: 'Audit Logs', icon: BarChart3 }] : []),
   ] as const
@@ -1724,6 +1693,13 @@ export function AdminDashboard() {
               {activeTab === 'home_page' && (
                 <motion.div key="home_page" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
                   <AdminHomePageSettings />
+                </motion.div>
+              )}
+
+              {/* Tab: Messages */}
+              {activeTab === 'messages' && (
+                <motion.div key="messages" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
+                  <AdminContactMessages />
                 </motion.div>
               )}
 

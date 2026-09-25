@@ -19,6 +19,7 @@ import { DynamicUpdatesSection } from '@/components/landing/DynamicUpdatesSectio
 import { HorizontalAnnouncementBar } from '@/components/landing/HorizontalAnnouncementBar';
 import { MissionExplodedView } from '@/components/landing/MissionExplodedView';
 import { useHomePageSettings } from '@/hooks/useHomePageSettings';
+import { supabase } from '@/lib/supabase';
 import {
   BookOpen,
   GraduationCap,
@@ -403,19 +404,44 @@ export function LandingPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
       toast.error('Please fill in all required fields.');
       return;
     }
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setIsContactOpen(false);
+    try {
+      await (supabase as any).from('contact_messages').insert({
+        name: contactForm.name.trim(),
+        email: contactForm.email.trim().toLowerCase(),
+        department: contactForm.department || 'MoES',
+        subject: 'Inquiry via Landing Page',
+        message: contactForm.message.trim(),
+        status: 'unread',
+        created_at: new Date().toISOString(),
+      });
+      const local = JSON.parse(localStorage.getItem('local_contact_messages') || '[]');
+      local.unshift({
+        id: 'local_' + Date.now(),
+        name: contactForm.name.trim(),
+        email: contactForm.email.trim(),
+        department: contactForm.department || 'MoES',
+        subject: 'Inquiry via Landing Page',
+        message: contactForm.message.trim(),
+        status: 'unread',
+        created_at: new Date().toISOString(),
+      });
+      localStorage.setItem('local_contact_messages', JSON.stringify(local));
+
       toast.success('Thank you for reaching out! A ministry support representative will respond shortly.');
+      setIsContactOpen(false);
       setContactForm({ name: '', email: '', department: '', message: '' });
-    }, 600);
+    } catch (err) {
+      toast.error('Failed to submit message.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -459,20 +485,18 @@ export function LandingPage() {
             >
               Courses
             </Link>
-            <button
-              type="button"
-              onClick={scrollToAbout}
-              className="text-sm font-semibold text-slate-300 hover:text-cyan-400 transition-colors cursor-pointer drop-shadow-sm"
+            <Link
+              to="/about"
+              className="text-sm font-semibold text-slate-300 hover:text-cyan-400 transition-colors drop-shadow-sm"
             >
               About
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsContactOpen(true)}
-              className="text-sm font-semibold text-slate-300 hover:text-cyan-400 transition-colors cursor-pointer drop-shadow-sm"
+            </Link>
+            <Link
+              to="/contact"
+              className="text-sm font-semibold text-slate-300 hover:text-cyan-400 transition-colors drop-shadow-sm"
             >
               Contact
-            </button>
+            </Link>
             <Link
               to="/register"
               className="text-sm font-semibold text-cyan-300 hover:text-white transition-colors drop-shadow-sm"
@@ -513,13 +537,13 @@ export function LandingPage() {
               >
                 Courses
               </Link>
-              <button
-                type="button"
-                onClick={scrollToAbout}
-                className="block w-full text-left text-sm font-semibold text-slate-300 hover:text-cyan-400 py-1.5 cursor-pointer"
+              <Link
+                to="/about"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-sm font-semibold text-slate-300 hover:text-cyan-400 py-1.5"
               >
                 About
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={() => {
@@ -979,8 +1003,17 @@ export function LandingPage() {
             </p>
           </div>
 
-          <div className="text-xs font-mono text-slate-500 text-center md:text-right shrink-0">
-            © 2026 Capacity Connect • All rights reserved.
+          <div className="flex flex-col md:flex-row items-center gap-6 text-xs text-slate-400">
+            <div className="flex items-center gap-4">
+              <Link to="/courses" className="hover:text-cyan-400 transition-colors">Courses</Link>
+              <Link to="/about" className="hover:text-cyan-400 transition-colors">About</Link>
+              <Link to="/contact" className="hover:text-cyan-400 transition-colors">Contact</Link>
+              <Link to="/login" className="hover:text-cyan-400 transition-colors">Login</Link>
+              <Link to="/register" className="hover:text-cyan-400 transition-colors">Register</Link>
+            </div>
+            <div className="font-mono text-slate-500">
+              © 2026 Capacity Connect • Ministry of Earth Sciences (MoES), Govt. of India.
+            </div>
           </div>
         </div>
       </footer>
