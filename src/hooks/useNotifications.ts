@@ -125,6 +125,7 @@ export function useNotifications() {
 
 export function getNotificationRedirectUrl(type: string, role: string | undefined): string {
   if (!role) return '/'
+  
   if (type.startsWith('enrollment_request:')) {
     const courseId = type.split(':')[1]
     return `/trainer/courses/${courseId}`
@@ -137,8 +138,24 @@ export function getNotificationRedirectUrl(type: string, role: string | undefine
     const courseId = type.split(':')[1]
     return role === 'trainer' ? `/trainer/courses/${courseId}` : `/trainee/courses/${courseId}`
   }
+  if (type.startsWith('course_announcement:') || type.startsWith('announcement:')) {
+    const courseId = type.split(':')[1]
+    return role === 'trainer' ? `/trainer/courses/${courseId}` : `/trainee/courses/${courseId}`
+  }
+  if (type.startsWith('course_session:') || type.startsWith('session:')) {
+    const courseId = type.split(':')[1]
+    return role === 'trainer' ? `/trainer/courses/${courseId}/sessions` : `/trainee/courses/${courseId}`
+  }
 
   switch (type) {
+    case 'course_announcement':
+    case 'platform_announcement':
+    case 'announcement':
+      return role === 'trainer' ? '/trainer/dashboard' : role === 'trainee' ? '/trainee/dashboard' : '/admin'
+    case 'course_session':
+    case 'session':
+    case 'live_session':
+      return role === 'trainer' ? '/trainer/courses' : '/trainee/courses'
     case 'user_registration':
     case 'course_submission':
       return role === 'super_admin' ? '/super-admin' : '/admin'
@@ -154,3 +171,53 @@ export function getNotificationRedirectUrl(type: string, role: string | undefine
       return `/${role}`
   }
 }
+
+export interface NotificationMeta {
+  category: 'announcement' | 'session' | 'course' | 'chat' | 'user' | 'system'
+  label: string
+  color: string
+}
+
+export function getNotificationMeta(type: string): NotificationMeta {
+  if (type.startsWith('course_announcement:') || type.startsWith('announcement:') || type === 'platform_announcement' || type === 'announcement' || type === 'course_announcement') {
+    return {
+      category: 'announcement',
+      label: 'Announcement',
+      color: 'bg-amber-50 text-amber-700 border-amber-200'
+    }
+  }
+  if (type.startsWith('course_session:') || type.startsWith('session:') || type === 'course_session' || type === 'session' || type === 'live_session') {
+    return {
+      category: 'session',
+      label: 'Live Session',
+      color: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+    }
+  }
+  if (type.startsWith('course_message:')) {
+    return {
+      category: 'chat',
+      label: 'Message',
+      color: 'bg-cyan-50 text-cyan-700 border-cyan-200'
+    }
+  }
+  if (type === 'user_registration') {
+    return {
+      category: 'user',
+      label: 'User',
+      color: 'bg-blue-50 text-blue-700 border-blue-200'
+    }
+  }
+  if (type === 'certificate_issued' || type === 'assessment_result') {
+    return {
+      category: 'course',
+      label: 'Achievement',
+      color: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    }
+  }
+  return {
+    category: 'system',
+    label: 'Platform',
+    color: 'bg-slate-100 text-slate-700 border-slate-200'
+  }
+}
+
