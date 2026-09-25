@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, User, RotateCcw } from 'lucide-react'
+import { X, Send, User, RotateCcw, Lock, LogIn, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ChatBotLogo } from './ChatBotLogo'
+import { useAuth } from '@/hooks/useAuth'
 
 function BotMessage({ content }: { content: string }) {
   const lines = content.split('\n')
@@ -40,7 +42,21 @@ const SUGGESTED_PROMPTS = [
   'Tell me about certifications',
 ]
 
+const CANNED_RESPONSES: Record<string, string> = {
+  'Explore available courses':
+    'You can explore our full catalog of scientific courses covering Atmospheric Science, Doppler Weather Radar, Oceanography, and Climatology on the **Courses** page. Filter by department or competency level to find your ideal training track.',
+  'How do I register?':
+    'To register, click **Get Started** or **Register** at the top right of the navigation bar. Select your role as a **Trainee** or **Trainer**, complete your institutional details, and submit for verification.',
+  'Browse training tracks':
+    'Capacity Connect offers dedicated training tracks including:\n• Atmospheric & Meteorological Sciences\n• Ocean Observations & Coastal Modeling\n• Doppler Weather Radar Operations & Calibration\n• Seismological & Geohazard Monitoring\n• Climate Forecasting & Disaster Risk Reduction',
+  'Tell me about certifications':
+    'Upon completing all course modules and passing the final assessments (minimum 60% passing score), you receive an official MoES-accredited, verifiable digital PDF certificate complete with cryptographic validation and QR code.',
+}
+
 export function ChatBot() {
+  const { user } = useAuth()
+  const isLoggedIn = Boolean(user)
+
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -50,11 +66,6 @@ export function ChatBot() {
   ])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [statusText, setStatusText] = useState<string | null>(null)
-  const [failedMsg, setFailedMsg] = useState<{
-    text: string
-    history: { role: 'bot' | 'user'; content: string }[]
-  } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -62,13 +73,13 @@ export function ChatBot() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, isLoading, statusText])
+  }, [messages, isLoading])
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && isLoggedIn) {
       setTimeout(() => inputRef.current?.focus(), 150)
     }
-  }, [isOpen])
+  }, [isOpen, isLoggedIn])
 
   const handleResetChat = () => {
     setMessages([
@@ -82,23 +93,51 @@ export function ChatBot() {
   const sendMessage = async (textToSend: string) => {
     if (!textToSend.trim() || isLoading) return
 
-    const newMsg = textToSend.trim()
-    const updatedMessages: Message[] = [...messages, { role: 'user', content: newMsg }]
+    const trimmedMsg = textToSend.trim()
 
+    // When NOT logged in, enforce that only the 4 suggested questions are permitted
+    if (!isLoggedIn && !SUGGESTED_PROMPTS.includes(trimmedMsg)) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'user', content: trimmedMsg },
+        {
+          role: 'bot',
+          content:
+            'Please log in to ask custom questions freely. As a guest, you can select any of the 4 suggested questions above.',
+        },
+      ])
+      setInputValue('')
+      return
+    }
+
+    const updatedMessages: Message[] = [...messages, { role: 'user', content: trimmedMsg }]
     setMessages(updatedMessages)
     setInputValue('')
     setIsLoading(true)
 
+    // Check if we have an instant canned answer for a suggested prompt
+    if (CANNED_RESPONSES[trimmedMsg]) {
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { role: 'bot', content: CANNED_RESPONSES[trimmedMsg] }])
+        setIsLoading(false)
+      }, 400)
+      return
+    }
+
     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 
     try {
+      if (!API_KEY) {
+        throw new Error('No API key configured')
+      }
+
       const formattedMessages = updatedMessages.map((msg) => ({
         role: msg.role === 'bot' ? 'model' : 'user',
         parts: [{ text: msg.content }],
       }))
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -106,7 +145,7 @@ export function ChatBot() {
             systemInstruction: {
               parts: [
                 {
-                  text: 'You are Capacity Connect AI, the intelligent platform assistant for Capacity Connect. You assist users with exploring courses, training modules, user registration, certifications, and platform navigation. Provide clear, helpful, and concise responses. Politely decline inquiries that are completely outside the scope of Capacity Connect.',
+                  text: 'You are Capacity Connect AI, the intelligent platform assistant for Capacity Connect (Ministry of Earth Sciences, Govt of India). You assist users with exploring courses, training modules, user registration, certifications, and platform navigation. Provide clear, helpful, and concise responses.',
                 },
               ],
             },
@@ -126,25 +165,29 @@ export function ChatBot() {
       if (reply) {
         setMessages((prev) => [...prev, { role: 'bot', content: reply }])
       } else {
-        setMessages((prev) => [...prev, { role: 'bot', content: 'I could not understand that. Could you please try again?' }])
+        setMessages((prev) => [
+          ...prev,
+          { role: 'bot', content: 'I could not understand that. Could you please rephrase?' },
+        ])
       }
     } catch (err: any) {
-      console.error('Chatbot error:', err)
+      console.warn('Chatbot fallback:', err)
       setMessages((prev) => [
         ...prev,
         {
           role: 'bot',
-          content: 'I am currently in standby mode. For immediate assistance, please reach out via the Contact page or browse our course catalog.',
+          content:
+            'I am currently operating with platform knowledge. For specific inquiries, explore our Courses catalog or contact official MoES administrators via the Contact page.',
         },
       ])
     } finally {
-      setStatusText(null)
       setIsLoading(false)
     }
   }
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
+    if (!isLoggedIn) return
     sendMessage(inputValue)
   }
 
@@ -159,7 +202,7 @@ export function ChatBot() {
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="absolute bottom-16 right-0 w-[calc(100vw-2.5rem)] sm:w-[410px] bg-[#060D1E]/95 backdrop-blur-2xl border border-cyan-500/30 shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_30px_rgba(6,182,212,0.15)] rounded-2xl overflow-hidden flex flex-col h-[550px] max-h-[82vh]"
           >
-            {/* Header: Cosmic Navy to Deep Space Cyan matching Homepage Header */}
+            {/* Header */}
             <div className="px-4 py-3.5 bg-gradient-to-r from-[#040814] via-[#07132a] to-[#0a1e3f] border-b border-cyan-500/25 flex justify-between items-center text-white shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -173,6 +216,9 @@ export function ChatBot() {
                   <h3 className="font-semibold text-sm tracking-tight text-white flex items-center gap-1.5">
                     Capacity Connect AI
                   </h3>
+                  <p className="text-[10px] text-cyan-300 font-medium">
+                    {isLoggedIn ? 'Online • Full Access' : 'Guest Mode • Suggested Questions'}
+                  </p>
                 </div>
               </div>
 
@@ -198,7 +244,7 @@ export function ChatBot() {
               </div>
             </div>
 
-            {/* Chat Messages Body: Clean Light Theme Canvas */}
+            {/* Chat Messages Body */}
             <div
               ref={scrollRef}
               className="flex-1 p-4 overflow-y-auto bg-gradient-to-b from-[#f8fafc] via-[#f1f5f9] to-[#f8fafc] flex flex-col gap-3.5 scroll-smooth"
@@ -247,10 +293,13 @@ export function ChatBot() {
                 </div>
               )}
 
-              {/* Suggested prompt chips on initial greeting */}
-              {messages.length <= 1 && (
+              {/* Suggested Questions: Available for guests anytime, or initial greeting for logged in users */}
+              {(!isLoggedIn || messages.length <= 1) && (
                 <div className="pt-2 flex flex-col gap-1.5">
-                  <p className="text-[11px] font-semibold text-slate-500 px-1">Suggested questions:</p>
+                  <p className="text-[11px] font-semibold text-slate-500 px-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-cyan-600" />
+                    Suggested questions:
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {SUGGESTED_PROMPTS.map((prompt, idx) => (
                       <button
@@ -267,27 +316,46 @@ export function ChatBot() {
               )}
             </div>
 
-            {/* Input Bar: Sleek Dark Cockpit Matching Home Page Dark Elements */}
-            <form
-              onSubmit={handleSend}
-              className="p-3 bg-[#040814] border-t border-cyan-500/20 flex gap-2 items-center"
-            >
-              <Input
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask Capacity Connect AI..."
-                className="rounded-xl bg-[#081226] border border-cyan-500/30 text-white placeholder:text-slate-400 focus-visible:ring-cyan-500 focus-visible:border-cyan-400 h-10 text-xs sm:text-sm shadow-inner"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={isLoading || !inputValue.trim()}
-                className="rounded-xl h-10 w-10 bg-gradient-to-r from-cyan-500 via-blue-600 to-amber-500 hover:opacity-95 text-white shadow-lg shadow-cyan-500/25 shrink-0 cursor-pointer disabled:opacity-40 transition-all"
+            {/* Input Bar */}
+            {isLoggedIn ? (
+              <form
+                onSubmit={handleSend}
+                className="p-3 bg-[#040814] border-t border-cyan-500/20 flex gap-2 items-center"
               >
-                <Send className="w-4 h-4" />
-              </Button>
-            </form>
+                <Input
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Ask Capacity Connect AI..."
+                  className="rounded-xl bg-[#081226] border border-cyan-500/30 text-white placeholder:text-slate-400 focus-visible:ring-cyan-500 focus-visible:border-cyan-400 h-10 text-xs sm:text-sm shadow-inner"
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={isLoading || !inputValue.trim()}
+                  className="rounded-xl h-10 w-10 bg-gradient-to-r from-cyan-500 via-blue-600 to-amber-500 hover:opacity-95 text-white shadow-lg shadow-cyan-500/25 shrink-0 cursor-pointer disabled:opacity-40 transition-all"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            ) : (
+              <div className="p-3 bg-[#040814] border-t border-cyan-500/20 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#081226] border border-cyan-500/25 text-xs text-slate-300">
+                  <div className="flex items-center gap-2 truncate">
+                    <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="truncate">Log in to type custom queries</span>
+                  </div>
+                  <Link
+                    to="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="shrink-0 px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold transition-all flex items-center gap-1 shadow-sm"
+                  >
+                    <LogIn className="w-3 h-3" />
+                    <span>Log In</span>
+                  </Link>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -309,5 +377,6 @@ export function ChatBot() {
     </div>
   )
 }
+
 
 

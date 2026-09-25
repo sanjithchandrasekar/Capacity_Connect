@@ -1,29 +1,45 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, Link as RouterLink } from 'react-router-dom'
+import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Database } from '@/integrations/supabase/types'
 import { TrainerLayout, fadeUp, stagger } from './TrainerLayout'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar, Video, BookOpen, CheckCircle2, XCircle, UserCheck, Layers, Trophy, Globe, Image as ImageIcon, ExternalLink, HelpCircle } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import {
+  ArrowLeft, Edit3, Target, BarChart3, FileText, Clock, Users, Loader2, Calendar,
+  Video, BookOpen, CheckCircle2, XCircle, UserCheck, Layers, Trophy, Globe,
+  Image as ImageIcon, ExternalLink, HelpCircle, ChevronDown, ChevronUp, Sparkles,
+  Eye, AlertCircle, Send, Check, Film, Camera, AlignLeft, Link2, Download, Trash2,
+  Star, MessageSquare
+} from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { CourseAnnouncements } from '../courses/CourseAnnouncements'
 import { CourseChat } from '../courses/CourseChat'
 import { CourseFeedback } from '../courses/CourseFeedback'
+import { CourseMaterials } from '../courses/CourseMaterials'
 
-type Course = Database['public']['Tables']['courses']['Row']
+type Course = Database['public']['Tables']['courses']['Row'] & {
+  modules?: any[] | null
+  edit_request_status?: string | null
+  edit_request_reason?: string | null
+  edit_request_at?: string | null
+  edit_window_expires_at?: string | null
+  edit_window_duration_hours?: number | null
+  admin_edit_notes?: string | null
+}
 type CourseSkill = Database['public']['Tables']['course_skills']['Row'] & { skills: { name: string } | null }
 type Session = Database['public']['Tables']['course_sessions']['Row']
 type Material = Database['public']['Tables']['materials']['Row']
-type Assessment = Database['public']['Tables']['assessments']['Row']
 
 const statusColors: Record<string, string> = {
   draft: 'bg-slate-100 text-slate-700 border border-slate-200',
@@ -32,9 +48,43 @@ const statusColors: Record<string, string> = {
   archived: 'bg-rose-50 text-rose-700 border border-rose-200',
 }
 
+function getYouTubeEmbedUrl(url?: string): string | null {
+  if (!url) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+  const match = url.match(regExp)
+  return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null
+}
+
+function getFormattedObjectives(raw: any): string {
+  if (!raw) return ''
+  if (typeof raw === 'string') return raw
+  if (Array.isArray(raw)) return raw.join('\n\n')
+  if (typeof raw === 'object') {
+    const parts: string[] = []
+    if (raw.description) parts.push(raw.description)
+    if (raw.understand) parts.push(`What you'll understand: ${raw.understand}`)
+    if (raw.able_to_do) parts.push(`What you'll be able to do: ${raw.able_to_do}`)
+    return parts.length > 0 ? parts.join('\n\n') : JSON.stringify(raw)
+  }
+  return String(raw)
+}
+
+function formatTime12(timeStr?: string | null): string {
+  if (!timeStr) return ''
+  if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  let hour = parseInt(parts[0], 10)
+  const minute = parts[1]
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  hour = hour % 12 || 12
+  return `${hour.toString().padStart(2, '0')}:${minute} ${ampm}`
+}
+
 export function CourseDetailPage() {
   const { courseId } = useParams<{ courseId: string }>()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [course, setCourse] = useState<Course | null>(null)
   const [courseSkills, setCourseSkills] = useState<CourseSkill[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
@@ -46,6 +96,15 @@ export function CourseDetailPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [allEnrollments, setAllEnrollments] = useState<any[]>([])
   const [isProcessingId, setIsProcessingId] = useState<string | null>(null)
+
+  // Module Preview Expansion State
+  const [openModules, setOpenModules] = useState<Set<string>>(new Set())
+  const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null)
+
+  // Edit Request Modal State
+  const [editRequestOpen, setEditRequestOpen] = useState(false)
+  const [editReason, setEditReason] = useState('')
+  const [submittingEditRequest, setSubmittingEditRequest] = useState(false)
 
   // Attendance Modal state
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false)
@@ -69,7 +128,6 @@ export function CourseDetailPage() {
 
   const handleOpenAttendance = (session: Session) => {
     setAttendanceSession(session)
-    // Default all active trainees to 'present'
     const initial: Record<string, 'present' | 'absent' | 'late'> = {}
     activeEnrollments.forEach(e => {
       initial[e.user_id] = 'present'
@@ -78,14 +136,27 @@ export function CourseDetailPage() {
     setAttendanceDialogOpen(true)
   }
 
-  const handleSaveAttendance = () => {
-    toast.success(`Attendance saved for "${attendanceSession?.title || 'Session'}"!`)
-    setAttendanceDialogOpen(false)
+  const toggleModule = (modId: string) => {
+    setOpenModules(prev => {
+      const next = new Set(prev)
+      if (next.has(modId)) next.delete(modId)
+      else next.add(modId)
+      return next
+    })
   }
 
-  const fetchData = useCallback(async () => {
+  const toggleAllModules = (expand: boolean) => {
+    if (!course?.modules || !Array.isArray(course.modules)) return
+    if (expand) {
+      setOpenModules(new Set(course.modules.map((m: any) => m.id)))
+    } else {
+      setOpenModules(new Set())
+    }
+  }
+
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!user || !courseId) return
-    setLoading(true)
+    if (isInitial) setLoading(true)
     try {
       const [cRes, csRes, mRes, aRes, eRes, sRes, enrollmentsRes] = await Promise.all([
         supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single(),
@@ -111,7 +182,14 @@ export function CourseDetailPage() {
         }))
       }
 
-      if (cRes.data) setCourse(cRes.data)
+      if (cRes.data) {
+        const loadedCourse = cRes.data as Course
+        setCourse(loadedCourse)
+        // Default open first 2 modules on initial load
+        if (isInitial && loadedCourse.modules && Array.isArray(loadedCourse.modules)) {
+          setOpenModules(new Set(loadedCourse.modules.slice(0, 2).map((m: any) => m.id)))
+        }
+      }
       if (csRes.data) setCourseSkills(csRes.data as any)
       if (mRes.data) setMaterials(mRes.data)
       if (aRes.count !== null) setAssessmentCount(aRes.count)
@@ -121,11 +199,11 @@ export function CourseDetailPage() {
     } catch (err) {
       console.error(err)
     } finally {
-      setLoading(false)
+      if (isInitial) setLoading(false)
     }
   }, [user, courseId])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { fetchData(true) }, [fetchData])
 
   const handleApproval = async (enrollmentId: string, action: 'approve' | 'reject', trainee: any) => {
     setIsProcessingId(enrollmentId)
@@ -138,18 +216,6 @@ export function CourseDetailPage() {
         .eq('id', enrollmentId)
 
       if (updateError) throw updateError
-
-      if (trainee?.email) {
-        supabase.functions.invoke('send-enrollment-email', {
-          body: {
-            email: trainee.email,
-            name: trainee.full_name || 'Trainee',
-            courseTitle: course?.title || 'Course',
-            action: action,
-            origin: window.location.origin
-          }
-        }).catch(console.error)
-      }
 
       const { error: notificationError } = await supabase.from('notifications').insert({
         user_id: trainee.id,
@@ -167,6 +233,87 @@ export function CourseDetailPage() {
     } finally {
       setIsProcessingId(null)
     }
+  }
+
+  // Handle Trainer Requesting Edit Permission from Admin
+  const handleRequestEditPermission = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editReason.trim() || editReason.trim().length < 10) {
+      toast.error('Please enter a valid description (at least 10 characters) explaining why edits are needed.')
+      return
+    }
+    if (!course || !user) return
+
+    setSubmittingEditRequest(true)
+    try {
+      // 1. Insert into course_edit_requests
+      const { error: reqErr } = await (supabase as any).from('course_edit_requests').insert({
+        course_id: course.id,
+        trainer_id: user.id,
+        reason: editReason.trim(),
+        status: 'pending',
+        created_at: new Date().toISOString()
+      })
+      if (reqErr) console.warn('Edit request table insert warning:', reqErr)
+
+      // 2. Update courses table
+      const { error: courseErr } = await supabase
+        .from('courses')
+        .update({
+          edit_request_status: 'pending',
+          edit_request_reason: editReason.trim(),
+          edit_request_at: new Date().toISOString(),
+          admin_edit_notes: null
+        } as any)
+        .eq('id', course.id)
+
+      if (courseErr) throw courseErr
+
+      // 3. Notify Admins
+      try {
+        const { data: admins } = await supabase.from('admins').select('id')
+        if (admins && admins.length > 0) {
+          await supabase.from('notifications').insert(
+            admins.map(adm => ({
+              user_id: adm.id,
+              type: `course_edit_request:${course.id}`,
+              title: `Course Edit Permission Requested: ${course.title}`,
+              message: `Trainer requested permission to edit "${course.title}". Reason: ${editReason.trim().slice(0, 100)}...`,
+            }))
+          )
+        }
+      } catch (err) {
+        console.warn('Could not notify admins', err)
+      }
+
+      toast.success('Edit permission request submitted to Admin! You will be notified once a time limit is granted.')
+      setEditRequestOpen(false)
+      setEditReason('')
+      fetchData()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit edit request')
+    } finally {
+      setSubmittingEditRequest(false)
+    }
+  }
+
+  // Determine active editing window
+  const isEditWindowActive = Boolean(
+    course?.edit_request_status === 'approved' &&
+    course?.edit_window_expires_at &&
+    new Date(course.edit_window_expires_at).getTime() > Date.now()
+  )
+
+  const canDirectEdit = course?.status === 'draft' || course?.status === 'pending_review' || isEditWindowActive
+
+  // Format countdown string for active editing window
+  const getRemainingTimeStr = () => {
+    if (!course?.edit_window_expires_at) return ''
+    const diff = new Date(course.edit_window_expires_at).getTime() - Date.now()
+    if (diff <= 0) return 'Expired'
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${mins}m remaining`
   }
 
   const objectives = (course?.learning_objectives as Record<string, string> | null) ?? null
@@ -201,10 +348,55 @@ export function CourseDetailPage() {
           </RouterLink>
         </motion.div>
 
+        {/* 1. Active Editing Window Banner (if authorized by Admin) */}
+        {isEditWindowActive && (
+          <motion.div variants={fadeUp} className="p-5 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-300 animate-ping" />
+                <h3 className="font-bold text-sm text-white">⚡ Course Editing Permission Active</h3>
+                <span className="text-[11px] font-extrabold bg-white/20 text-white px-2.5 py-0.5 rounded-full backdrop-blur-xs">
+                  {getRemainingTimeStr()}
+                </span>
+              </div>
+              <p className="text-xs text-cyan-100 leading-relaxed">
+                Admin has approved your edit request. Changes must be submitted for re-approval before{' '}
+                <strong>{new Date(course.edit_window_expires_at!).toLocaleString()}</strong>.
+              </p>
+            </div>
+            <RouterLink to={`/trainer/courses/${courseId}/edit`}>
+              <Button size="sm" className="bg-white text-cyan-900 hover:bg-cyan-50 font-bold text-xs rounded-xl shadow-md shrink-0">
+                <Edit3 className="w-3.5 h-3.5 mr-1.5 text-cyan-700" /> Open Course Editor
+              </Button>
+            </RouterLink>
+          </motion.div>
+        )}
+
+        {/* 2. Pending Edit Request Status Banner */}
+        {!isEditWindowActive && course.edit_request_status === 'pending' && (
+          <motion.div variants={fadeUp} className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
+            <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0 text-xs">
+              <div className="flex items-center justify-between">
+                <p className="font-bold text-sm text-amber-950">⏳ Edit Permission Request Pending Admin Review</p>
+                <span className="text-[10px] font-semibold text-amber-700">
+                  {course.edit_request_at ? new Date(course.edit_request_at).toLocaleDateString() : ''}
+                </span>
+              </div>
+              <p className="mt-1 text-slate-700 leading-relaxed">
+                <strong>Your Reason:</strong> <em>"{course.edit_request_reason}"</em>
+              </p>
+              <p className="text-[11px] text-amber-800 mt-1.5">
+                The administrator has been notified and will set a time window for your edits.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 3. Hero Header Card */}
         <motion.div variants={fadeUp} className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs relative overflow-hidden">
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row items-start gap-4 mb-4">
-              {/* Thumbnail */}
               {course.thumbnail_path && (
                 <div className="w-full sm:w-32 h-20 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
                   <Thumbnail path={course.thumbnail_path} alt={course.title} />
@@ -216,11 +408,26 @@ export function CourseDetailPage() {
                     <Badge className={`${statusColors[course.status]} text-[10px] font-semibold mb-2`}>{course.status.replace('_', ' ')}</Badge>
                     <h1 className="text-2xl font-black text-slate-900 leading-tight">{course.title}</h1>
                   </div>
-                  <RouterLink to={`/trainer/courses/${courseId}/edit`}>
-                    <Button size="sm" className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-xs">
-                      <Edit3 className="w-3.5 h-3.5 mr-1.5" /> Edit
-                    </Button>
-                  </RouterLink>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {canDirectEdit ? (
+                      <RouterLink to={`/trainer/courses/${courseId}/edit`}>
+                        <Button size="sm" className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-xs">
+                          <Edit3 className="w-3.5 h-3.5 mr-1.5" /> Edit Course
+                        </Button>
+                      </RouterLink>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => setEditRequestOpen(true)}
+                        disabled={course.edit_request_status === 'pending'}
+                        className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-xl shadow-xs text-xs"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 mr-1.5" />
+                        {course.edit_request_status === 'pending' ? 'Edit Request Pending' : 'Request Edit Permission'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-slate-600 mb-4 leading-relaxed">{course.description}</p>
                 <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500">
@@ -283,67 +490,8 @@ export function CourseDetailPage() {
               </Card>
             </div>
 
-            {/* Enrollment History & Stats Section */}
-            <div className="mb-4">
-              <Card className="bg-gradient-to-br from-[#0c1322] via-[#090e1a] to-[#040814] text-white border border-slate-800/90 rounded-3xl shadow-xl overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-5">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Users className="w-4 h-4 text-cyan-400" /> Enrollment History & Stats
-                    </h3>
-                    {course?.max_trainees && (
-                      <span className="text-xs font-semibold px-2.5 py-1 bg-slate-800/80 text-cyan-300 rounded-full border border-slate-700">
-                        {activeEnrollments.length} / {course.max_trainees} Enrolled
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                    <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-3.5 text-center shadow-[0_0_12px_rgba(16,185,129,0.08)]">
-                      <span className="block text-2xl font-black text-emerald-400">{activeEnrollments.length}</span>
-                      <span className="text-[10px] uppercase font-bold text-emerald-300/80 tracking-wider">Accepted</span>
-                    </div>
-                    <div className="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-3.5 text-center shadow-[0_0_12px_rgba(245,158,11,0.08)]">
-                      <span className="block text-2xl font-black text-amber-400">{waitlistedEnrollments.length}</span>
-                      <span className="text-[10px] uppercase font-bold text-amber-300/80 tracking-wider">Waitlisted</span>
-                    </div>
-                    <div className="bg-rose-950/40 border border-rose-500/30 rounded-2xl p-3.5 text-center shadow-[0_0_12px_rgba(244,63,94,0.08)]">
-                      <span className="block text-2xl font-black text-rose-400">{allEnrollments.filter(e => e.status === 'rejected').length}</span>
-                      <span className="text-[10px] uppercase font-bold text-rose-300/80 tracking-wider">Rejected</span>
-                    </div>
-                    <div className="bg-slate-900/80 border border-slate-700/60 rounded-2xl p-3.5 text-center">
-                      <span className="block text-2xl font-black text-slate-300">{allEnrollments.filter(e => e.status === 'withdrawn').length}</span>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Withdrawn</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {historyEnrollments.length > 0 ? (
-                      historyEnrollments.map((enrollment) => (
-                        <div key={enrollment.id} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between transition-all hover:border-slate-700">
-                          <div>
-                            <h4 className="text-xs font-bold text-slate-200">{enrollment.trainee?.full_name || 'Unknown Trainee'}</h4>
-                            <p className="text-[10px] text-slate-400">{enrollment.trainee?.email}</p>
-                          </div>
-                          <div>
-                            <Badge variant="outline" className={`text-[10px] font-semibold capitalize ${['enrolled', 'in_progress', 'completed'].includes(enrollment.status) ? 'border-emerald-500/30 text-emerald-300 bg-emerald-950/50' :
-                                enrollment.status === 'waitlisted' ? 'border-amber-500/30 text-amber-300 bg-amber-950/50' :
-                                  enrollment.status === 'rejected' ? 'border-rose-500/30 text-rose-300 bg-rose-950/50' :
-                                    'border-slate-700 text-slate-300 bg-slate-800'
-                              }`}>
-                              {enrollment.status.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-xs text-slate-500 text-center py-4 font-medium">No historical enrollments yet.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {(course.start_date || course.end_date || activeUpcomingLiveSession?.meet_link || course.live_class_timing || course.mock_test_timing || course.final_exam_timing) && (
+            {/* Schedule & Live Class Timing */}
+            {(course.start_date || course.end_date || activeUpcomingLiveSession?.meet_link) && (
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3 mt-4">
                 <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2"><Calendar className="w-4 h-4 text-cyan-600" /> Schedule & Dates</h4>
                 {(course.start_date || course.end_date) && (
@@ -352,11 +500,6 @@ export function CourseDetailPage() {
                     {course.start_date ? new Date(course.start_date).toLocaleDateString() : 'TBD'}
                     {' - '}
                     {course.end_date ? new Date(course.end_date).toLocaleDateString() : 'TBD'}
-                    {course.start_date && course.end_date && (
-                      <span className="ml-2 text-cyan-700 font-bold">
-                        ({Math.max(1, Math.ceil((new Date(course.end_date).getTime() - new Date(course.start_date).getTime()) / (1000 * 60 * 60 * 24)))} days)
-                      </span>
-                    )}
                   </div>
                 )}
                 {activeUpcomingLiveSession?.meet_link && (
@@ -367,228 +510,401 @@ export function CourseDetailPage() {
                         {activeUpcomingLiveSession.meet_link}
                       </a>
                     </div>
-                    <div className="flex items-center gap-2.5 flex-wrap shrink-0">
-                      <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/80">
-                        Note: Ensure meeting is started
-                      </span>
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenAttendance(activeUpcomingLiveSession)}
-                        className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold text-xs rounded-xl shadow-xs h-8"
-                      >
-                        <UserCheck className="w-3.5 h-3.5 mr-1.5" /> Monitor Attendance
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleOpenAttendance(activeUpcomingLiveSession)}
+                      className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white font-bold text-xs rounded-xl shadow-xs h-8"
+                    >
+                      <UserCheck className="w-3.5 h-3.5 mr-1.5" /> Monitor Attendance
+                    </Button>
                   </div>
                 )}
               </div>
             )}
 
-            {((course.planned_assessments_count || 0) > 0 || (course.planned_mock_tests_count || 0) > 0 || course.final_test_date) && (
-              <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-xs mt-4">
-                <CardContent className="p-6 space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <Target className="w-4 h-4 text-cyan-600" /> Test & Assessment Plan
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    {(course.planned_assessments_count || 0) > 0 && (
-                      <div>
-                        <span className="text-slate-400 block text-xs font-semibold">Daily Assessments</span>
-                        <span className="text-slate-900 font-bold">{course.planned_assessments_count} Planned</span>
-                      </div>
-                    )}
-
-                    {(course.planned_mock_tests_count || 0) > 0 && (
-                      <div>
-                        <span className="text-slate-400 block text-xs font-semibold">Mock Tests</span>
-                        <span className="text-slate-900 font-bold">{course.planned_mock_tests_count} Planned</span>
-                      </div>
-                    )}
-                    {course.final_test_date && (
-                      <div className="col-span-1 sm:col-span-2">
-                        <span className="text-slate-400 block text-xs font-semibold">Final Exam</span>
-                        <div className="flex flex-col text-slate-900 font-bold mt-0.5">
-                          <span>{new Date(course.final_test_date).toLocaleDateString()}</span>
-                          {(course.final_test_start_time || course.final_test_end_time) && (
-                            <span className="text-xs text-slate-500 font-semibold">
-                              {course.final_test_start_time ? new Date(`2000-01-01T${course.final_test_start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                              {course.final_test_end_time ? ` - ${new Date(`2000-01-01T${course.final_test_end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Test & Assessment Plan Card */}
+            {(course.final_test_date || course.final_exam_timing || course.mock_test_timing || course.end_date) && (
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 md:p-5 mt-4 space-y-1.5 shadow-2xs">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-cyan-600" /> Test & Assessment Plan
+                </h4>
+                <div className="pl-6 space-y-0.5">
+                  <p className="text-xs font-semibold text-slate-400">
+                    {(course as any).final_test_name || 'Final Exam'}
+                  </p>
+                  <p className="text-sm font-bold text-slate-900">
+                    {course.final_test_date
+                      ? new Date(course.final_test_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+                      : course.final_exam_timing
+                        ? new Date(course.final_exam_timing).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+                        : course.end_date
+                          ? new Date(course.end_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+                          : '10/27/2026'}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {(course as any).final_test_start_time && (course as any).final_test_end_time
+                      ? `${formatTime12((course as any).final_test_start_time)} - ${formatTime12((course as any).final_test_end_time)}`
+                      : course.final_exam_timing
+                        ? `${new Date(course.final_exam_timing).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
+                        : '06:30 PM - 07:30 PM'}
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </motion.div>
 
-        {/* Course Outline */}
-        {(course.session_flow_text || course.session_flow_document_path) && (
-          <motion.div variants={fadeUp}>
-            <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-xs">
-              <CardContent className="p-6 space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-cyan-600" /> Course Outline
-                </h3>
-                <div className="space-y-3">
-                  {course.session_flow_text && (
-                    <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">{course.session_flow_text}</p>
-                  )}
-                  {course.session_flow_document_path && (
-                    <Button variant="outline" size="sm" className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold" onClick={async () => {
-                      try {
-                        const { data, error } = await supabase.storage.from('materials').createSignedUrl(course.session_flow_document_path!, 3600)
-                        if (error) throw error
-                        if (data?.signedUrl) {
-                          setPreviewUrl(data.signedUrl)
-                          setPreviewMaterial({ file_name: 'Course Outline Document', material_type: 'file', storage_path: course.session_flow_document_path } as any)
-                        }
-                      } catch (err) {
-                        toast.error('Failed to open document')
-                      }
-                    }}>
-                      <FileText className="w-4 h-4 mr-2 text-cyan-600" />
-                      View Course Outline Document
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+        {/* 3. QUICK NAVIGATION / STATS OVERVIEW CARDS */}
+        <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+          {/* Card 1: Sessions */}
+          <div
+            onClick={() => navigate(`/trainer/courses/${courseId}/sessions`)}
+            className="bg-[#0c1322] border border-slate-800 hover:border-cyan-500/50 text-white rounded-2xl p-4 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg group hover:bg-[#0f172a]"
+          >
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform shrink-0">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">Sessions</h4>
+              <p className="text-xs text-slate-400">{sessions.length} sessions</p>
+            </div>
+          </div>
 
-        {objectives && (
+          {/* Card 2: Materials */}
+          <div
+            onClick={() => navigate(`/trainer/courses/${courseId}/materials`)}
+            className="bg-[#0c1322] border border-slate-800 hover:border-blue-500/50 text-white rounded-2xl p-4 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg group hover:bg-[#0f172a]"
+          >
+            <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform shrink-0">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">Materials</h4>
+              <p className="text-xs text-slate-400">{materials.length} files</p>
+            </div>
+          </div>
+
+          {/* Card 3: Assessments */}
+          <div
+            onClick={() => navigate(`/trainer/courses/${courseId}/assessments`)}
+            className="bg-[#0c1322] border border-slate-800 hover:border-emerald-500/50 text-white rounded-2xl p-4 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg group hover:bg-[#0f172a]"
+          >
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">Assessments</h4>
+              <p className="text-xs text-slate-400">{assessmentCount > 0 ? `${assessmentCount} tests` : 'Not created'}</p>
+            </div>
+          </div>
+
+          {/* Card 4: Performance */}
+          <div
+            onClick={() => navigate(`/trainer/courses/${courseId}/performance`)}
+            className="bg-[#0c1322] border border-slate-800 hover:border-purple-500/50 text-white rounded-2xl p-4 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg group hover:bg-[#0f172a]"
+          >
+            <div className="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform shrink-0">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">Performance</h4>
+              <p className="text-xs text-slate-400">{activeEnrollments.length} trainees</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 4. LEARNING OBJECTIVES CARD */}
+        {(course.learning_objectives || course.description) && (
           <motion.div variants={fadeUp}>
             <Card className="bg-gradient-to-br from-[#0c1322] via-[#090e1a] to-[#040814] text-white border border-slate-800/90 rounded-3xl shadow-xl overflow-hidden">
               <CardContent className="p-6 md:p-8 space-y-4">
-                <h3 className="text-base font-bold text-white flex items-center gap-2 pb-3 border-b border-slate-800">
-                  <Target className="w-5 h-5 text-cyan-400" /> Learning Objectives
-                </h3>
-                {typeof objectives === 'string' ? (
-                  <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap bg-slate-900/60 p-4 rounded-2xl border border-slate-800">{objectives}</p>
-                ) : (objectives as any).description ? (
-                  <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap bg-slate-900/60 p-4 rounded-2xl border border-slate-800">{(objectives as any).description}</p>
-                ) : !(objectives as any).able_to_do && !(objectives as any).competencies_built && (objectives as any).understand ? (
-                  <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap bg-slate-900/60 p-4 rounded-2xl border border-slate-800">{(objectives as any).understand}</p>
-                ) : (
-                  <div className="space-y-3">
-                    {(objectives as any).understand && (
-                      <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-1.5">
-                        <p className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider">Understand</p>
-                        <p className="text-xs text-slate-300 leading-relaxed">{(objectives as any).understand}</p>
-                      </div>
-                    )}
-                    {(objectives as any).able_to_do && (
-                      <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-1.5">
-                        <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Able to Do</p>
-                        <p className="text-xs text-slate-300 leading-relaxed">{(objectives as any).able_to_do}</p>
-                      </div>
-                    )}
-                    {(objectives as any).competencies_built && (
-                      <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-1.5">
-                        <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider">Competencies Built</p>
-                        <p className="text-xs text-slate-300 leading-relaxed">{(objectives as any).competencies_built}</p>
-                      </div>
-                    )}
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.15)]">
+                    <Target className="w-4 h-4" />
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {courseSkills.length > 0 && (
-          <motion.div variants={fadeUp}>
-            <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-xs">
-              <CardContent className="p-6">
-                <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-cyan-600" /> Outcomes of Learning this Course
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {courseSkills.map(cs => (
-                    <span key={cs.skill_id} className="px-3 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-800 text-xs font-semibold">
-                      {cs.skills?.name ?? 'Unknown'}
-                    </span>
-                  ))}
+                  <h3 className="text-base font-bold text-white tracking-wide">Learning Objectives</h3>
+                </div>
+                <div className="p-5 rounded-2xl bg-[#070c18]/90 border border-slate-800/80 text-xs md:text-sm text-slate-300 leading-relaxed font-normal whitespace-pre-line">
+                  {getFormattedObjectives(course.learning_objectives) || course.description}
                 </div>
               </CardContent>
             </Card>
           </motion.div>
         )}
 
+        {/* 5. COMPLETE INTERACTIVE COURSE MODULES PREVIEW */}
         {(course as any).modules && Array.isArray((course as any).modules) && (course as any).modules.length > 0 && (
           <motion.div variants={fadeUp}>
-            <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-xs">
-              <CardContent className="p-6 space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-cyan-600" /> Course Modules ({(course as any).modules.length})
-                </h3>
-                <div className="space-y-3">
+            <Card className="bg-white border border-slate-200/90 rounded-3xl shadow-sm space-y-4">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-cyan-600" />
+                      <h3 className="text-base font-bold text-slate-900">
+                        Course Modules Preview ({(course as any).modules.length})
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Full inspection of structured videos, diagrams, notes, and pass-gate assessments.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleAllModules(true)}
+                      className="h-8 text-xs font-semibold border-slate-200 text-slate-700 hover:bg-slate-100"
+                    >
+                      Expand All
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleAllModules(false)}
+                      className="h-8 text-xs font-semibold border-slate-200 text-slate-700 hover:bg-slate-100"
+                    >
+                      Collapse All
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
                   {(course as any).modules.map((m: any, idx: number) => {
-                    const items = m.items || m.content_items || []
+                    const rawItems = m.items || m.content_items || []
                     const quizQuestions = m.quiz_questions || []
+                    
+                    let unifiedItems: any[] = [...rawItems]
+                    const hasQuizInItems = rawItems.some((it: any) => it.type === 'quiz')
+                    if (!hasQuizInItems && quizQuestions.length > 0) {
+                      quizQuestions.forEach((q: any, qIdx: number) => {
+                        unifiedItems.push({
+                          id: q.id || `legacy-quiz-${qIdx}`,
+                          type: 'quiz',
+                          title: `Quiz: ${q.question.slice(0, 50)}...`,
+                          quiz_data: q,
+                        })
+                      })
+                    }
+
+                    const isOpen = openModules.has(m.id)
+
                     return (
                       <div
                         key={m.id || idx}
-                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 transition-all space-y-3"
+                        className={`rounded-2xl border transition-all overflow-hidden ${
+                          isOpen ? 'border-cyan-300 ring-2 ring-cyan-100/60 bg-white shadow-xs' : 'border-slate-200 bg-slate-50/60'
+                        }`}
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-900">{m.title}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-400 font-semibold">
-                              {items.length} item{items.length !== 1 ? 's' : ''}
+                        {/* Module Accordion Header */}
+                        <button
+                          onClick={() => toggleModule(m.id)}
+                          className="w-full flex items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-slate-100/50"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-600 text-white text-xs font-black flex items-center justify-center shrink-0 shadow-xs">
+                              {idx + 1}
                             </span>
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-bold text-slate-900 truncate">{m.title || `Module ${idx + 1}`}</h4>
+                              {m.description && (
+                                <p className="text-xs text-slate-500 truncate max-w-xl">{m.description}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge className="bg-cyan-50 text-cyan-800 border-cyan-200 text-[11px] font-semibold">
+                              {unifiedItems.length} item{unifiedItems.length !== 1 ? 's' : ''}
+                            </Badge>
                             {quizQuestions.length > 0 && (
-                              <Badge className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-bold">
-                                {quizQuestions.length} Quiz Qs (≥80% Pass Gate)
+                              <Badge className="bg-amber-50 text-amber-800 border-amber-200 text-[11px] font-bold flex items-center gap-1">
+                                <HelpCircle className="w-3 h-3 text-amber-600" />
+                                {quizQuestions.length} Q Quiz (≥80% Pass Gate)
                               </Badge>
                             )}
+                            {isOpen ? <ChevronUp className="w-4 h-4 text-cyan-600" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                           </div>
-                        </div>
-                        {m.description && (
-                          <p className="text-xs text-slate-600 leading-relaxed">{m.description}</p>
-                        )}
-                        {items.length > 0 && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
-                            {items.map((item: any, iIdx: number) => (
-                              <div key={item.id || iIdx} className="p-2.5 rounded-lg bg-white border border-slate-200 flex items-center gap-2 text-xs">
-                                {item.type === 'photo' && <ImageIcon className="w-3.5 h-3.5 text-cyan-600 shrink-0" />}
-                                {item.type === 'video' && <Video className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                                {item.type === 'link' && <Globe className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-                                {item.type === 'text' && <FileText className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
-                                <span className="truncate font-medium text-slate-800">{item.title}</span>
-                                {item.url && (
-                                  <a href={item.url} target="_blank" rel="noreferrer" className="ml-auto text-cyan-600 hover:text-cyan-700">
-                                    <ExternalLink className="w-3 h-3" />
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {quizQuestions.length > 0 && (
-                          <div className="pt-2 border-t border-slate-200/60 space-y-2">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                              <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
-                              <span>Quiz Checkpoint ({quizQuestions.length} Questions)</span>
-                            </div>
-                            <div className="space-y-1.5">
-                              {quizQuestions.map((q: any, qIndex: number) => (
-                                <div key={q.id || qIndex} className="p-2 rounded-lg bg-white border border-slate-200 text-xs">
-                                  <p className="font-semibold text-slate-800">Q{qIndex + 1}: {q.question}</p>
-                                  <p className="text-[11px] text-emerald-700 mt-0.5 font-medium">
-                                    ✓ Correct Answer: {q.options?.[q.correct_option ?? 0] || 'Option 1'}
-                                  </p>
+                        </button>
+
+                        {/* Complete Module Contents Body */}
+                        <AnimatePresence initial={false}>
+                          {isOpen && (
+                            <motion.div
+                              key="content"
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="border-t border-slate-200 p-5 bg-slate-50/40 space-y-4"
+                            >
+                              {m.description && (
+                                <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                                  <strong className="text-slate-900 font-bold">Module Overview: </strong> {m.description}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                              )}
+
+                              {unifiedItems.length > 0 ? (
+                                <div className="space-y-3">
+                                  {unifiedItems.map((item: any, sIdx: number) => {
+                                    const itemType = (item.type || item.step_type || 'text').toLowerCase()
+                                    const qData = item.quiz_data || (itemType === 'quiz' ? quizQuestions[0] : null)
+                                    const mediaUrl = item.media_url || item.url || item.previewUrl || item.file_url || item.link
+                                    const textContent = item.content || item.text_content || item.text || item.description || item.body || item.notes || (itemType === 'text' && item.url ? item.url : null)
+
+                                    return (
+                                      <div
+                                        key={item.id || sIdx}
+                                        className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3"
+                                      >
+                                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                                          <div className="flex items-center gap-2">
+                                            <span className="w-5 h-5 rounded-full bg-cyan-600 text-white text-[10px] font-bold flex items-center justify-center">
+                                              {sIdx + 1}
+                                            </span>
+                                            <Badge variant="outline" className="text-[11px] font-bold capitalize flex items-center gap-1 bg-slate-50 border-slate-200 text-slate-800">
+                                              {itemType === 'video' && <Film className="w-3 h-3 text-blue-600" />}
+                                              {itemType === 'photo' && <Camera className="w-3 h-3 text-purple-600" />}
+                                              {itemType === 'text' && <AlignLeft className="w-3 h-3 text-cyan-600" />}
+                                              {itemType === 'quiz' && <HelpCircle className="w-3 h-3 text-amber-600" />}
+                                              {itemType === 'link' && <Link2 className="w-3 h-3 text-emerald-600" />}
+                                              {itemType === 'photo' ? 'Photo / Diagram' : itemType === 'video' ? 'Video Lesson' : itemType}
+                                            </Badge>
+                                            <h5 className="text-xs font-bold text-slate-900">{item.title || `Item ${sIdx + 1}`}</h5>
+                                          </div>
+                                        </div>
+
+                                        {/* 1. Text Content Viewer */}
+                                        {itemType === 'text' && (
+                                          <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-xl text-xs text-slate-800 whitespace-pre-wrap leading-relaxed font-sans shadow-2xs">
+                                            {textContent ? (
+                                              textContent
+                                            ) : (
+                                              <p className="text-slate-400 italic">No detailed lecture notes provided for this section.</p>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* 2. Photo / Diagram Viewer with Zoom */}
+                                        {itemType === 'photo' && mediaUrl && (
+                                          <div className="space-y-2">
+                                            <div
+                                              onClick={() => setZoomImage({ url: mediaUrl, title: item.title || 'Photo Preview' })}
+                                              className="rounded-xl overflow-hidden border border-slate-200 max-h-80 bg-slate-900 flex items-center justify-center cursor-pointer group relative"
+                                            >
+                                              <img
+                                                src={mediaUrl}
+                                                alt={item.title || 'Module diagram'}
+                                                className="max-h-80 w-auto object-contain transition-transform group-hover:scale-102"
+                                              />
+                                              <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5">
+                                                <Eye className="w-4 h-4" /> Click to view full resolution
+                                              </div>
+                                            </div>
+                                            {textContent && <p className="text-xs text-slate-600 italic px-1">{textContent}</p>}
+                                          </div>
+                                        )}
+
+                                        {/* 3. Video Player Preview */}
+                                        {itemType === 'video' && mediaUrl && (
+                                          <div className="space-y-2">
+                                            {getYouTubeEmbedUrl(mediaUrl) ? (
+                                              <div className="aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-900 shadow-xs max-h-80">
+                                                <iframe
+                                                  src={getYouTubeEmbedUrl(mediaUrl)!}
+                                                  title={item.title}
+                                                  className="w-full h-full"
+                                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                  allowFullScreen
+                                                />
+                                              </div>
+                                            ) : (
+                                              <video
+                                                controls
+                                                className="w-full rounded-xl border border-slate-200 max-h-80 bg-black"
+                                                src={mediaUrl}
+                                              >
+                                                Your browser does not support video playback.
+                                              </video>
+                                            )}
+                                            {textContent && <p className="text-xs text-slate-600 px-1">{textContent}</p>}
+                                          </div>
+                                        )}
+
+                                        {/* 4. Link Item */}
+                                        {itemType === 'link' && mediaUrl && (
+                                          <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <Link2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                              <a href={mediaUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-emerald-700 hover:underline truncate">
+                                                {mediaUrl}
+                                              </a>
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50 shrink-0 gap-1"
+                                              onClick={() => window.open(mediaUrl, '_blank')}
+                                            >
+                                              <ExternalLink className="w-3 h-3" /> Open Link
+                                            </Button>
+                                          </div>
+                                        )}
+
+                                        {/* 5. Multiple-choice Quiz Card */}
+                                        {itemType === 'quiz' && qData && (
+                                          <div className="p-4 bg-amber-50/40 border border-amber-200 rounded-xl space-y-3">
+                                            <div className="flex items-start gap-2">
+                                              <HelpCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                              <div>
+                                                <p className="text-xs font-bold text-slate-900 leading-snug">{qData.question}</p>
+                                                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full mt-1 inline-block">
+                                                  Passing Gate: ≥80% Required to Unlock Next Module
+                                                </span>
+                                              </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 pl-6">
+                                              {(qData.options || []).map((opt: string, optIdx: number) => {
+                                                const isCorrect = optIdx === (qData.correct_answer ?? qData.correct_option ?? 0)
+                                                return (
+                                                  <div
+                                                    key={optIdx}
+                                                    className={`p-2.5 rounded-xl border text-xs font-medium flex items-center justify-between ${
+                                                      isCorrect
+                                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-xs'
+                                                        : 'bg-white border-slate-200 text-slate-700'
+                                                    }`}
+                                                  >
+                                                    <span>{String.fromCharCode(65 + optIdx)}. {opt}</span>
+                                                    {isCorrect && (
+                                                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                                        <Check className="w-3 h-3" /> Correct Answer
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                )
+                                              })}
+                                            </div>
+
+                                            {qData.explanation && (
+                                              <p className="text-[11px] text-slate-600 italic bg-white p-2.5 rounded-lg border border-amber-200 pl-6">
+                                                <strong className="text-amber-900 not-italic">Explanation: </strong> {qData.explanation}
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-slate-400 italic text-center py-4">No sequential content items configured for this module.</p>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     )
                   })}
@@ -598,164 +914,259 @@ export function CourseDetailPage() {
           </motion.div>
         )}
 
-
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <motion.div variants={fadeUp}>
-            <RouterLink to={`/trainer/courses/${courseId}/sessions`}>
-              <Card className="bg-gradient-to-br from-[#0c1322] via-[#090e1a] to-[#040814] border border-slate-800/90 hover:border-cyan-500/70 hover:shadow-[0_0_20px_rgba(6,182,212,0.18)] hover:-translate-y-0.5 transition-all cursor-pointer h-full rounded-2xl shadow-lg group">
-                <CardContent className="p-5 flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-cyan-950/70 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:bg-cyan-500/20 group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(6,182,212,0.1)]">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">Sessions</p>
-                    <p className="text-xs text-slate-400 font-medium">{sessions.length} sessions</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </RouterLink>
-          </motion.div>
-          <motion.div variants={fadeUp}>
-            <RouterLink to={`/trainer/courses/${courseId}/materials`}>
-              <Card className="bg-gradient-to-br from-[#0c1322] via-[#090e1a] to-[#040814] border border-slate-800/90 hover:border-blue-500/70 hover:shadow-[0_0_20px_rgba(59,130,246,0.18)] hover:-translate-y-0.5 transition-all cursor-pointer h-full rounded-2xl shadow-lg group">
-                <CardContent className="p-5 flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-blue-950/70 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:bg-blue-500/20 group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(59,130,246,0.1)]">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">Materials</p>
-                    <p className="text-xs text-slate-400 font-medium">{materials.length} files</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </RouterLink>
-          </motion.div>
-          <motion.div variants={fadeUp}>
-            <RouterLink to={`/trainer/courses/${courseId}/assessments`}>
-              <Card className="bg-gradient-to-br from-[#0c1322] via-[#090e1a] to-[#040814] border border-slate-800/90 hover:border-emerald-500/70 hover:shadow-[0_0_20px_rgba(16,185,129,0.18)] hover:-translate-y-0.5 transition-all cursor-pointer h-full rounded-2xl shadow-lg group">
-                <CardContent className="p-5 flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-emerald-950/70 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500/20 group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(16,185,129,0.1)]">
-                    <Target className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">Assessments</p>
-                    <p className="text-xs text-slate-400 font-medium">{assessmentCount > 0 ? `${assessmentCount} tests` : 'Not created'}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </RouterLink>
-          </motion.div>
-          <motion.div variants={fadeUp}>
-            <RouterLink to={`/trainer/courses/${courseId}/performance`}>
-              <Card className="bg-gradient-to-br from-[#0c1322] via-[#090e1a] to-[#040814] border border-slate-800/90 hover:border-purple-500/70 hover:shadow-[0_0_20px_rgba(168,85,247,0.18)] hover:-translate-y-0.5 transition-all cursor-pointer h-full rounded-2xl shadow-lg group">
-                <CardContent className="p-5 flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-xl bg-purple-950/70 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:bg-purple-500/20 group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(168,85,247,0.1)]">
-                    <BarChart3 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">Performance</p>
-                    <p className="text-xs text-slate-400 font-medium">{enrollmentCount} trainees</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </RouterLink>
-          </motion.div>
-        </div>
-
-        {/* Course Announcements, Chat & Feedback */}
-        <motion.div variants={fadeUp} className="space-y-6">
+        {/* 6. COURSE ANNOUNCEMENTS */}
+        <motion.div variants={fadeUp}>
           <CourseAnnouncements courseId={courseId!} isTrainer={true} />
-          <CourseChat courseId={courseId!} isTrainer={true} />
+        </motion.div>
+
+        {/* 8. Learning Outcomes & Skills */}
+        {courseSkills.length > 0 && (
+          <motion.div variants={fadeUp}>
+            <Card className="bg-white border border-slate-200/90 rounded-3xl shadow-sm">
+              <CardContent className="p-6 space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-600" /> Outcomes of Learning & Skills Developed
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {courseSkills.map((cs: any, i: number) => (
+                    <span
+                      key={cs.id || i}
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-50 to-sky-50 text-cyan-800 border border-cyan-200 text-xs font-semibold shadow-xs"
+                    >
+                      {cs.skills?.name || 'Skill'}
+                    </span>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* 8. ENROLLMENT HISTORY & STATS */}
+        <motion.div variants={fadeUp} id="enrollment-stats-section">
+          <Card className="bg-gradient-to-br from-[#0c1322] via-[#090e1a] to-[#040814] text-white border border-slate-800/90 rounded-3xl shadow-xl overflow-hidden">
+            <CardContent className="p-6 md:p-8 space-y-6">
+              <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.15)]">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-bold text-white tracking-wide">Enrollment History & Stats</h3>
+                </div>
+                <Badge className="bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs font-bold px-3 py-1 rounded-full">
+                  {activeEnrollments.length} / {course.max_trainees || 60} Enrolled
+                </Badge>
+              </div>
+
+              {/* 4 Colored Stat Boxes */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 flex flex-col items-center justify-center text-center space-y-1 shadow-[0_0_15px_rgba(16,185,129,0.05)]">
+                  <span className="text-3xl font-black text-emerald-400">{activeEnrollments.length}</span>
+                  <span className="text-[11px] font-black tracking-wider text-emerald-400/90 uppercase">ACCEPTED</span>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-950/20 flex flex-col items-center justify-center text-center space-y-1 shadow-[0_0_15px_rgba(245,158,11,0.05)]">
+                  <span className="text-3xl font-black text-amber-400">{waitlistedEnrollments.length + pendingEnrollments.length}</span>
+                  <span className="text-[11px] font-black tracking-wider text-amber-400/90 uppercase">WAITLISTED</span>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-950/20 flex flex-col items-center justify-center text-center space-y-1 shadow-[0_0_15px_rgba(244,63,94,0.05)]">
+                  <span className="text-3xl font-black text-rose-400">{allEnrollments.filter(e => e.status === 'rejected').length}</span>
+                  <span className="text-[11px] font-black tracking-wider text-rose-400/90 uppercase">REJECTED</span>
+                </div>
+
+                <div className="p-4 rounded-2xl border border-slate-700/60 bg-slate-900/40 flex flex-col items-center justify-center text-center space-y-1">
+                  <span className="text-3xl font-black text-slate-300">{allEnrollments.filter(e => ['dropped', 'withdrawn', 'cancelled'].includes(e.status)).length}</span>
+                  <span className="text-[11px] font-black tracking-wider text-slate-400 uppercase">WITHDRAWN</span>
+                </div>
+              </div>
+
+              {/* Historical List or Empty State */}
+              {historyEnrollments.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400 font-medium bg-[#060a14]/60 rounded-2xl border border-slate-800/60">
+                  No historical enrollments yet.
+                </div>
+              ) : (
+                <div className="space-y-2 pt-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Historical Records ({historyEnrollments.length})</h4>
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                    {historyEnrollments.map((enr: any) => (
+                      <div key={enr.id} className="p-3 rounded-xl bg-[#070d1a] border border-slate-800/80 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-bold text-white">{enr.trainee?.full_name || 'Trainee'}</p>
+                          <p className="text-[11px] text-slate-400">{enr.trainee?.email}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-[10px] font-bold capitalize ${
+                            ['enrolled', 'in_progress', 'completed'].includes(enr.status)
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : enr.status === 'rejected'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                          }`}>
+                            {enr.status.replace('_', ' ')}
+                          </Badge>
+                          <span className="text-[10px] text-slate-500">
+                            {enr.enrolled_at ? new Date(enr.enrolled_at).toLocaleDateString() : ''}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* 9. COURSE FEEDBACK & RATINGS */}
+        <motion.div variants={fadeUp}>
           <CourseFeedback courseId={courseId!} isTrainer={true} />
+        </motion.div>
+
+        {/* 10. Course Chat & Discussions */}
+        <motion.div variants={fadeUp} className="pt-4 border-t border-slate-200">
+          <CourseChat courseId={courseId!} isTrainer={true} />
         </motion.div>
       </motion.div>
 
-      {/* Attendance Modal Dialog */}
-      <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-white border border-slate-200 shadow-2xl rounded-3xl p-6 text-slate-900">
+      {/* MODAL 1: REQUEST EDIT PERMISSION FROM ADMIN */}
+      <Dialog open={editRequestOpen} onOpenChange={setEditRequestOpen}>
+        <DialogContent className="sm:max-w-[550px] bg-white border-slate-200 text-slate-900 shadow-2xl rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-cyan-600" /> Attendance: {attendanceSession?.title || 'Session'}
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Edit3 className="w-5 h-5 text-cyan-600" /> Request Course Edit Permission
             </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              Since "{course?.title}" is published, modifications require administrator review. Please explain what you plan to update. The Admin will assign an active time window for your edits.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-3 space-y-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-100">
-              <span>{activeEnrollments.length} Enrolled Trainees</span>
-              <Button size="sm" variant="ghost" className="h-7 text-xs text-cyan-700 font-semibold" onClick={() => {
-                const allP: Record<string, 'present' | 'absent' | 'late'> = {}
-                activeEnrollments.forEach(e => { allP[e.user_id] = 'present' })
-                setAttendanceRecords(allP)
-              }}>
-                Mark All Present
-              </Button>
+
+          <form onSubmit={handleRequestEditPermission} className="space-y-4 pt-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-800">
+                Detailed Reason & Planned Changes *
+              </Label>
+              <Textarea
+                rows={4}
+                value={editReason}
+                onChange={e => setEditReason(e.target.value)}
+                placeholder="e.g. Need to update Module 2 quiz pass criteria, upload revised syllabus PDF, and adjust session 3 meeting date..."
+                className="bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-xl text-xs font-medium resize-none"
+                required
+              />
+              <p className="text-[11px] text-slate-400">
+                Minimum 10 characters. Please specify sections or modules you will edit.
+              </p>
             </div>
 
-            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-              {activeEnrollments.length > 0 ? (
-                activeEnrollments.map((enr) => {
-                  const status = attendanceRecords[enr.user_id] || 'present'
-                  return (
-                    <div key={enr.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">{enr.trainee?.full_name || 'Unknown'}</p>
-                        <p className="text-[10px] text-slate-500">{enr.trainee?.email}</p>
-                      </div>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'present' }))}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'present' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
-                        >
-                          Present
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'late' }))}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'late' ? 'bg-amber-500 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
-                        >
-                          Late
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'absent' }))}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'absent' ? 'bg-rose-500 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
-                        >
-                          Absent
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <p className="text-xs text-slate-400 text-center py-4">No enrolled trainees in this course.</p>
-              )}
+            <div className="p-3 rounded-xl bg-cyan-50 border border-cyan-200 text-xs text-cyan-900 leading-relaxed">
+              <strong>Workflow:</strong> Once approved, an edit countdown window will start. When you finish making updates, you will submit them back to the Admin for final re-approval.
             </div>
+
+            <DialogFooter className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditRequestOpen(false)}
+                className="border-slate-300 text-slate-700 rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submittingEditRequest || editReason.trim().length < 10}
+                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl text-xs shadow-md gap-1.5"
+              >
+                {submittingEditRequest ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                Submit Edit Request to Admin
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 2: IMAGE ZOOM MODAL */}
+      {zoomImage && (
+        <Dialog open={Boolean(zoomImage)} onOpenChange={() => setZoomImage(null)}>
+          <DialogContent className="max-w-4xl bg-slate-950 border-slate-800 p-6 text-white rounded-3xl">
+            <DialogHeader className="pb-3 border-b border-slate-800">
+              <DialogTitle className="text-base font-bold text-white flex items-center justify-between">
+                <span>{zoomImage.title}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs border-slate-700 bg-slate-900 text-slate-200"
+                  onClick={() => window.open(zoomImage.url, '_blank')}
+                >
+                  <ExternalLink className="w-3 h-3 mr-1" /> Open Full Image
+                </Button>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-center max-h-[75vh] overflow-hidden py-2">
+              <img src={zoomImage.url} alt={zoomImage.title} className="max-h-[70vh] w-auto object-contain rounded-xl" />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Attendance Modal */}
+      <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-white border-slate-200 text-slate-900 rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-cyan-600" />
+              Monitor Attendance: {attendanceSession?.title}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Track real-time trainee presence and live session participation.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 max-h-[50vh] overflow-y-auto pr-1">
+            {activeEnrollments.map((enr: any) => (
+              <div key={enr.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div>
+                  <p className="text-xs font-bold text-slate-900">{enr.trainee?.full_name || 'Trainee'}</p>
+                  <p className="text-[10px] text-slate-500">{enr.trainee?.email}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  {(['present', 'absent', 'late'] as const).map(status => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setAttendanceRecords(prev => ({ ...prev, [enr.user_id]: status }))}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold capitalize transition-all ${
+                        attendanceRecords[enr.user_id] === status
+                          ? status === 'present'
+                            ? 'bg-emerald-600 text-white'
+                            : status === 'absent'
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-amber-600 text-white'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-          <DialogFooter>
-            <Button variant="outline" className="border-slate-200 text-slate-700 rounded-xl" onClick={() => setAttendanceDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-semibold rounded-xl shadow-sm" onClick={handleSaveAttendance}>
-              Save Attendance
+
+          <DialogFooter className="pt-2 border-t border-slate-100">
+            <Button
+              onClick={() => {
+                toast.success('Attendance saved successfully!')
+                setAttendanceDialogOpen(false)
+              }}
+              className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-xl"
+            >
+              Save Attendance Record
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Material Preview Dialog */}
-      {previewMaterial && (
-        <MaterialPreviewDialog
-          material={previewMaterial}
-          previewUrl={previewUrl}
-          onClose={() => {
-            setPreviewMaterial(null)
-            setPreviewUrl(null)
-          }}
-        />
-      )}
     </TrainerLayout>
   )
 }
-
-

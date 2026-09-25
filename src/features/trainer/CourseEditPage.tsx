@@ -21,13 +21,20 @@ import {
 import {
   ArrowLeft, Upload, Target, Video, 
   Trash2, Send, Save, AlertCircle, FileText, Loader2, Calendar,
-  BarChart3, Award, Plus
+  BarChart3, Award, Plus, Clock, Edit3, CheckCircle2, Lock, Sparkles
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { CourseMaterials } from '@/features/courses/CourseMaterials'
 import { CourseCertificateStep } from '@/features/courses/CourseCertificateStep'
 
-type Course = Database['public']['Tables']['courses']['Row']
+type Course = Database['public']['Tables']['courses']['Row'] & {
+  edit_request_status?: string | null
+  edit_request_reason?: string | null
+  edit_request_at?: string | null
+  edit_window_expires_at?: string | null
+  edit_window_duration_hours?: number | null
+  admin_edit_notes?: string | null
+}
 type Skill = Database['public']['Tables']['skills']['Row']
 type CourseSkill = Database['public']['Tables']['course_skills']['Row']
 
@@ -73,6 +80,10 @@ export function CourseEditPage() {
   const [customSkillName, setCustomSkillName] = useState('')
   const [addingSkill, setAddingSkill] = useState(false)
   const [materialCount, setMaterialCount] = useState(0)
+
+  // Edit Request State
+  const [editReason, setEditReason] = useState('')
+  const [submittingEditRequest, setSubmittingEditRequest] = useState(false)
 
   const [thumbnail, setThumbnail] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
@@ -160,6 +171,81 @@ export function CourseEditPage() {
     setThumbnailPreview(URL.createObjectURL(file))
   }
 
+  // Active Edit Window Check
+  const isEditWindowActive = Boolean(
+    course?.edit_request_status === 'approved' &&
+    course?.edit_window_expires_at &&
+    new Date(course.edit_window_expires_at).getTime() > Date.now()
+  )
+
+  const canEdit = course?.status === 'draft' || course?.status === 'pending_review' || isEditWindowActive
+
+  const getRemainingTimeStr = () => {
+    if (!course?.edit_window_expires_at) return ''
+    const diff = new Date(course.edit_window_expires_at).getTime() - Date.now()
+    if (diff <= 0) return 'Expired'
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${mins}m remaining`
+  }
+
+  // Request Edit Permission from Admin
+  const handleRequestEditPermission = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editReason.trim() || editReason.trim().length < 10) {
+      toast.error('Please enter a valid description (at least 10 characters) explaining why edits are needed.')
+      return
+    }
+    if (!course || !user) return
+
+    setSubmittingEditRequest(true)
+    try {
+      await (supabase as any).from('course_edit_requests').insert({
+        course_id: course.id,
+        trainer_id: user.id,
+        reason: editReason.trim(),
+        status: 'pending',
+        created_at: new Date().toISOString()
+      })
+
+      const { error: courseErr } = await supabase
+        .from('courses')
+        .update({
+          edit_request_status: 'pending',
+          edit_request_reason: editReason.trim(),
+          edit_request_at: new Date().toISOString(),
+          admin_edit_notes: null
+        } as any)
+        .eq('id', course.id)
+
+      if (courseErr) throw courseErr
+
+      try {
+        const { data: admins } = await supabase.from('admins').select('id')
+        if (admins && admins.length > 0) {
+          await supabase.from('notifications').insert(
+            admins.map(adm => ({
+              user_id: adm.id,
+              type: `course_edit_request:${course.id}`,
+              title: `Course Edit Permission Requested: ${course.title}`,
+              message: `Trainer requested permission to edit "${course.title}". Reason: ${editReason.trim().slice(0, 100)}...`,
+            }))
+          )
+        }
+      } catch (err) {
+        console.warn('Could not notify admins', err)
+      }
+
+      toast.success('Edit permission request submitted to Admin! You will be notified once a time limit is granted.')
+      setEditReason('')
+      fetchData()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit edit request')
+    } finally {
+      setSubmittingEditRequest(false)
+    }
+  }
+
   const handleSave = async (status: 'draft' | 'pending_review') => {
     if (!course) return
     const valid = await trigger()
@@ -208,9 +294,9 @@ export function CourseEditPage() {
 
       const data = watch()
       const { duration_hours, ...rest } = data
-      const updateData = {
+      const updateData: any = {
         ...rest,
-        status,
+        status: isEditWindowActive && status === 'pending_review' ? 'pending_review' : status,
         duration_minutes: duration_hours ? duration_hours * 60 : null,
         start_date: data.start_date ? new Date(data.start_date).toISOString() : null,
         end_date: data.end_date ? new Date(data.end_date).toISOString() : null,
@@ -220,6 +306,12 @@ export function CourseEditPage() {
         certificate_template_url: certificateTemplateUrl,
         certificate_template_name: certificateTemplateName,
       }
+
+      // If submitting after edit window, set edit_request_status to submitted
+      if (isEditWindowActive && status === 'pending_review') {
+        updateData.edit_request_status = 'submitted'
+      }
+
       const { error } = await supabase
         .from('courses')
         .update(updateData as any)
@@ -233,8 +325,14 @@ export function CourseEditPage() {
         )
       }
 
-      toast.success(status === 'draft' ? 'Course saved' : 'Course submitted for review')
-      navigate('/trainer/courses')
+      toast.success(
+        isEditWindowActive && status === 'pending_review'
+          ? 'Course updates submitted to Admin for re-approval!'
+          : status === 'draft'
+            ? 'Course saved as draft'
+            : 'Course submitted for review'
+      )
+      navigate(`/trainer/courses/${courseId}`)
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to save')
     } finally {
@@ -280,14 +378,12 @@ export function CourseEditPage() {
 
   if (!course) return null
 
-  const canEdit = course.status === 'draft' || course.status === 'pending_review'
-
   return (
     <TrainerLayout>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-3xl mx-auto space-y-6">
         <motion.div variants={fadeUp}>
-          <button onClick={() => navigate('/trainer/courses')} className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors mb-4">
-            <ArrowLeft className="w-4 h-4" /> Back to Courses
+          <button onClick={() => navigate(`/trainer/courses/${courseId}`)} className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors mb-4">
+            <ArrowLeft className="w-4 h-4" /> Back to Course Details
           </button>
           <div className="flex items-center justify-between">
             <div>
@@ -301,11 +397,34 @@ export function CourseEditPage() {
                 }>
                   {course.status.replace('_', ' ')}
                 </Badge>
+                {isEditWindowActive && (
+                  <Badge className="bg-cyan-100 text-cyan-800 border-cyan-300 font-bold flex items-center gap-1 animate-pulse">
+                    <Clock className="w-3 h-3" /> Edit Window Active ({getRemainingTimeStr()})
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
         </motion.div>
 
+        {/* Active Edit Window Countdown Banner */}
+        {isEditWindowActive && (
+          <motion.div variants={fadeUp} className="p-4 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white shadow-md flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-cyan-200" /> Admin Authorized Edit Window
+              </p>
+              <p className="text-[11px] text-cyan-100">
+                Time remaining: <strong>{getRemainingTimeStr()}</strong> (Expires: {new Date(course.edit_window_expires_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+              </p>
+            </div>
+            <span className="text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-lg">
+              Re-Approval Required on Submit
+            </span>
+          </motion.div>
+        )}
+
+        {/* 1. Main Course Details Form (Active when canEdit) */}
         {canEdit ? (
           <motion.div variants={fadeUp} className="space-y-4">
             <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
@@ -353,29 +472,33 @@ export function CourseEditPage() {
                   <div className="space-y-1.5">
                     <Label className="text-slate-700 text-xs font-semibold">End Date</Label>
                     <Input type="datetime-local" {...register('end_date')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
-                    {errors.end_date && (
-                      <p className="text-[10px] text-rose-600 font-medium">{errors.end_date.message as string}</p>
-                    )}
                   </div>
-                  {isUrgent && watch('start_date') && !errors.start_date && (
-                    <div className="col-span-1 sm:col-span-2 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs font-medium flex items-center gap-2">
-                      <span className="text-lg">⚠️</span> Course starts in less than 30 days! This will be flagged as <strong className="font-bold">URGENT</strong> for fast-track Admin approval.
-                    </div>
-                  )}
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="text-slate-700 text-xs font-semibold">Passing Score (%)</Label>
+                  <Input type="number" {...register('passing_score')} placeholder="e.g. 60" className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl max-w-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-slate-700 text-xs font-semibold">Meeting Link (Live online classes)</Label>
+                  <Input {...register('meet_link')} placeholder="https://meet.google.com/..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
+                </div>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-1.5 pt-4 border-t border-slate-100">
-                  <Label className="text-slate-700 text-xs font-semibold">Course Thumbnail</Label>
-                  <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
+            <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
+              <CardHeader className="border-b border-slate-100"><CardTitle className="text-slate-900 text-base font-bold">Course Thumbnail</CardTitle></CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-3">
+                  <input ref={thumbRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleThumbnailChange} />
                   {thumbnailPreview ? (
-                    <div className="relative w-full max-w-sm h-40 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
-                      <img src={thumbnailPreview} alt="" className="w-full h-full object-cover" />
+                    <div className="relative rounded-xl overflow-hidden border border-slate-200 h-40 bg-slate-100 max-w-md">
+                      <img src={thumbnailPreview} alt="Thumbnail preview" className="w-full h-full object-cover" />
                       <button type="button" onClick={() => { setThumbnail(null); setThumbnailPreview(null) }} className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-white hover:bg-rose-600 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => thumbRef.current?.click()} className="w-full max-w-sm h-32 border-2 border-dashed border-slate-200 hover:border-cyan-500 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-cyan-600 transition-all bg-slate-50/50">
+                    <button type="button" onClick={() => thumbRef.current?.click()} className="w-full max-w-md h-32 border-2 border-dashed border-slate-200 hover:border-cyan-500 rounded-xl flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-cyan-600 bg-slate-50/50 transition-colors">
                       <Upload className="w-6 h-6" />
                       <span className="text-xs font-semibold">Click to upload thumbnail</span>
                       <span className="text-[10px] text-slate-400">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
@@ -477,75 +600,112 @@ export function CourseEditPage() {
             />
           </motion.div>
         ) : (
-          <motion.div variants={fadeUp}>
-            <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
-              <CardContent className="py-8 text-center">
-                <p className="text-slate-700 font-medium">This course is <strong>{course.status}</strong> and cannot be edited.</p>
-                {course.status === 'pending_review' && <p className="text-sm text-slate-500 mt-1">Wait for admin review or contact an admin.</p>}
+          /* 2. Published & Locked State -> Edit Permission Request Workflow */
+          <motion.div variants={fadeUp} className="space-y-4">
+            <Card className="bg-white border border-slate-200/90 shadow-sm rounded-3xl overflow-hidden">
+              <CardContent className="p-6 md:p-8 space-y-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                    <Lock className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      This course is <span className="text-emerald-700 font-extrabold capitalize">{course.status}</span> and locked from direct edits.
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                      To preserve ongoing enrollments and published curriculum integrity, updates to syllabus, title, or schedule require permission from the Administrator. The Admin will assign an active editing time limit.
+                    </p>
+                  </div>
+                </div>
+
+                {course.edit_request_status === 'pending' ? (
+                  <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-950 space-y-2">
+                    <p className="font-bold flex items-center gap-1.5 text-amber-900">
+                      <Clock className="w-4 h-4 text-amber-600" /> Edit Permission Request is Pending Admin Review
+                    </p>
+                    <p className="text-slate-700">
+                      <strong>Your Planned Changes:</strong> "{course.edit_request_reason}"
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      Submitted on: {course.edit_request_at ? new Date(course.edit_request_at).toLocaleString() : 'Recently'}
+                    </p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleRequestEditPermission} className="space-y-4 pt-2 border-t border-slate-100">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-slate-800">
+                        Reason / Description for Requested Edits *
+                      </Label>
+                      <Textarea
+                        rows={4}
+                        value={editReason}
+                        onChange={e => setEditReason(e.target.value)}
+                        placeholder="Explain the changes you plan to make (e.g., Update module 2 quiz questions, adjust duration hours, revise lecture notes)..."
+                        className="bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 rounded-xl text-xs font-medium resize-none"
+                        required
+                      />
+                      <p className="text-[11px] text-slate-400">
+                        Minimum 10 characters required.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-xs text-slate-500 font-medium">
+                        Admin will assign an active countdown window (e.g. 24 hours).
+                      </p>
+                      <Button
+                        type="submit"
+                        disabled={submittingEditRequest || editReason.trim().length < 10}
+                        className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-sm gap-1.5"
+                      >
+                        {submittingEditRequest ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        Submit Edit Request to Admin
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </motion.div>
         )}
 
+        {/* Action Buttons when editing is active */}
         {canEdit && (
-          <motion.div variants={fadeUp} className="flex items-center justify-between">
-            <Button variant="outline" onClick={() => navigate('/trainer/courses')} className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Cancel
+          <motion.div variants={fadeUp} className="flex items-center justify-between pt-2">
+            <Button variant="outline" onClick={() => navigate(`/trainer/courses/${courseId}`)} className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl text-xs">
+              <ArrowLeft className="w-4 h-4 mr-1.5" /> Cancel
             </Button>
             <div className="flex items-center gap-3">
-              {materialCount === 0 && (
-                <span className="text-xs text-amber-700 font-semibold flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  No materials added
-                </span>
-              )}
-              {materialCount > 0 && (
-                <span className="text-xs text-slate-500 font-medium">
-                  {materialCount} material{materialCount !== 1 ? 's' : ''}
-                </span>
-              )}
-              <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              <Button variant="outline" onClick={() => handleSave('draft')} disabled={saving} className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl text-xs">
+                {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
                 Save Draft
               </Button>
-              <Button onClick={() => handleSave('pending_review')} disabled={saving} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold shadow-md shadow-cyan-600/20 rounded-xl">
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                Submit for Review
+              <Button onClick={() => handleSave('pending_review')} disabled={saving} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold shadow-md shadow-cyan-600/20 rounded-xl text-xs">
+                {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Send className="w-4 h-4 mr-1.5" />}
+                {isEditWindowActive ? 'Submit Updates for Admin Re-Approval' : 'Submit for Review'}
               </Button>
             </div>
           </motion.div>
         )}
 
+        {/* 3. ALWAYS-ACTIVE COURSE MATERIALS (Fully functional without admin permission) */}
         <motion.div variants={fadeUp}>
-          <Card className="bg-white border border-slate-200/90 shadow-xs rounded-2xl">
-            <CardContent className="p-6">
-              <h3 className="text-sm font-bold text-slate-900 mb-4">Course Materials</h3>
+          <Card className="bg-white border border-slate-200/90 shadow-sm rounded-2xl">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Course Materials & Resources</h3>
+                  <p className="text-xs text-slate-500">
+                    Upload documents, lecture slides, or video links. Always active and editable without admin lock.
+                  </p>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full shrink-0">
+                  ✓ Always Uploadable
+                </span>
+              </div>
               <CourseMaterials embedded onMaterialCountChange={setMaterialCount} />
             </CardContent>
           </Card>
-        </motion.div>
-
-        <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Link to={`/trainer/courses/${courseId}/sessions`} className="p-4 rounded-xl bg-white border border-slate-200 hover:border-cyan-500 shadow-xs transition-all text-center group">
-            <Calendar className="w-5 h-5 text-cyan-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-slate-800 font-bold">Sessions</span>
-          </Link>
-          <Link to={`/trainer/courses/${courseId}/materials`} className="p-4 rounded-xl bg-white border border-slate-200 hover:border-cyan-500 shadow-xs transition-all text-center group">
-            <FileText className="w-5 h-5 text-cyan-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-slate-800 font-bold">Materials</span>
-          </Link>
-          <Link to={`/trainer/courses/${courseId}/assessments`} className="p-4 rounded-xl bg-white border border-slate-200 hover:border-cyan-500 shadow-xs transition-all text-center group">
-            <Target className="w-5 h-5 text-cyan-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-slate-800 font-bold">Assessments</span>
-          </Link>
-          <Link to={`/trainer/courses/${courseId}/performance`} className="p-4 rounded-xl bg-white border border-slate-200 hover:border-cyan-500 shadow-xs transition-all text-center group">
-            <BarChart3 className="w-5 h-5 text-cyan-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-slate-800 font-bold">Performance</span>
-          </Link>
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
-            <Award className="w-5 h-5 text-slate-400 mx-auto mb-2" />
-            <span className="text-xs text-slate-400 font-medium">Preview</span>
-          </div>
         </motion.div>
       </motion.div>
     </TrainerLayout>

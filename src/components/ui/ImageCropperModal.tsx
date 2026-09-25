@@ -52,13 +52,13 @@ export function ImageCropperModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-[#040814] border-cyan-500/30">
+      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-slate-900 border-slate-700 text-white shadow-2xl">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold text-zinc-200">Crop Thumbnail</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-white">Crop Thumbnail</DialogTitle>
         </DialogHeader>
         
         <div className="px-6 space-y-4">
-          <div className="relative w-full h-[350px] bg-black/5 rounded-xl overflow-hidden border border-cyan-500/30">
+          <div className="relative w-full h-[350px] bg-slate-950 rounded-xl overflow-hidden border border-slate-700">
             {imageSrc ? (
               <Cropper
                 image={imageSrc}
@@ -70,14 +70,14 @@ export function ImageCropperModal({
                 onZoomChange={onZoomChange}
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-zinc-200/40 text-sm">
+              <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
                 No image selected
               </div>
             )}
           </div>
           
           <div className="py-2 flex items-center gap-4">
-            <span className="text-sm font-medium text-zinc-200/70">Zoom</span>
+            <span className="text-sm font-semibold text-slate-200">Zoom</span>
             <input
               type="range"
               value={zoom}
@@ -86,16 +86,27 @@ export function ImageCropperModal({
               step={0.1}
               aria-labelledby="Zoom"
               onChange={(e) => setZoom(Number(e.target.value))}
-              className="flex-1 h-2 bg-ink/10 rounded-lg appearance-none cursor-pointer accent-primary"
+              className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400"
             />
           </div>
         </div>
         
-        <DialogFooter className="p-6 pt-2 bg-[#040814]/50 border-t border-cyan-500/30 mt-4">
-          <Button variant="outline" onClick={onClose} disabled={isProcessing} className="border-cyan-500/30 text-zinc-200/70">
+        <DialogFooter className="p-6 pt-3 bg-slate-950/80 border-t border-slate-800 mt-4 flex items-center justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isProcessing}
+            className="border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700 hover:text-white font-semibold px-5"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isProcessing || !imageSrc} className="bg-primary text-primary-foreground">
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={isProcessing || !imageSrc}
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold px-6 shadow-md"
+          >
             {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Save Crop
           </Button>

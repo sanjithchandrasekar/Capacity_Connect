@@ -9,17 +9,19 @@ import { AdminCourses } from '@/features/courses/AdminCourses'
 import { TrainerAssignmentBanner } from '@/features/admin/TrainerAssignmentBanner'
 import { AdminAnnouncements } from '@/features/admin/AdminAnnouncements'
 import { AdminHomePageSettings } from '@/features/admin/AdminHomePageSettings'
+import { AdminContactMessages } from '@/features/admin/AdminContactMessages'
 import { Button } from '@/components/ui/button'
 import { ResponsiveContainer, Tooltip, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { AnnouncementModal } from '@/components/ui/AnnouncementModal'
 import { AnnouncementsFeed } from '@/components/ui/AnnouncementsFeed'
+import { AdminUserDetailsModal } from '@/features/admin/AdminUserDetailsModal'
 import {
   Globe, LogOut, Users, BookOpen, BarChart3, Shield,
   GraduationCap, ChevronRight, CheckCircle, Search,
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
-  Award, Target, FileText, Settings, User,
-  RefreshCw, Star, MessageSquare,
+  Award, Target, FileText, Settings, User, Mail,
+  RefreshCw, Star, MessageSquare, Eye,
   Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone, FileCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -491,7 +493,9 @@ export function TraineeDashboard() {
   })
 
   const enrolledCount = enrollments.length
-  const completedEnrollments = enrollments.filter((e: any) => e.status === 'completed')
+  const completedEnrollments = enrollments.filter(
+    (e: any) => e.status === 'completed' || (e.progress_percent ?? 0) === 100
+  )
   const completionRate = enrolledCount > 0
     ? Math.round((completedEnrollments.length / enrolledCount) * 100)
     : 0
@@ -501,6 +505,10 @@ export function TraineeDashboard() {
     return sum + Math.round(mins * pct)
   }, 0)
   const hoursLearned = Math.round(totalMinutes / 60)
+  const earnedCertificatesCount = Math.max(
+    certificates.length,
+    completedEnrollments.length
+  )
 
   const stats = [
     {
@@ -509,7 +517,7 @@ export function TraineeDashboard() {
       icon: BookOpen,
       gradient: 'from-cyan-600 to-blue-700',
       badgeText: 'Active',
-      subtext: enrolledCount === 0 ? 'No courses yet' : `${enrollments.filter((e: any) => e.status !== 'completed' && e.status !== 'withdrawn').length} active`,
+      subtext: enrolledCount === 0 ? 'No courses yet' : `${enrollments.filter((e: any) => e.status !== 'completed' && e.status !== 'withdrawn' && (e.progress_percent ?? 0) < 100).length} active`,
     },
     {
       label: 'Hours Learned',
@@ -521,11 +529,11 @@ export function TraineeDashboard() {
     },
     {
       label: 'Certificates',
-      value: certLoading ? '…' : String(certificates.length),
+      value: certLoading && enrollmentsLoading ? '…' : String(earnedCertificatesCount),
       icon: Award,
       gradient: 'from-amber-500 to-orange-600',
-      badgeText: 'Verified',
-      subtext: certificates.length === 0 ? 'None yet' : 'Ready to share',
+      badgeText: earnedCertificatesCount > 0 ? 'Verified' : 'Pending',
+      subtext: earnedCertificatesCount === 0 ? 'None yet' : `${earnedCertificatesCount} earned • Ready to view`,
     },
     {
       label: 'Completion Rate',
@@ -544,9 +552,9 @@ export function TraineeDashboard() {
       id: e.course?.id,
       title: e.course?.title ?? 'Untitled Course',
       progress: e.progress_percent ?? 0,
-      status: e.status === 'completed' ? 'Completed' : 'In Progress',
+      status: e.status === 'completed' || (e.progress_percent ?? 0) === 100 ? 'Completed' : 'In Progress',
       instructor: e.course?.trainer?.full_name ?? 'Instructor',
-      duration: e.status === 'completed'
+      duration: e.status === 'completed' || (e.progress_percent ?? 0) === 100
         ? 'Completed'
         : e.course?.duration_minutes
           ? `${Math.round(e.course.duration_minutes * (1 - (e.progress_percent ?? 0) / 100))} min left`
@@ -568,11 +576,11 @@ export function TraineeDashboard() {
           : 'bg-blue-100 text-blue-700',
       }))
     : enrollments.slice(0, 4).map((e: any) => ({
-        icon: e.status === 'completed' ? CheckCircle : BookOpen,
-        title: e.status === 'completed' ? 'Completed Course' : 'Enrolled in Course',
+        icon: e.status === 'completed' || (e.progress_percent ?? 0) === 100 ? CheckCircle : BookOpen,
+        title: e.status === 'completed' || (e.progress_percent ?? 0) === 100 ? 'Completed Course' : 'Enrolled in Course',
         desc: e.course?.title ?? 'Course',
         time: formatDistanceToNow(new Date(e.enrolled_at), { addSuffix: true }),
-        iconBg: e.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-100 text-cyan-700',
+        iconBg: e.status === 'completed' || (e.progress_percent ?? 0) === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-100 text-cyan-700',
       }))
 
   return (
@@ -778,45 +786,6 @@ export function TraineeDashboard() {
             </Link>
           ))}
         </motion.div>
-
-        {/* Profile Card */}
-        <motion.div variants={fadeUp} className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Account Overview</h3>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
-              Trainee Profile
-            </span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: 'Full Name', value: profile?.full_name },
-              { label: 'Email Address', value: profile?.email },
-              { label: 'Department', value: profile?.department ?? '—' },
-              { label: 'Designation', value: profile?.designation ?? '—' },
-            ].map(item => (
-              <div key={item.label} className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                <p className="text-[11px] font-semibold text-slate-500 mb-0.5">{item.label}</p>
-                <p className="text-sm font-bold text-slate-900 truncate">{item.value || 'Not provided'}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Verification Status:</span>
-              <StatusBadge status={profile?.approval_status ?? 'pending'} />
-            </div>
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={handleResetPassword}
-                className="text-xs font-semibold text-cyan-700 hover:text-cyan-800 transition-colors flex items-center gap-1.5 bg-cyan-50 hover:bg-cyan-100 px-3 py-1.5 rounded-lg border border-cyan-200"
-              >
-                <Shield className="w-3.5 h-3.5" />
-                Reset Password
-              </button>
-              <span className="text-xs text-slate-400">MoES Capacity Connect</span>
-            </div>
-          </div>
-        </motion.div>
       </motion.div>
     </DashboardShell>
   )
@@ -1008,7 +977,7 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<Profile[]>([])
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements' | 'home_page'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements' | 'messages' | 'home_page'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended' | 'rejected'>('all')
   const [ConfirmDialog, confirm] = useConfirm()
@@ -1016,16 +985,22 @@ export function AdminDashboard() {
   const [previewMaterial, setPreviewMaterial] = useState<{file_name: string, storage_path: string} | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [pendingCoursesCount, setPendingCoursesCount] = useState(0)
+  const [coursesList, setCoursesList] = useState<any[]>([])
+  const [enrollmentsList, setEnrollmentsList] = useState<any[]>([])
+  const [selectedUserForModal, setSelectedUserForModal] = useState<any | null>(null)
+  const [isUserDetailsModalOpen, setIsUserDetailsModalOpen] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [trRes, trnRes, admRes, logRes, coursesRes] = await Promise.all([
+      const [trRes, trnRes, admRes, logRes, pendingCoursesRes, allCoursesRes, enrollmentsRes] = await Promise.all([
         supabase.from('trainees').select('*').order('created_at', { ascending: false }),
         supabase.from('trainers').select('*').order('created_at', { ascending: false }),
         supabase.from('admins').select('*').order('created_at', { ascending: false }),
         supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(50),
         supabase.from('courses').select('id', { count: 'exact' }).eq('status', 'pending_review'),
+        supabase.from('courses').select('id, title, status, delivery_mode, department, course_type, created_at'),
+        supabase.from('enrollments').select('id, course_id, status, progress_pct, completed_at, created_at'),
       ])
 
       const allUsers = [
@@ -1035,7 +1010,9 @@ export function AdminDashboard() {
       ]
       setUsers(allUsers as any)
       if (logRes.data) setLogs(logRes.data)
-      setPendingCoursesCount(coursesRes.count || 0)
+      setPendingCoursesCount(pendingCoursesRes.count || 0)
+      if (allCoursesRes.data) setCoursesList(allCoursesRes.data)
+      if (enrollmentsRes.data) setEnrollmentsList(enrollmentsRes.data)
     } catch (e) {
       console.error('Exception in fetchData:', e)
     } finally {
@@ -1044,6 +1021,55 @@ export function AdminDashboard() {
   }
 
   useEffect(() => { fetchData() }, [])
+
+  const platformAnalytics = useMemo(() => {
+    const totalEnrollments = enrollmentsList.length
+    const completedEnrollments = enrollmentsList.filter(e => e.status === 'completed').length
+    const activeEnrollments = enrollmentsList.filter(e => e.status === 'in_progress' || e.status === 'enrolled').length
+    const completionRate = totalEnrollments > 0 ? Math.round((completedEnrollments / totalEnrollments) * 100) : 0
+    
+    const totalProgress = enrollmentsList.reduce((acc, curr) => acc + (Number(curr.progress_pct) || 0), 0)
+    const avgProgress = totalEnrollments > 0 ? Math.round(totalProgress / totalEnrollments) : 0
+
+    const deptMap: Record<string, number> = {}
+    users.forEach(u => {
+      const d = (u.department || 'MoES HQ').trim()
+      deptMap[d] = (deptMap[d] || 0) + 1
+    })
+    const deptArray = Object.entries(deptMap)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percent: users.length > 0 ? Math.round((count / users.length) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+
+    const publishedCourses = coursesList.filter(c => c.status === 'published').length
+    const draftCourses = coursesList.filter(c => c.status === 'draft').length
+    const pendingCourses = coursesList.filter(c => c.status === 'pending_review').length
+
+    const recordedCount = coursesList.filter(c => c.delivery_mode === 'recorded' || !c.delivery_mode).length
+    const liveCount = coursesList.filter(c => c.delivery_mode === 'live').length
+    const hybridCount = coursesList.filter(c => c.delivery_mode === 'hybrid').length
+
+    return {
+      totalEnrollments,
+      completedEnrollments,
+      activeEnrollments,
+      completionRate,
+      avgProgress,
+      deptArray: deptArray.slice(0, 6),
+      totalCourses: coursesList.length,
+      publishedCourses,
+      draftCourses,
+      pendingCourses,
+      deliveryModes: {
+        recorded: recordedCount,
+        live: liveCount,
+        hybrid: hybridCount,
+      }
+    }
+  }, [enrollmentsList, coursesList, users])
 
   const filteredUsers = useMemo(() => {
     let filtered = users
@@ -1204,6 +1230,7 @@ export function AdminDashboard() {
     ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins', icon: Shield }] : []),
     { key: 'courses', label: 'Courses', icon: BookOpen },
     { key: 'announcements', label: 'Announcements', icon: Megaphone },
+    { key: 'messages', label: 'Messages', icon: Mail },
     { key: 'home_page', label: 'Home Page', icon: Globe },
     ...(isSuperAdmin ? [{ key: 'logs', label: 'Audit Logs', icon: BarChart3 }] : []),
   ] as const
@@ -1217,7 +1244,6 @@ export function AdminDashboard() {
     { label: 'Total Users', value: users.length, icon: Users, gradient: 'from-cyan-600 to-blue-700', badgeText: 'Registered' },
     { label: 'Pending Approval', value: pendingCount, icon: Clock, gradient: 'from-amber-500 to-orange-600', badgeText: pendingCount > 0 ? 'Action Needed' : 'All Clear' },
     { label: 'Approved Users', value: users.filter(u => u.approval_status === 'approved').length, icon: CheckCircle, gradient: 'from-emerald-500 to-teal-700', badgeText: 'Verified' },
-    { label: 'Audit Logs', value: logs.length, icon: BarChart3, gradient: 'from-blue-600 to-indigo-700', badgeText: 'Logged Events' },
   ]
 
   const activities = [
@@ -1306,7 +1332,7 @@ export function AdminDashboard() {
                     exit="hidden"
                     className="space-y-6"
                   >
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {stats.map(s => <StatCard key={s.label} {...s} />)}
                     </div>
                     
@@ -1330,21 +1356,26 @@ export function AdminDashboard() {
                           <h4 className="font-bold text-sm">Review Trainees</h4>
                           <p className="text-xs text-white/80">Manage user accounts</p>
                         </div>
-                        {pendingCount > 0 && (
+                        {pendingTrainees > 0 && (
                           <div className="absolute top-4 right-4 bg-black/30 px-2 py-1 rounded-lg text-xs font-bold backdrop-blur-sm">
-                            {pendingCount} Pending
+                            {pendingTrainees} Pending
                           </div>
                         )}
                       </div>
                       <div 
-                        onClick={() => setActiveTab('logs')}
-                        className="group cursor-pointer p-5 rounded-3xl bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-md shadow-slate-500/20 hover:scale-105 transition-all flex flex-col justify-between h-32"
+                        onClick={() => setActiveTab('trainers')}
+                        className="group cursor-pointer p-5 rounded-3xl bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-md shadow-slate-500/20 hover:scale-105 transition-all flex flex-col justify-between h-32 relative overflow-hidden"
                       >
-                        <BarChart3 className="w-6 h-6 text-white/80 group-hover:text-white group-hover:scale-110 transition-transform" />
+                        <GraduationCap className="w-6 h-6 text-white/80 group-hover:text-white group-hover:scale-110 transition-transform" />
                         <div>
-                          <h4 className="font-bold text-sm">Audit Logs</h4>
-                          <p className="text-xs text-white/80">View platform activity</p>
+                          <h4 className="font-bold text-sm">Review Trainers</h4>
+                          <p className="text-xs text-white/80">Manage trainer accounts</p>
                         </div>
+                        {pendingTrainers > 0 && (
+                          <div className="absolute top-4 right-4 bg-black/30 px-2 py-1 rounded-lg text-xs font-bold backdrop-blur-sm">
+                            {pendingTrainers} Pending
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1440,11 +1471,15 @@ export function AdminDashboard() {
                             ) : filteredUsers.map(u => (
                               <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                                 <td className="px-3 py-3">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                  <div
+                                    onClick={() => { setSelectedUserForModal(u); setIsUserDetailsModalOpen(true); }}
+                                    className="flex items-center gap-2.5 cursor-pointer group"
+                                    title="Click to view full profile details"
+                                  >
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs">
                                       {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
                                     </div>
-                                    <span className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[130px]">{u.full_name}</span>
+                                    <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition-colors truncate max-w-[130px]">{u.full_name}</span>
                                   </div>
                                 </td>
                                 <td className="px-3 py-3 text-xs text-slate-600 truncate max-w-[150px]">{u.email}</td>
@@ -1456,7 +1491,7 @@ export function AdminDashboard() {
                                         <Shield className="w-3 h-3 text-emerald-600" />
                                         <span className="truncate max-w-[100px]">{u.proof_path.split('/').pop()}</span>
                                       </div>
-                                      <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all w-fit">
+                                      <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all w-fit cursor-pointer">
                                         View Document
                                       </button>
                                     </div>
@@ -1467,23 +1502,36 @@ export function AdminDashboard() {
                                 <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
                                 <td className="px-3 py-3 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setSelectedUserForModal(u)
+                                        setIsUserDetailsModalOpen(true)
+                                      }}
+                                      className="text-xs px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-300 hover:bg-sky-100 hover:border-sky-400 font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                                      title="View Complete Trainee Info"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-sky-700" /> Info
+                                    </button>
                                     {u.approval_status === 'pending' && (
                                       <>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs">Approve</button>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'rejected')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs">Reject</button>
+                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs cursor-pointer">Approve</button>
+                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'rejected')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Reject</button>
                                       </>
                                     )}
                                     {u.approval_status === 'approved' && (
                                       <>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all shadow-xs">→ Trainer</button>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs">Suspend</button>
+                                        <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all shadow-xs cursor-pointer">→ Trainer</button>
+                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Suspend</button>
                                       </>
                                     )}
                                     {u.approval_status === 'suspended' && (
-                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs">Unsuspend</button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs cursor-pointer">Unsuspend</button>
                                     )}
                                     {u.approval_status !== 'pending' && (
-                                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs" title="Permanently Delete Account">Delete</button>
+                                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer" title="Permanently Delete Account">Delete</button>
                                     )}
                                   </div>
                                 </td>
@@ -1564,11 +1612,15 @@ export function AdminDashboard() {
                             ) : filteredUsers.map(u => (
                               <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                                 <td className="px-3 py-3">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                  <div
+                                    onClick={() => { setSelectedUserForModal(u); setIsUserDetailsModalOpen(true); }}
+                                    className="flex items-center gap-2.5 cursor-pointer group"
+                                    title="Click to view full profile details"
+                                  >
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs">
                                       {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
                                     </div>
-                                    <span className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[130px]">{u.full_name}</span>
+                                    <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition-colors truncate max-w-[130px]">{u.full_name}</span>
                                   </div>
                                 </td>
                                 <td className="px-3 py-3 text-xs text-slate-600 truncate max-w-[150px]">{u.email}</td>
@@ -1581,7 +1633,7 @@ export function AdminDashboard() {
                                         <Shield className="w-3 h-3 text-emerald-600" />
                                         <span className="truncate max-w-[100px]">{u.proof_path.split('/').pop()}</span>
                                       </div>
-                                      <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all w-fit">
+                                      <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all w-fit cursor-pointer">
                                         View Document
                                       </button>
                                     </div>
@@ -1592,23 +1644,36 @@ export function AdminDashboard() {
                                 <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
                                 <td className="px-3 py-3 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setSelectedUserForModal(u)
+                                        setIsUserDetailsModalOpen(true)
+                                      }}
+                                      className="text-xs px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-300 hover:bg-sky-100 hover:border-sky-400 font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                                      title="View Complete Trainer Info"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-sky-700" /> Info
+                                    </button>
                                     {u.approval_status === 'pending' && (
                                       <>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs">Approve</button>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'rejected')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs">Reject</button>
+                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs cursor-pointer">Approve</button>
+                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'rejected')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Reject</button>
                                       </>
                                     )}
                                     {u.approval_status === 'approved' && (
-                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs">Suspend</button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Suspend</button>
                                     )}
                                     {u.approval_status === 'suspended' && (
-                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs">Unsuspend</button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs cursor-pointer">Unsuspend</button>
                                     )}
                                     {u.approval_status !== 'pending' && (
-                                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs" title="Permanently Delete Account">Delete</button>
+                                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer" title="Permanently Delete Account">Delete</button>
                                     )}
                                     {isSuperAdmin && u.approval_status === 'approved' && (
-                                      <button onClick={() => handlePromoteToAdmin(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold hover:opacity-95 transition-all shadow-xs">Promote to Admin</button>
+                                      <button onClick={() => handlePromoteToAdmin(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold hover:opacity-95 transition-all shadow-xs cursor-pointer">Promote to Admin</button>
                                     )}
                                   </div>
                                 </td>
@@ -1672,11 +1737,15 @@ export function AdminDashboard() {
                             ) : filteredUsers.map(u => (
                               <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                                 <td className="px-3 py-3">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                                  <div
+                                    onClick={() => { setSelectedUserForModal(u); setIsUserDetailsModalOpen(true); }}
+                                    className="flex items-center gap-2.5 cursor-pointer group"
+                                    title="Click to view full profile details"
+                                  >
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs">
                                       {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
                                     </div>
-                                    <span className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[130px]">{u.full_name}</span>
+                                    <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition-colors truncate max-w-[130px]">{u.full_name}</span>
                                   </div>
                                 </td>
                                 <td className="px-3 py-3 text-xs text-slate-600 truncate max-w-[150px]">{u.email}</td>
@@ -1688,11 +1757,24 @@ export function AdminDashboard() {
                                 <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
                                 <td className="px-3 py-3 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setSelectedUserForModal(u)
+                                        setIsUserDetailsModalOpen(true)
+                                      }}
+                                      className="text-xs px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-300 hover:bg-sky-100 hover:border-sky-400 font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                                      title="View Complete Admin Info"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-sky-700" /> Info
+                                    </button>
                                     {u.approval_status === 'approved' && u.role !== 'super_admin' && (
-                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs">Suspend</button>
+                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Suspend</button>
                                     )}
                                     {u.approval_status !== 'pending' && u.role !== 'super_admin' && (
-                                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs" title="Permanently Delete Account">Delete</button>
+                                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer" title="Permanently Delete Account">Delete</button>
                                     )}
                                   </div>
                                 </td>
@@ -1724,6 +1806,13 @@ export function AdminDashboard() {
               {activeTab === 'home_page' && (
                 <motion.div key="home_page" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
                   <AdminHomePageSettings />
+                </motion.div>
+              )}
+
+              {/* Tab: Messages */}
+              {activeTab === 'messages' && (
+                <motion.div key="messages" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
+                  <AdminContactMessages />
                 </motion.div>
               )}
 
@@ -1789,29 +1878,156 @@ export function AdminDashboard() {
             <AnnouncementsFeed />
           </motion.div>
 
-          {/* Quick Actions (Overview Tab Only) */}
+          {/* Platform Analytics & Governance Statistics Section */}
           {activeTab === 'overview' && (
-            <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { icon: Users, title: 'Manage Users', desc: 'Approve, suspend, or promote accounts', to: '/admin', gradient: 'from-cyan-600 to-blue-700' },
-                { icon: Shield, title: 'System Governance', desc: 'Configure platform access & policies', to: '/admin', gradient: 'from-blue-600 to-indigo-700' },
-                { icon: BarChart3, title: 'Platform Analytics', desc: 'Usage metrics, completions & trends', to: '/admin', gradient: 'from-amber-500 to-orange-600' },
-              ].map(action => (
-                <Link key={action.title} to={action.to}>
-                  <div className="p-5 rounded-3xl bg-white border border-slate-200/90 hover:border-cyan-400 hover:shadow-xl hover:shadow-slate-200/60 hover:-translate-y-1 transition-all duration-300 group cursor-pointer flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${action.gradient} text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform`}>
-                        <action.icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 group-hover:text-cyan-600 transition-colors">{action.title}</h4>
-                        <p className="text-xs text-slate-500">{action.desc}</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-cyan-600 group-hover:translate-x-1 transition-all" />
+            <motion.div variants={fadeUp} className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-sm overflow-hidden space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-md shadow-orange-500/20 shrink-0">
+                    <BarChart3 className="w-6 h-6" />
                   </div>
-                </Link>
-              ))}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-slate-900">Platform Analytics & Insights</h3>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        Live Metrics
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">Real-time training metrics, completion trends, and institutional capacity distribution.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchData}
+                    className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh Stats
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setActiveTab('courses')}
+                    className="rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:opacity-95 text-xs font-semibold shadow-xs cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 mr-1.5" /> View Courses
+                  </Button>
+                </div>
+              </div>
+
+              {/* 4 Stat Metric Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                  <p className="text-xs font-semibold text-slate-500">Total Enrollments</p>
+                  <p className="text-2xl font-extrabold text-slate-900 mt-1">{platformAnalytics.totalEnrollments}</p>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] font-medium text-cyan-700">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-600"></span>
+                    <span>{platformAnalytics.activeEnrollments} Active in training</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                  <p className="text-xs font-semibold text-slate-500">Course Completion Rate</p>
+                  <p className="text-2xl font-extrabold text-emerald-600 mt-1">{platformAnalytics.completionRate}%</p>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] font-medium text-emerald-700">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{platformAnalytics.completedEnrollments} Certified Trainees</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                  <p className="text-xs font-semibold text-slate-500">Average Learner Progress</p>
+                  <p className="text-2xl font-extrabold text-blue-600 mt-1">{platformAnalytics.avgProgress}%</p>
+                  <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                    <div className="bg-blue-600 h-full rounded-full transition-all duration-500" style={{ width: `${platformAnalytics.avgProgress}%` }} />
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                  <p className="text-xs font-semibold text-slate-500">Published Programs</p>
+                  <p className="text-2xl font-extrabold text-slate-900 mt-1">{platformAnalytics.publishedCourses}</p>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] font-medium text-slate-500">
+                    <span>{platformAnalytics.totalCourses} total created</span>
+                    {platformAnalytics.pendingCourses > 0 && (
+                      <span className="text-amber-600 font-bold">({platformAnalytics.pendingCourses} pending)</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2 Detailed Breakdown Panels */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+                {/* Department Distribution */}
+                <div className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-cyan-600" />
+                      MoES Departmental Representation
+                    </h4>
+                    <span className="text-[11px] text-slate-400 font-medium">Top Units</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {platformAnalytics.deptArray.length > 0 ? (
+                      platformAnalytics.deptArray.map(dept => (
+                        <div key={dept.name} className="space-y-1.5">
+                          <div className="flex justify-between text-xs font-medium">
+                            <span className="text-slate-800 font-bold">{dept.name}</span>
+                            <span className="text-slate-500">{dept.count} users ({dept.percent}%)</span>
+                          </div>
+                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transition-all duration-500"
+                              style={{ width: `${Math.max(dept.percent, 8)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 py-3 text-center">No departmental data available yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Course Delivery & Operational Status */}
+                <div className="p-5 rounded-2xl border border-slate-200/80 bg-white shadow-xs space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                      <Target className="w-4 h-4 text-orange-600" />
+                      Program Delivery Modes
+                    </h4>
+                    <span className="text-[11px] text-slate-400 font-medium">Distribution</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2.5 pt-1">
+                    <div className="p-3 rounded-xl bg-cyan-50/60 border border-cyan-100 text-center">
+                      <p className="text-[11px] font-semibold text-cyan-800">Recorded</p>
+                      <p className="text-lg font-extrabold text-cyan-950 mt-0.5">{platformAnalytics.deliveryModes.recorded}</p>
+                      <p className="text-[10px] text-cyan-600 mt-0.5">Self-paced</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-100 text-center">
+                      <p className="text-[11px] font-semibold text-amber-800">Live</p>
+                      <p className="text-lg font-extrabold text-amber-950 mt-0.5">{platformAnalytics.deliveryModes.live}</p>
+                      <p className="text-[10px] text-amber-600 mt-0.5">Real-time cohorts</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-purple-50/60 border border-purple-100 text-center">
+                      <p className="text-[11px] font-semibold text-purple-800">Hybrid</p>
+                      <p className="text-lg font-extrabold text-purple-950 mt-0.5">{platformAnalytics.deliveryModes.hybrid}</p>
+                      <p className="text-[10px] text-purple-600 mt-0.5">Blended sessions</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <Award className="w-4 h-4 text-emerald-600" />
+                      Digital Certifications:
+                    </span>
+                    <span className="font-bold text-slate-900">{platformAnalytics.completedEnrollments} issued</span>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
         </motion.div>
@@ -1820,6 +2036,16 @@ export function AdminDashboard() {
         material={previewMaterial}
         previewUrl={previewUrl}
         onClose={() => setPreviewMaterial(null)}
+      />
+      <AdminUserDetailsModal
+        user={selectedUserForModal}
+        isOpen={isUserDetailsModalOpen}
+        onClose={() => {
+          setIsUserDetailsModalOpen(false)
+          setSelectedUserForModal(null)
+        }}
+        onUpdateStatus={handleUpdateUser}
+        onViewProof={handleViewProof}
       />
     </>
   )

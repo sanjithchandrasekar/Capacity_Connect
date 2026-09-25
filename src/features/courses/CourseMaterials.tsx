@@ -81,6 +81,8 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
   const [savingQuestions, setSavingQuestions] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [ConfirmDialog, confirm] = useConfirm()
+  const onCountChangeRef = useRef(onMaterialCountChange)
+  onCountChangeRef.current = onMaterialCountChange
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
@@ -104,14 +106,14 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
       const { data: materialsData } = await query.order('created_at', { ascending: false })
       if (materialsData) {
         setMaterials(materialsData)
-        onMaterialCountChange?.(materialsData.length)
+        onCountChangeRef.current?.(materialsData.length)
       }
     } catch {
       if (!embedded) toast.error('Failed to load materials')
     } finally {
       setLoading(false)
     }
-  }, [user, courseId, embedded, onMaterialCountChange])
+  }, [user, courseId, embedded, sessionId])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -408,10 +410,10 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
 
   if (loading) {
     return embedded ? (
-      <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-zinc-200" /></div>
+      <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-cyan-600" /></div>
     ) : (
       <TrainerLayout>
-        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-zinc-200" /></div>
+        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-cyan-600" /></div>
       </TrainerLayout>
     )
   }
@@ -420,22 +422,22 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
     <div className={embedded ? '' : 'max-w-5xl mx-auto space-y-6'}>
       {!embedded && (
         <div>
-          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-zinc-200/60 hover:text-zinc-200 transition-colors mb-4">
+          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-700 font-semibold transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
-          <h2 className="text-2xl font-bold tracking-tight text-zinc-200">Course Materials</h2>
-          <p className="text-zinc-200/60 text-sm mt-1">Upload documents, videos, and resources for "{course?.title}"</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Course Materials</h2>
+          <p className="text-slate-500 text-sm mt-1">Upload documents, videos, and resources for "{course?.title}"</p>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-ink/5 rounded-lg w-fit">
+      <div className="flex gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-xl w-fit">
         <button
           onClick={() => setActiveTab('files')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
             activeTab === 'files'
-              ? 'bg-ink/20 text-zinc-200'
-              : 'text-zinc-200/60 hover:text-zinc-200'
+              ? 'bg-white text-cyan-700 shadow-xs border border-slate-200/80'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <FileText className="w-4 h-4 mr-1.5 inline" />
@@ -443,10 +445,10 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
         </button>
         <button
           onClick={() => setActiveTab('links')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
             activeTab === 'links'
-              ? 'bg-ink/20 text-zinc-200'
-              : 'text-zinc-200/60 hover:text-zinc-200'
+              ? 'bg-white text-cyan-700 shadow-xs border border-slate-200/80'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Link2 className="w-4 h-4 mr-1.5 inline" />
@@ -457,7 +459,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
       {activeTab === 'files' && (
         <div
           className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
-                    dragOver ? 'border-ink bg-ink/10' : 'border-cyan-500/30 hover:border-cyan-500/30 hover:bg-ink/5'
+            dragOver ? 'border-cyan-500 bg-cyan-50/50' : 'border-slate-300 bg-slate-50/60 hover:border-cyan-500 hover:bg-cyan-50/20'
           }`}
           onDragOver={e => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
@@ -473,18 +475,18 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
             onChange={handleFileInput}
             disabled={uploading}
           />
-          <Upload className={`w-8 h-8 mx-auto mb-3 ${dragOver ? 'text-zinc-200' : 'text-zinc-200/50'}`} />
+          <Upload className={`w-8 h-8 mx-auto mb-3 ${dragOver ? 'text-cyan-600 animate-bounce' : 'text-cyan-600/70'}`} />
           {uploading ? (
             <div>
-              <p className="text-sm text-zinc-200 font-medium">Uploading: {uploadProgress}</p>
-              <Loader2 className="w-4 h-4 animate-spin text-zinc-200 mx-auto mt-2" />
+              <p className="text-sm text-slate-800 font-bold">Uploading: {uploadProgress}</p>
+              <Loader2 className="w-4 h-4 animate-spin text-cyan-600 mx-auto mt-2" />
             </div>
           ) : (
             <div>
-              <p className="text-sm text-zinc-200 font-medium mb-1">
+              <p className="text-sm text-slate-800 font-bold mb-1">
                 {dragOver ? 'Drop files here' : 'Click to upload or drag and drop'}
               </p>
-              <p className="text-xs text-zinc-200/50">
+              <p className="text-xs text-slate-500 font-medium">
                 PDF, DOCX, PPTX, TXT, MP4, Images — Max 100MB each
               </p>
             </div>
@@ -493,16 +495,16 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
       )}
 
       {activeTab === 'links' && (
-        <Card className="bg-[#070E20]/90 border-cyan-500/30">
-          <CardContent className="p-4 space-y-3">
-            <p className="text-xs text-zinc-200/50">Add links to external resources, YouTube videos, or any online material.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+        <Card className="bg-white border border-slate-200 shadow-sm rounded-2xl">
+          <CardContent className="p-5 space-y-3">
+            <p className="text-xs text-slate-600 font-medium">Add links to external resources, YouTube videos, or any online material.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2.5">
               <Input
                 value={linkUrl}
                 onChange={e => setLinkUrl(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
                 placeholder="https://example.com/resource"
-                className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs"
+                className="bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 h-10 rounded-xl text-xs font-medium"
                 disabled={addingLink}
               />
               <Input
@@ -510,14 +512,14 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                 onChange={e => setLinkTitle(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLink() } }}
                 placeholder="Title (optional)"
-                className="bg-ink/5 border-cyan-500/30 text-zinc-200 h-9 text-xs"
+                className="bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 h-10 rounded-xl text-xs font-medium"
                 disabled={addingLink}
               />
               <Button
                 type="button"
                 onClick={addLink}
                 disabled={!linkUrl.trim() || addingLink}
-                className="bg-ink hover:bg-ink/90 text-zinc-200 h-9 px-3 shrink-0"
+                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold h-10 px-4 rounded-xl shadow-sm shrink-0"
               >
                 {addingLink ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               </Button>
@@ -526,51 +528,50 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
         </Card>
       )}
 
-      <div className="flex items-center gap-2 p-3 rounded-lg bg-ink/5 border-cyan-500/30">
-        <Brain className="w-4 h-4 text-zinc-200 shrink-0" />
-        <p className="text-xs text-zinc-200/60">
-          <span className="font-medium text-zinc-200">AI Question Generation:</span> Click the <Sparkles className="w-3 h-3 inline" /> icon on any material to auto-generate assessment questions from its content.
+      <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200/80">
+        <Brain className="w-4 h-4 text-cyan-700 shrink-0" />
+        <p className="text-xs text-slate-700 font-medium leading-relaxed">
+          <span className="font-bold text-cyan-900">AI Question Generation:</span> Click the <Sparkles className="w-3 h-3 inline text-cyan-600" /> icon on any material to auto-generate assessment questions from its content.
         </p>
       </div>
 
       {materials.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-zinc-200">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900">
               Materials ({materials.length})
               {materials.some(m => m.material_type === 'file') && materials.some(m => m.material_type !== 'file') && (
-                <span className="text-zinc-200/50 font-normal ml-2">
+                <span className="text-slate-500 font-normal ml-2">
                   — {materials.filter(m => m.material_type === 'file').length} files, {materials.filter(m => m.material_type !== 'file').length} links
                 </span>
               )}
             </h3>
-
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {materials.map(material => {
               const isLink = material.material_type === 'link' || material.material_type === 'video'
               const isVideo = material.mime_type?.startsWith('video/') || material.material_type === 'video'
               const Icon = isLink ? Globe : isVideo ? Video : getFileIcon(material.mime_type)
               return (
-                <div key={material.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#040814] border border-cyan-500/30 hover:border-cyan-500/30 transition-all group">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                    isLink ? 'bg-ink/5' : isVideo ? 'bg-ink/5' : 'bg-ink/5'
+                <div key={material.id} className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-cyan-300 hover:shadow-xs transition-all group">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                    isLink ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : isVideo ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-cyan-50 border-cyan-200 text-cyan-600'
                   }`}>
-                    <Icon className={`w-5 h-5 ${isLink ? 'text-zinc-200' : isVideo ? 'text-zinc-200' : 'text-zinc-200'}`} />
+                    <Icon className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handlePreview(material)}>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm text-zinc-200 font-medium truncate hover:underline">{material.file_name}</p>
+                      <p className="text-sm text-slate-900 font-bold truncate hover:text-cyan-700 transition-colors">{material.file_name}</p>
                       {isLink && (
-                        <Badge className="bg-ink/10 text-zinc-200 border-cyan-500/30 text-[10px] h-4">
+                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] h-4 font-bold">
                           <Link2 className="w-2.5 h-2.5 mr-0.5 inline" />
                           Link
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-zinc-200/50 mt-0.5">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                       {isLink ? (
-                        <span className="text-zinc-200 hover:text-zinc-200 truncate max-w-xs flex items-center gap-1">
+                        <span className="text-slate-600 hover:text-cyan-600 truncate max-w-xs flex items-center gap-1 font-medium">
                           {material.url}
                           <ExternalLink className="w-3 h-3 shrink-0" />
                         </span>
@@ -581,13 +582,12 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                         </>
                       )}
                       <span>{formatDistanceToNow(new Date(material.created_at), { addSuffix: true })}</span>
-
                     </div>
                   </div>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <Link
                       to={`/trainer/courses/${courseId}/assessments`}
-                      className="p-2 rounded-lg hover:bg-ink/5 text-zinc-200/60 hover:text-zinc-200 transition-all"
+                      className="p-2 rounded-xl hover:bg-cyan-50 text-slate-400 hover:text-cyan-700 transition-all border border-transparent hover:border-cyan-200"
                       title="Go to Assessments"
                     >
                       <Sparkles className="w-4 h-4" />
@@ -596,16 +596,16 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                       <button
                         onClick={() => handleDownload(material)}
                         disabled={downloadingId === material.id}
-                        className="p-2 rounded-lg hover:bg-ink/5 text-zinc-200/60 hover:text-zinc-200 transition-all"
+                        className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200"
                         title="Download"
                       >
-                        {downloadingId === material.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        {downloadingId === material.id ? <Loader2 className="w-4 h-4 animate-spin text-cyan-600" /> : <Download className="w-4 h-4" />}
                       </button>
                     )}
                     <button
                       onClick={() => handleDelete(material)}
                       disabled={deletingId === material.id}
-                      className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-200/60 hover:text-red-400 transition-all"
+                      className="p-2 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all border border-transparent hover:border-rose-200"
                       title="Delete"
                     >
                       {deletingId === material.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -619,10 +619,10 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
       )}
 
       {materials.length === 0 && !uploading && (
-        <div className="text-center py-8">
-          <FileText className="w-10 h-10 text-zinc-200/30 mx-auto mb-3" />
-          <p className="text-zinc-200/60 text-sm">No materials added yet.</p>
-          <p className="text-zinc-200/40 text-xs mt-1">Upload files or add links to build your course content.</p>
+        <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-200">
+          <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-700 font-bold text-sm">No materials added yet.</p>
+          <p className="text-slate-400 text-xs mt-1 font-medium">Upload files or add links to build your course content.</p>
         </div>
       )}
     </div>
@@ -636,24 +636,24 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
 
       {/* AI Question Review Dialog */}
       <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-[#040814] border-cyan-500/30">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-slate-900 border-slate-700 text-white shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-zinc-200 flex items-center gap-2">
-              <Brain className="w-5 h-5 text-zinc-200" />
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Brain className="w-5 h-5 text-cyan-400" />
               AI-Generated Questions ({generatedQuestions.length})
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-zinc-200/50">
+            <p className="text-xs text-slate-400">
               Review and select questions to add to your assessment. Uncheck questions you don't want.
             </p>
             {generatedQuestions.map((q: any, i: number) => (
               <div
                 key={i}
-                className={`p-3 rounded-lg border transition-all ${
+                className={`p-3.5 rounded-xl border transition-all ${
                   selectedQuestions.has(i)
-                    ? 'bg-ink/5 border-cyan-500/30'
-                    : 'bg-[#040814] border-cyan-500/30 opacity-50'
+                    ? 'bg-slate-800/80 border-cyan-500/50 shadow-xs'
+                    : 'bg-slate-950/60 border-slate-800 opacity-50'
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -661,27 +661,27 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
                     type="checkbox"
                     checked={selectedQuestions.has(i)}
                     onChange={() => toggleQuestionSelection(i)}
-                    className="mt-1 rounded border-cyan-500/30 bg-ink/5 text-zinc-200 focus:ring-ink/50"
+                    className="mt-1 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500 accent-cyan-500"
                   />
                   <div className="flex-1">
-                    <p className="text-sm text-zinc-200 font-medium mb-2">{q.question_text}</p>
+                    <p className="text-sm text-slate-100 font-bold mb-2">{q.question_text}</p>
                     <div className="grid grid-cols-2 gap-1.5 text-xs">
                       {['A', 'B', 'C', 'D'].map(opt => (
                         <div
                           key={opt}
-                          className={`px-2 py-1 rounded border ${
+                          className={`px-2.5 py-1.5 rounded-lg border ${
                             q.correct_answer === opt
-                              ? 'bg-green-50 border-green-200 text-green-700'
-                              : 'bg-ink/5 border-cyan-500/30 text-zinc-200/60'
+                              ? 'bg-emerald-950/70 border-emerald-500 text-emerald-300 font-semibold'
+                              : 'bg-slate-900 border-slate-800 text-slate-300'
                           }`}
                         >
-                          <span className="font-medium">{opt}.</span> {q.options?.[opt]}
+                          <span className="font-bold mr-1">{opt}.</span> {q.options?.[opt]}
                         </div>
                       ))}
                     </div>
                     {q.explanation && (
-                      <p className="text-xs text-zinc-200/50 mt-2 italic">
-                        <span className="text-zinc-200/60">Explanation:</span> {q.explanation}
+                      <p className="text-xs text-slate-400 mt-2 italic">
+                        <span className="text-slate-300 font-semibold">Explanation:</span> {q.explanation}
                       </p>
                     )}
                   </div>
@@ -689,18 +689,18 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
               </div>
             ))}
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t border-slate-800 pt-3 flex items-center justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => setReviewOpen(false)}
-              className="border-cyan-500/30 text-zinc-200"
+              className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 font-semibold text-xs"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveAcceptedQuestions}
               disabled={savingQuestions || selectedQuestions.size === 0}
-              className="bg-ink hover:bg-ink/90 text-zinc-200"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs"
             >
               {savingQuestions ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
               Add {selectedQuestions.size} Question{selectedQuestions.size !== 1 ? 's' : ''}

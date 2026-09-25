@@ -1,3 +1,4 @@
+import { jsPDF } from 'jspdf'
 import JSZip from 'jszip'
 import { supabase } from './supabase'
 
@@ -11,86 +12,6 @@ export interface CertificateData {
   percentage?: number | string
   completedAt?: string
   certificateId?: string
-}
-
-/**
- * Replaces placeholders in PPTX slide XML, handling both simple text and split XML runs.
- */
-function replacePlaceholdersInXml(xmlContent: string, data: CertificateData): string {
-  const percentageStr = typeof data.percentage === 'number' 
-    ? `${Math.round(data.percentage)}%` 
-    : data.percentage || '100%'
-
-  const formattedDate = data.completedAt 
-    ? new Date(data.completedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-    : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-
-  const replacements: Record<string, string> = {
-    '<<NAME>>': data.traineeName,
-    '&lt;&lt;NAME&gt;&gt;': data.traineeName,
-    '{{NAME}}': data.traineeName,
-    '[NAME]': data.traineeName,
-    '<<PERCENTAGE>>': percentageStr,
-    '&lt;&lt;PERCENTAGE&gt;&gt;': percentageStr,
-    '{{PERCENTAGE}}': percentageStr,
-    '[PERCENTAGE]': percentageStr,
-    '<<SCORE>>': percentageStr,
-    '&lt;&lt;SCORE&gt;&gt;': percentageStr,
-    '<<COURSE_NAME>>': data.courseTitle,
-    '&lt;&lt;COURSE_NAME&gt;&gt;': data.courseTitle,
-    '<<COURSE>>': data.courseTitle,
-    '&lt;&lt;COURSE&gt;&gt;': data.courseTitle,
-    '<<DATE>>': formattedDate,
-    '&lt;&lt;DATE&gt;&gt;': formattedDate,
-    '<<TRAINER_NAME>>': data.trainerName || 'Lead Trainer',
-    '&lt;&lt;TRAINER_NAME&gt;&gt;': data.trainerName || 'Lead Trainer',
-    '<<CERTIFICATE_ID>>': data.certificateId || `CC-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
-  }
-
-  let result = xmlContent
-
-  // 1. Direct string replacement
-  for (const [key, value] of Object.entries(replacements)) {
-    result = result.split(key).join(escapeXml(value))
-  }
-
-  // 2. Paragraph-level replacement for split XML tags like <a:r><a:t>&lt;&lt;</a:t></a:r><a:r><a:t>NAME</a:t></a:r><a:r><a:t>&gt;&gt;</a:t></a:r>
-  result = result.replace(/<a:p[\s\S]*?<\/a:p>/g, (paragraph) => {
-    let pText = paragraph
-    for (const [key, value] of Object.entries(replacements)) {
-      if (!pText.includes(key)) {
-        // Test if paragraph's text content stripped of XML contains key
-        const textOnly = pText.replace(/<[^>]+>/g, '')
-        if (textOnly.includes(key)) {
-          // Replace first <a:t> content and empty the others inside this paragraph
-          let firstReplaced = false
-          pText = pText.replace(/<a:t>([\s\S]*?)<\/a:t>/g, (match, textVal) => {
-            if (!firstReplaced) {
-              firstReplaced = true
-              return `<a:t>${escapeXml(textOnly.replace(new RegExp(escapeRegex(key), 'g'), value))}</a:t>`
-            }
-            return `<a:t></a:t>`
-          })
-        }
-      }
-    }
-    return pText
-  })
-
-  return result
-}
-
-function escapeXml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 /**
@@ -108,75 +29,459 @@ export function triggerFileDownload(blob: Blob, fileName: string) {
 }
 
 /**
- * Generates a customized PPTX certificate by replacing placeholders in a template
+ * Helper to safely load an image from URL or path
  */
-export async function generateTraineeCertificate(
-  templateUrl: string | null | undefined,
-  data: CertificateData
-): Promise<{ blob: Blob; fileName: string; storageUrl?: string }> {
-  let templateBuffer: ArrayBuffer
+async function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null)
+    img.src = src
+  })
+}
 
-  if (templateUrl) {
-    // Fetch template from URL
-    try {
-      const response = await fetch(templateUrl)
-      if (!response.ok) throw new Error(`Failed to fetch template: ${response.statusText}`)
-      templateBuffer = await response.arrayBuffer()
-    } catch (err) {
-      console.warn('Could not fetch custom template, falling back to default starter template:', err)
-      templateBuffer = await createDefaultPptxTemplate(data.courseTitle)
-    }
-  } else {
-    // Generate default MoES starter PPTX template
-    templateBuffer = await createDefaultPptxTemplate(data.courseTitle)
+/**
+ * Generates an authentic, high-resolution government-grade PDF certificate of completion
+ */
+export async function generatePdfCertificate(data: CertificateData): Promise<Blob> {
+  const width = 2970 // A4 landscape 300 DPI equivalent
+  const height = 2100
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+
+  if (!ctx) {
+    throw new Error('Canvas 2D context unavailable')
   }
 
-  // Load PPTX with JSZip
-  const zip = await JSZip.loadAsync(templateBuffer)
+  // 1. Background Fill - Elegant off-white/ivory parchment with subtle warm tint
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillRect(0, 0, width, height)
 
-  // Find and update all slide XML files
-  const slideFiles = Object.keys(zip.files).filter(
-    fileName => fileName.startsWith('ppt/slides/slide') && fileName.endsWith('.xml')
+  // Soft subtle gradient background
+  const bgGrad = ctx.createLinearGradient(0, 0, width, height)
+  bgGrad.addColorStop(0, '#FAFCFF')
+  bgGrad.addColorStop(0.5, '#FFFFFF')
+  bgGrad.addColorStop(1, '#F4F9FD')
+  ctx.fillStyle = bgGrad
+  ctx.fillRect(0, 0, width, height)
+
+  // 2. Micro Guilloche Background Pattern / Watermark
+  ctx.save()
+  ctx.strokeStyle = 'rgba(14, 116, 144, 0.03)'
+  ctx.lineWidth = 1
+  for (let i = -width; i < width * 2; i += 60) {
+    ctx.beginPath()
+    ctx.moveTo(i, 0)
+    ctx.lineTo(i + height, height)
+    ctx.stroke()
+  }
+  ctx.restore()
+
+  // 3. Intricate Government Multi-layered Borders
+  // Outer Royal Border
+  ctx.strokeStyle = '#0F172A'
+  ctx.lineWidth = 16
+  ctx.strokeRect(60, 60, width - 120, height - 120)
+
+  // Fine Gold Line 1
+  ctx.strokeStyle = '#D97706'
+  ctx.lineWidth = 4
+  ctx.strokeRect(84, 84, width - 168, height - 168)
+
+  // Thin Gold Line 2
+  ctx.strokeStyle = '#F59E0B'
+  ctx.lineWidth = 1.5
+  ctx.strokeRect(96, 96, width - 192, height - 192)
+
+  // Inner Subtle Cyan Border
+  ctx.strokeStyle = '#0284C7'
+  ctx.lineWidth = 2
+  ctx.strokeRect(120, 120, width - 240, height - 240)
+
+  // Corner Ornaments (Top-Left, Top-Right, Bottom-Left, Bottom-Right)
+  const drawCornerOrnament = (cx: number, cy: number, rot: number) => {
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.rotate(rot)
+    ctx.strokeStyle = '#D97706'
+    ctx.lineWidth = 3
+    ctx.fillStyle = '#D97706'
+
+    // Corner bracket
+    ctx.beginPath()
+    ctx.moveTo(-45, -45)
+    ctx.lineTo(15, -45)
+    ctx.lineTo(15, -35)
+    ctx.lineTo(-35, -35)
+    ctx.lineTo(-35, 15)
+    ctx.lineTo(-45, 15)
+    ctx.closePath()
+    ctx.fill()
+
+    // Corner diamond
+    ctx.beginPath()
+    ctx.arc(-20, -20, 5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
+
+  drawCornerOrnament(120, 120, 0)
+  drawCornerOrnament(width - 120, 120, Math.PI / 2)
+  drawCornerOrnament(width - 120, height - 120, Math.PI)
+  drawCornerOrnament(120, height - 120, -Math.PI / 2)
+
+  // 4. Header Logos (MoES, IMD, Capacity Connect)
+  const [moesImg, imdImg, logoImg] = await Promise.all([
+    loadImage('/MOES.jpg'),
+    loadImage('/IMD.jpg'),
+    loadImage('/logo.webp').then(img => img || loadImage('/logo.png')),
+  ])
+
+  // Left Logo: MoES
+  if (moesImg) {
+    ctx.save()
+    const logoH = 120
+    const logoW = (moesImg.width / moesImg.height) * logoH
+    ctx.drawImage(moesImg, 180, 160, logoW, logoH)
+    ctx.restore()
+  }
+
+  // Right Logo: IMD
+  if (imdImg) {
+    ctx.save()
+    const logoH = 120
+    const logoW = (imdImg.width / imdImg.height) * logoH
+    ctx.drawImage(imdImg, width - 180 - logoW, 160, logoW, logoH)
+    ctx.restore()
+  }
+
+  // Center Capacity Connect Emblem or Logo
+  if (logoImg) {
+    ctx.save()
+    const logoH = 90
+    const logoW = (logoImg.width / logoImg.height) * logoH
+    ctx.drawImage(logoImg, width / 2 - logoW / 2, 155, logoW, logoH)
+    ctx.restore()
+  }
+
+  // 5. Header Typography
+  ctx.textAlign = 'center'
+  
+  // Government / Ministry Heading
+  ctx.font = '700 36px "Cinzel", "Times New Roman", Georgia, serif'
+  ctx.fillStyle = '#0F172A'
+  ctx.fillText('GOVERNMENT OF INDIA • MINISTRY OF EARTH SCIENCES', width / 2, 290)
+
+  ctx.font = '600 22px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#0369A1'
+  ctx.letterSpacing = '3px'
+  ctx.fillText('CAPACITY CONNECT LEARNING & KNOWLEDGE PLATFORM', width / 2, 330)
+
+  // Decorative Horizontal Ribbon Divider
+  ctx.save()
+  const divY = 360
+  const divGrad = ctx.createLinearGradient(width / 2 - 400, divY, width / 2 + 400, divY)
+  divGrad.addColorStop(0, 'rgba(217, 119, 6, 0)')
+  divGrad.addColorStop(0.3, 'rgba(217, 119, 6, 0.8)')
+  divGrad.addColorStop(0.5, '#D97706')
+  divGrad.addColorStop(0.7, 'rgba(217, 119, 6, 0.8)')
+  divGrad.addColorStop(1, 'rgba(217, 119, 6, 0)')
+  ctx.strokeStyle = divGrad
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  ctx.moveTo(width / 2 - 450, divY)
+  ctx.lineTo(width / 2 + 450, divY)
+  ctx.stroke()
+
+  // Center star
+  ctx.fillStyle = '#D97706'
+  ctx.font = '24px "Inter", sans-serif'
+  ctx.fillText('★ ★ ★', width / 2, divY + 8)
+  ctx.restore()
+
+  // 6. Certificate Title
+  ctx.font = '900 68px "Cinzel", "Times New Roman", Georgia, serif'
+  ctx.fillStyle = '#0F172A'
+  ctx.fillText('CERTIFICATE OF COMPLETION', width / 2, 470)
+
+  // Subtitle
+  ctx.font = 'italic 500 28px "Georgia", "Times New Roman", serif'
+  ctx.fillStyle = '#64748B'
+  ctx.fillText('This is proudly and officially awarded to', width / 2, 530)
+
+  // 7. Trainee Full Name
+  ctx.font = 'bold 76px "Georgia", "Times New Roman", serif'
+  const nameGrad = ctx.createLinearGradient(width / 2 - 300, 600, width / 2 + 300, 650)
+  nameGrad.addColorStop(0, '#0369A1')
+  nameGrad.addColorStop(0.5, '#0284C7')
+  nameGrad.addColorStop(1, '#0F172A')
+  ctx.fillStyle = nameGrad
+  ctx.fillText(data.traineeName || 'Trainee', width / 2, 640)
+
+  // Name Underline with Gold Accent
+  ctx.strokeStyle = '#D97706'
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  ctx.moveTo(width / 2 - 380, 670)
+  ctx.lineTo(width / 2 + 380, 670)
+  ctx.stroke()
+
+  // 8. Description Text
+  ctx.font = '400 28px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#475569'
+  ctx.fillText('for successfully fulfilling all curriculum requirements and demonstrating professional competency in', width / 2, 735)
+
+  // Course Title Box / Banner
+  ctx.font = 'bold 44px "Cinzel", "Times New Roman", Georgia, serif'
+  ctx.fillStyle = '#0F172A'
+  
+  // Measure course title & wrap if very long
+  const rawCourseTitle = data.courseTitle || 'Specialized Training Program'
+  ctx.fillText(rawCourseTitle, width / 2, 810)
+
+  // Score & Achievement badge text
+  const percentageStr = typeof data.percentage === 'number' 
+    ? `${Math.round(data.percentage)}%` 
+    : data.percentage || '100%'
+
+  ctx.font = '500 26px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#334155'
+  ctx.fillText(
+    `Academic Assessment & Course Proficiency Score: `,
+    width / 2 - 40,
+    880
+  )
+  ctx.font = 'bold 28px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#059669'
+  ctx.fillText(percentageStr, width / 2 + 310, 880)
+
+  // Additional institutional accreditation note
+  ctx.font = 'italic 20px "Georgia", "Times New Roman", serif'
+  ctx.fillStyle = '#64748B'
+  ctx.fillText(
+    'Conducted under the National Earth Science Capacity Building Framework • Smart India Hackathon Initiative SIH26075',
+    width / 2,
+    930
   )
 
-  for (const fileName of slideFiles) {
-    const slideXml = await zip.file(fileName)?.async('string')
-    if (slideXml) {
-      const updatedXml = replacePlaceholdersInXml(slideXml, data)
-      zip.file(fileName, updatedXml)
-    }
+  // 9. Official Embossed Gold Seal (Lower Center / Left)
+  const sealX = width / 2
+  const sealY = 1140
+  const sealRadius = 90
+
+  ctx.save()
+  // Seal Outer Starburst / Rosette
+  ctx.fillStyle = '#D97706'
+  for (let i = 0; i < 36; i++) {
+    ctx.save()
+    ctx.translate(sealX, sealY)
+    ctx.rotate((i * 10 * Math.PI) / 180)
+    ctx.beginPath()
+    ctx.moveTo(0, -sealRadius - 12)
+    ctx.lineTo(8, -sealRadius + 2)
+    ctx.lineTo(-8, -sealRadius + 2)
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
   }
 
-  // Also check notes & presentation files
-  const otherFiles = Object.keys(zip.files).filter(
-    fileName => (fileName.startsWith('ppt/notesSlides/') || fileName === 'ppt/presentation.xml') && fileName.endsWith('.xml')
+  // Outer Gold Circle
+  ctx.beginPath()
+  ctx.arc(sealX, sealY, sealRadius, 0, Math.PI * 2)
+  const sealGrad = ctx.createRadialGradient(sealX - 20, sealY - 20, 10, sealX, sealY, sealRadius)
+  sealGrad.addColorStop(0, '#FDE68A')
+  sealGrad.addColorStop(0.5, '#F59E0B')
+  sealGrad.addColorStop(1, '#B45309')
+  ctx.fillStyle = sealGrad
+  ctx.fill()
+  ctx.lineWidth = 4
+  ctx.strokeStyle = '#78350F'
+  ctx.stroke()
+
+  // Inner Circle
+  ctx.beginPath()
+  ctx.arc(sealX, sealY, sealRadius - 14, 0, Math.PI * 2)
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = 2
+  ctx.setLineDash([4, 4])
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  // Seal Text
+  ctx.font = 'bold 15px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#FFFFFF'
+  ctx.textAlign = 'center'
+  ctx.fillText('★ OFFICIAL SEAL ★', sealX, sealY - 30)
+  ctx.font = 'bold 20px "Cinzel", "Times New Roman", serif'
+  ctx.fillText('GOVT OF INDIA', sealX, sealY - 2)
+  ctx.font = 'bold 14px "Inter", "Arial", sans-serif'
+  ctx.fillText('MOES CERTIFIED', sealX, sealY + 26)
+  ctx.font = 'bold 11px "Inter", "Arial", sans-serif'
+  ctx.fillText('VERIFIED CREDENTIAL', sealX, sealY + 45)
+
+  // Ribbon tails below seal
+  ctx.fillStyle = '#B45309'
+  ctx.beginPath()
+  ctx.moveTo(sealX - 35, sealY + sealRadius - 10)
+  ctx.lineTo(sealX - 65, sealY + sealRadius + 55)
+  ctx.lineTo(sealX - 35, sealY + sealRadius + 40)
+  ctx.lineTo(sealX - 10, sealY + sealRadius + 55)
+  ctx.lineTo(sealX - 10, sealY + sealRadius - 5)
+  ctx.closePath()
+  ctx.fill()
+
+  ctx.fillStyle = '#D97706'
+  ctx.beginPath()
+  ctx.moveTo(sealX + 10, sealY + sealRadius - 5)
+  ctx.lineTo(sealX + 10, sealY + sealRadius + 55)
+  ctx.lineTo(sealX + 35, sealY + sealRadius + 40)
+  ctx.lineTo(sealX + 65, sealY + sealRadius + 55)
+  ctx.lineTo(sealX + 35, sealY + sealRadius - 10)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+
+  // 10. Left Signature Block: Lead Trainer / Instructor
+  const sigLeftX = 540
+  const sigY = 1180
+
+  // Stylized signature curve for trainer
+  ctx.save()
+  ctx.strokeStyle = '#0284C7'
+  ctx.lineWidth = 2.5
+  ctx.beginPath()
+  ctx.moveTo(sigLeftX - 140, sigY - 25)
+  ctx.bezierCurveTo(sigLeftX - 90, sigY - 70, sigLeftX - 50, sigY + 10, sigLeftX, sigY - 35)
+  ctx.bezierCurveTo(sigLeftX + 40, sigY - 75, sigLeftX + 80, sigY - 10, sigLeftX + 130, sigY - 30)
+  ctx.stroke()
+  ctx.restore()
+
+  ctx.strokeStyle = '#64748B'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(sigLeftX - 180, sigY)
+  ctx.lineTo(sigLeftX + 180, sigY)
+  ctx.stroke()
+
+  ctx.textAlign = 'center'
+  ctx.font = 'bold 24px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#0F172A'
+  ctx.fillText(data.trainerName || 'Lead Course Instructor', sigLeftX, sigY + 35)
+
+  ctx.font = '500 18px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#64748B'
+  ctx.fillText('Lead Trainer & Subject Expert', sigLeftX, sigY + 65)
+  ctx.fillText('Ministry of Earth Sciences, GoI', sigLeftX, sigY + 90)
+
+  // 11. Right Signature Block: Competent Authority / Director MoES
+  const sigRightX = width - 540
+
+  // Stylized signature curve for authority
+  ctx.save()
+  ctx.strokeStyle = '#0369A1'
+  ctx.lineWidth = 2.5
+  ctx.beginPath()
+  ctx.moveTo(sigRightX - 130, sigY - 20)
+  ctx.bezierCurveTo(sigRightX - 80, sigY - 65, sigRightX - 30, sigY + 15, sigRightX + 20, sigY - 40)
+  ctx.bezierCurveTo(sigRightX + 60, sigY - 80, sigRightX + 100, sigY - 5, sigRightX + 140, sigY - 25)
+  ctx.stroke()
+  ctx.restore()
+
+  ctx.strokeStyle = '#64748B'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(sigRightX - 180, sigY)
+  ctx.lineTo(sigRightX + 180, sigY)
+  ctx.stroke()
+
+  ctx.textAlign = 'center'
+  ctx.font = 'bold 24px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#0F172A'
+  ctx.fillText('Director General / Program Chair', sigRightX, sigY + 35)
+
+  ctx.font = '500 18px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#64748B'
+  ctx.fillText('Capacity Building & Human Resource Division', sigRightX, sigY + 65)
+  ctx.fillText('India Meteorological Department / MoES', sigRightX, sigY + 90)
+
+  // 12. Bottom Security & Verification Metadata Bar
+  const formattedDate = data.completedAt 
+    ? new Date(data.completedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+
+  const certId = data.certificateId || `CC-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+
+  ctx.fillStyle = '#0F172A'
+  ctx.fillRect(120, height - 190, width - 240, 50)
+
+  ctx.textAlign = 'left'
+  ctx.font = '600 18px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#38BDF8'
+  ctx.fillText(`  ISSUE DATE: ${formattedDate.toUpperCase()}`, 140, height - 158)
+
+  ctx.textAlign = 'center'
+  ctx.font = '600 18px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#FDE68A'
+  ctx.fillText(`CERTIFICATE ID: ${certId}`, width / 2, height - 158)
+
+  ctx.textAlign = 'right'
+  ctx.font = '600 18px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#34D399'
+  ctx.fillText(`STATUS: VERIFIED & AUTHENTICATED  `, width - 140, height - 158)
+
+  ctx.textAlign = 'center'
+  ctx.font = '500 15px "Inter", "Arial", sans-serif'
+  ctx.fillStyle = '#64748B'
+  ctx.fillText(
+    'Verify authenticity online at https://capacity-connect.gov.in/verify  •  Issued by Ministry of Earth Sciences, New Delhi',
+    width / 2,
+    height - 105
   )
-  for (const fileName of otherFiles) {
-    const xml = await zip.file(fileName)?.async('string')
-    if (xml) {
-      const updatedXml = replacePlaceholdersInXml(xml, data)
-      zip.file(fileName, updatedXml)
-    }
-  }
 
-  // Generate output PPTX blob
-  const outputBlob = await zip.generateAsync({
-    type: 'blob',
-    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  // Convert canvas to High Quality PNG image data URL
+  const imgDataUrl = canvas.toDataURL('image/png', 1.0)
+
+  // Create jsPDF instance in A4 Landscape (297mm x 210mm)
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4',
+    compress: true,
   })
 
-  const safeTraineeName = data.traineeName.replace(/[^a-zA-Z0-9_-]/g, '_')
-  const safeCourseName = data.courseTitle.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30)
-  const fileName = `${safeTraineeName}_${safeCourseName}_Certificate.pptx`
+  // Add the high-res certificate image to fill standard A4 Landscape page precisely
+  pdf.addImage(imgDataUrl, 'PNG', 0, 0, 297, 210, undefined, 'FAST')
 
-  // Upload certificate to 'certificates' bucket
+  // Return PDF Blob
+  return pdf.output('blob')
+}
+
+/**
+ * Generates a customized PDF certificate and saves it to Supabase storage
+ */
+export async function generateTraineeCertificate(
+  _templateUrl: string | null | undefined,
+  data: CertificateData
+): Promise<{ blob: Blob; fileName: string; storageUrl?: string }> {
+  // Generate high-resolution PDF certificate
+  const outputBlob = await generatePdfCertificate(data)
+
+  const safeTraineeName = (data.traineeName || 'Trainee').replace(/[^a-zA-Z0-9_-]/g, '_')
+  const safeCourseName = (data.courseTitle || 'Course').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30)
+  const fileName = `${safeTraineeName}_${safeCourseName}_Certificate.pdf`
+
+  // Upload certificate to 'certificates' bucket as PDF
   let storageUrl: string | undefined
   try {
-    const storagePath = `${data.courseId}/${data.traineeId}_${Date.now()}.pptx`
+    const storagePath = `${data.courseId}/${data.traineeId}_${Date.now()}.pdf`
     const { data: uploadData, error: uploadErr } = await supabase.storage
       .from('certificates')
       .upload(storagePath, outputBlob, {
-        contentType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        contentType: 'application/pdf',
         upsert: true,
       })
 
@@ -207,10 +512,19 @@ export async function generateTraineeCertificate(
       }
     }
   } catch (storageErr) {
-    console.warn('Storage upload error (proceeding with direct download):', storageErr)
+    console.warn('Storage upload error (proceeding with direct PDF download):', storageErr)
   }
 
   return { blob: outputBlob, fileName, storageUrl }
+}
+
+function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
 }
 
 /**

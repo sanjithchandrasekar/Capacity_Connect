@@ -11,7 +11,8 @@ import {
   Lock, Target, Calendar, Video, Download, ExternalLink, Users,
   GraduationCap, Award, PlayCircle,
   ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle, BarChart3,
-  HelpCircle, Sparkles, CheckSquare, RotateCcw, Unlock, Image as ImageIcon, Check, Trophy
+  HelpCircle, Sparkles, CheckSquare, RotateCcw, Unlock, Image as ImageIcon, Check, Trophy,
+  Eye, Film, Camera, AlignLeft, Globe
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -29,6 +30,29 @@ import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certifica
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+}
+
+function getYouTubeEmbedUrl(url?: string): string | null {
+  if (!url) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+  const match = url.match(regExp)
+  return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null
+}
+
+function LinkedinIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+    </svg>
+  )
+}
+
+function GithubIcon({ className = 'w-3.5 h-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+    </svg>
+  )
 }
 
 function getMaterialIcon(type: string) {
@@ -140,13 +164,22 @@ export function TraineeCourseDetails() {
   }
 
   const handleSubmitModuleQuiz = async (mod: any) => {
-    const questions = mod.quiz_questions || []
+    const rawItems = mod.items || mod.content_items || []
+    const quizQuestionsFromItems = rawItems.filter((i: any) => i.type === 'quiz' && i.quiz_data).map((i: any) => i.quiz_data)
+    const legacyQuizQuestions = (mod.quiz_questions || [])
+    const questions: any[] = [...quizQuestionsFromItems]
+    legacyQuizQuestions.forEach((lq: any) => {
+      if (!questions.some(q => q.id === lq.id || q.question === lq.question)) {
+        questions.push(lq)
+      }
+    })
+
     if (questions.length === 0) return
 
     const userAnswers = moduleQuizAnswers[mod.id] || {}
     const answeredCount = Object.keys(userAnswers).length
     if (answeredCount < questions.length) {
-      toast.error(`Please answer all ${questions.length} questions before submitting.`)
+      toast.error(`Please answer all ${questions.length} questions before submitting. (${answeredCount}/${questions.length} answered)`)
       return
     }
 
@@ -189,11 +222,15 @@ export function TraineeCourseDetails() {
         try {
           await supabase
             .from('enrollments')
-            .update({ progress_percent: progressPercent } as any)
+            .update({
+              progress_percent: progressPercent,
+              status: progressPercent === 100 ? 'completed' : 'in_progress'
+            } as any)
             .eq('course_id', courseId!)
             .eq('user_id', profile.id)
           queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile.id] })
           queryClient.invalidateQueries({ queryKey: ['my_learning', profile.id] })
+          queryClient.invalidateQueries({ queryKey: ['trainee-profile-completed-badges'] })
         } catch (err) {
           console.warn('Could not update enrollment progress', err)
         }
@@ -236,11 +273,15 @@ export function TraineeCourseDetails() {
     try {
       await supabase
         .from('enrollments')
-        .update({ progress_percent: progressPercent } as any)
+        .update({
+          progress_percent: progressPercent,
+          status: progressPercent === 100 ? 'completed' : 'in_progress'
+        } as any)
         .eq('course_id', courseId!)
         .eq('user_id', profile!.id)
       queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile?.id] })
       queryClient.invalidateQueries({ queryKey: ['my_learning', profile?.id] })
+      queryClient.invalidateQueries({ queryKey: ['trainee-profile-completed-badges'] })
     } catch (err) {
       console.warn('Could not update enrollment progress', err)
     }
@@ -253,7 +294,7 @@ export function TraineeCourseDetails() {
     queryFn: async () => {
       const { data: courseData, error } = await supabase
         .from('courses')
-        .select(`*, trainer:trainers!courses_trainer_id_fkey(full_name, bio, years_of_experience, qualifications, email, study_details)`)
+        .select(`*, trainer:trainers!courses_trainer_id_fkey(full_name, bio, years_of_experience, qualifications, email, study_details, work_experience, expertise_areas, linkedin_url, website_url, github_url)`)
         .eq('id', courseId!)
         .single() as any
       if (error) throw error
@@ -339,6 +380,19 @@ export function TraineeCourseDetails() {
     enabled: !!courseId,
   })
 
+  const { data: courseSkills = [] } = useQuery({
+    queryKey: ['course-skills', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('course_skills')
+        .select('*, skills(name)')
+        .eq('course_id', courseId!)
+      if (error) return []
+      return data || []
+    },
+    enabled: !!courseId,
+  })
+
   useEffect(() => {
     if (!profile?.id || !courseId) return
 
@@ -366,11 +420,28 @@ export function TraineeCourseDetails() {
 
   const dropMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase.rpc as any)('drop_enrollment', {
-        p_course_id: courseId!,
-        p_user_id: profile!.id
-      })
-      if (error) throw error
+      // 1. Update status to 'withdrawn'
+      const { error: updateErr } = await supabase
+        .from('enrollments')
+        .update({ status: 'withdrawn' } as any)
+        .eq('course_id', courseId!)
+        .eq('user_id', profile!.id)
+
+      if (updateErr) {
+        // Fallback to RPC or delete
+        const { error: rpcErr } = await (supabase.rpc as any)('drop_enrollment', {
+          p_course_id: courseId!,
+          p_user_id: profile!.id
+        })
+        if (rpcErr) {
+          const { error: delErr } = await supabase
+            .from('enrollments')
+            .delete()
+            .eq('course_id', courseId!)
+            .eq('user_id', profile!.id)
+          if (delErr) throw updateErr
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile?.id] })
@@ -483,27 +554,97 @@ export function TraineeCourseDetails() {
   }
 
   const handleVerifyOtp = async () => {
-    if (!profile?.email || otpInput.length !== 6) return
+    if (!profile?.email || otpInput.trim().length < 6 || otpInput.trim().length > 8) return
     setIsVerifyingOtp(true)
     try {
       const { error } = await supabase.auth.verifyOtp({
         email: profile.email,
-        token: otpInput,
+        token: otpInput.trim(),
         type: 'email'
       })
       if (error) throw error
 
       if (otpDialogType === 'enroll') {
-        const { error: enrollErr } = await (supabase.rpc as any)('enroll_trainee', {
-          p_course_id: courseId!,
-          p_user_id: profile.id
-        })
-        if (enrollErr) throw enrollErr
+        // 1. Calculate capacity status
+        const { count: currentEnrolled } = await supabase
+          .from('enrollments')
+          .select('id', { count: 'exact', head: true })
+          .eq('course_id', courseId!)
+          .in('status', ['enrolled', 'in_progress', 'completed'])
+
+        const isFull = course?.max_trainees ? (currentEnrolled ?? 0) >= course.max_trainees : false
+        const targetStatus = isFull ? 'waitlisted' : 'pending_approval'
+
+        // 2. Check if already has an enrollment record (e.g. previously dropped or rejected)
+        const { data: existingRecord } = await supabase
+          .from('enrollments')
+          .select('id')
+          .eq('course_id', courseId!)
+          .eq('user_id', profile.id)
+          .maybeSingle()
+
+        if (existingRecord) {
+          const { error: updateErr } = await supabase
+            .from('enrollments')
+            .update({
+              status: targetStatus,
+              enrolled_at: new Date().toISOString(),
+              progress_percent: 0,
+            } as any)
+            .eq('id', existingRecord.id)
+
+          if (updateErr) {
+            // Try RPC fallback
+            await (supabase.rpc as any)('enroll_trainee', {
+              p_course_id: courseId!,
+              p_user_id: profile.id
+            })
+          }
+        } else {
+          const { error: insertErr } = await supabase
+            .from('enrollments')
+            .insert({
+              course_id: courseId!,
+              user_id: profile.id,
+              status: targetStatus,
+              enrolled_at: new Date().toISOString(),
+              progress_percent: 0,
+            } as any)
+
+          if (insertErr) {
+            // Try RPC fallback
+            const { error: rpcErr } = await (supabase.rpc as any)('enroll_trainee', {
+              p_course_id: courseId!,
+              p_user_id: profile.id
+            })
+            if (rpcErr) throw insertErr
+          }
+        }
+
+        // 3. Notify Trainer of Enrollment Request
+        if (course?.trainer_id) {
+          try {
+            await supabase.from('notifications').insert({
+              user_id: course.trainer_id,
+              type: `enrollment_request:${course.id}`,
+              title: isFull ? 'New Course Waitlist Request' : 'New Enrollment Approval Request',
+              message: `${profile.full_name || profile.email} has requested to enroll in "${course.title}".`,
+            } as any)
+          } catch (notifErr) {
+            console.warn('Could not notify trainer:', notifErr)
+          }
+        }
 
         queryClient.invalidateQueries({ queryKey: ['enrollment', courseId, profile?.id] })
         queryClient.invalidateQueries({ queryKey: ['enrollments-count', courseId] })
         queryClient.invalidateQueries({ queryKey: ['trainee-dashboard-enrollments', profile?.id] })
-        toast.success('Successfully registered / enrolled in course!')
+        
+        if (isFull) {
+          toast.success('Course is currently full. You have been added to the Waitlist!')
+        } else {
+          toast.success('Enrollment request submitted! Awaiting trainer approval.')
+        }
+
         setOtpDialogType(null)
         setOtpSent(false)
         setOtpInput('')
@@ -572,6 +713,8 @@ export function TraineeCourseDetails() {
     ? Math.max(0, seatLimit - activeCount)
     : Math.max(0, waitlistLimit - waitlistedCount)
   const spotsLabel = !isSeatFull ? 'seats' : 'waitlist spots'
+
+  const isApprovedTrainee = Boolean(enrollment && (['enrolled', 'in_progress', 'completed'] as string[]).includes(enrollment.status))
 
   const canDrop = (() => {
     if (!course?.start_date) return true
@@ -692,23 +835,6 @@ export function TraineeCourseDetails() {
                       <Layers className="w-4 h-4 text-sky-400 shrink-0" />
                       <span>{course.sessions?.length || 0} Sessions</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Video className="w-4 h-4 text-blue-400 shrink-0" />
-                      <span className="capitalize">{course.delivery_mode || 'Recorded'} Delivery</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Pass: {course.passing_score}%</span>
-                    </div>
-                    {enrollmentCounts !== undefined && (
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-cyan-300 shrink-0" />
-                        <span>{enrollmentCounts.active} enrolled / {seatLimit}</span>
-                        {enrollmentCounts.waitlisted > 0 && (
-                          <span className="text-amber-300 ml-1">({enrollmentCounts.waitlisted} waitlisted)</span>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   {/* Progress bar for enrolled users */}
@@ -749,30 +875,32 @@ export function TraineeCourseDetails() {
                           {downloadingCert ? 'Generating...' : 'Download Certificate'}
                         </Button>
                         <Button
-                          onClick={() => navigate('/trainee/my-learning')}
-                          variant="outline"
-                          className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                          onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
+                          className="bg-white/10 hover:bg-white/20 text-white border border-white/25 backdrop-blur-md font-bold rounded-2xl px-6 py-3 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-sm"
                         >
-                          <PlayCircle className="w-4 h-4 mr-2" /> Review Lessons
+                          <PlayCircle className="w-4 h-4 text-cyan-300" />
+                          <span>Review Modules (New Tab)</span>
+                          <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                         </Button>
                       </div>
-                    ) : enrollment && enrollment.status === 'enrolled' ? (
+                    ) : isApprovedTrainee ? (
                       <div className="flex flex-wrap items-center gap-3">
                         <Button
-                          onClick={() => navigate('/trainee/my-learning')}
-                          className="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold rounded-2xl px-6 py-3 shadow-lg shadow-cyan-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                          onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
+                          className="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-extrabold text-sm sm:text-base rounded-2xl px-8 py-4 shadow-xl shadow-cyan-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                         >
-                          <PlayCircle className="w-4 h-4" /> Go to My Learning
+                          <PlayCircle className="w-5 h-5" />
+                          <span>{enrollment?.progress_percent && enrollment.progress_percent > 0 ? 'Resume Learning' : 'Start Learning'}</span>
+                          <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
                         </Button>
                         
                         <div className="space-y-1">
                           <Button
                             onClick={() => handleInitiateOtp('drop')}
                             disabled={!canDrop || dropMutation.isPending}
-                            variant="outline"
-                            className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                            className="bg-white/10 hover:bg-rose-500/20 text-white border border-white/20 hover:border-rose-400/40 backdrop-blur-md font-bold rounded-2xl px-6 py-3 transition-all"
                           >
-                            {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                            {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2 text-rose-400" />}
                             Drop Course
                           </Button>
                           {!canDrop && course?.start_date && (
@@ -796,10 +924,9 @@ export function TraineeCourseDetails() {
                         <Button
                           onClick={() => handleInitiateOtp('drop')}
                           disabled={dropMutation.isPending}
-                          variant="outline"
-                          className="border-white/20 text-white hover:bg-white/10 font-bold rounded-2xl px-6 py-3"
+                          className="bg-white/10 hover:bg-rose-500/20 text-white border border-white/20 hover:border-rose-400/40 backdrop-blur-md font-bold rounded-2xl px-6 py-3 transition-all"
                         >
-                          {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                          {dropMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2 text-rose-400" />}
                           Quit Waitlist
                         </Button>
                       </div>
@@ -811,23 +938,16 @@ export function TraineeCourseDetails() {
                         <p className="text-xs text-rose-300 font-medium">Capacity limit of {seatLimit + waitlistLimit} reached.</p>
                       </div>
                     ) : (
-                      <div className="space-y-1.5">
-                        <Button
-                          onClick={() => handleInitiateOtp('enroll')}
-                          disabled={isSendingOtp || otpDialogType === 'enroll'}
-                          className="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-extrabold text-base rounded-2xl px-8 py-5 shadow-xl shadow-cyan-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                        >
-                          {isSendingOtp && otpDialogType === 'enroll'
-                            ? <Loader2 className="w-5 h-5 animate-spin" />
-                            : <GraduationCap className="w-5 h-5" />}
-                          {isFull ? 'Join Waitlist' : 'Enroll in Course'}
-                        </Button>
-                        {spotsLeft !== null && (
-                          <p className="text-xs text-amber-300 font-semibold">
-                            🔥 Only {spotsLeft} {spotsLabel} remaining!
-                          </p>
-                        )}
-                      </div>
+                      <Button
+                        onClick={() => handleInitiateOtp('enroll')}
+                        disabled={isSendingOtp || otpDialogType === 'enroll'}
+                        className="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-extrabold text-base rounded-2xl px-8 py-5 shadow-xl shadow-cyan-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                      >
+                        {isSendingOtp && otpDialogType === 'enroll'
+                          ? <Loader2 className="w-5 h-5 animate-spin" />
+                          : <GraduationCap className="w-5 h-5" />}
+                        {isFull ? 'Join Waitlist' : 'Enroll in Course'}
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -839,21 +959,89 @@ export function TraineeCourseDetails() {
                 {/* Left column (2/3) */}
                 <div className="lg:col-span-2 space-y-5">
 
-                  {(!enrollment || enrollment.status === 'pending_approval' || enrollment.status === 'rejected') && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 flex items-start gap-4">
-                      <div className="p-2 bg-amber-100 rounded-xl shrink-0"><Lock className="w-5 h-5 text-amber-600" /></div>
+                  {/* 1. Preview Mode Banner (if not approved) */}
+                  {!isApprovedTrainee && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 sm:p-6 flex items-start gap-4 shadow-xs">
+                      <div className="p-2.5 bg-amber-100 rounded-2xl shrink-0">
+                        <Lock className="w-5 h-5 text-amber-600" />
+                      </div>
                       <div>
-                        <h4 className="text-sm font-bold text-amber-900 mb-1">Preview Mode</h4>
-                        <p className="text-sm text-amber-800/90">
-                          {enrollment?.status === 'pending_approval' 
-                            ? "Your enrollment is pending approval by the instructor. You will gain access to course materials once approved."
+                        <h4 className="text-sm font-bold text-amber-900 mb-1">
+                          {enrollment?.status === 'pending_approval'
+                            ? 'Enrollment Pending Approval'
                             : enrollment?.status === 'rejected'
-                            ? "Your enrollment request was rejected. Please contact your instructor for more details."
-                            : "You are currently viewing this course in preview mode. Enroll and get approved to access learning materials and sessions."}
+                            ? 'Enrollment Not Approved'
+                            : 'Preview Mode'}
+                        </h4>
+                        <p className="text-xs sm:text-sm text-amber-800/90 leading-relaxed font-normal">
+                          {enrollment?.status === 'pending_approval' 
+                            ? "Your enrollment is currently pending approval by the course trainer. Interactive learning modules, videos, notes, and quizzes will unlock automatically once approved."
+                            : enrollment?.status === 'rejected'
+                            ? "Your enrollment request was not approved. Please contact your trainer for further assistance."
+                            : "You are currently viewing this course in preview mode. Enroll and receive trainer approval to unlock the interactive learning experience and assessments."}
                         </p>
                       </div>
                     </div>
                   )}
+
+                  {/* 2. Resume Learning Action Banner / Completed Banner (for Approved Trainees) */}
+                  {isApprovedTrainee && (() => {
+                    const isCourseFullyCompleted = Boolean(
+                      (enrollment?.progress_percent ?? 0) >= 100 ||
+                      (course.modules?.length > 0 && completedModules.length >= course.modules.length) ||
+                      enrollment?.status === 'completed'
+                    )
+
+                    return (
+                      <div className={`border rounded-3xl p-6 shadow-xl relative overflow-hidden transition-all ${
+                        isCourseFullyCompleted
+                          ? 'bg-gradient-to-r from-[#061c14] via-[#08281b] to-[#04120c] border-emerald-500/40 shadow-emerald-950/30'
+                          : 'bg-gradient-to-r from-[#0c162c] via-[#091224] to-[#040814] border-cyan-500/30'
+                      }`}>
+                        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl pointer-events-none ${
+                          isCourseFullyCompleted ? 'bg-emerald-500/15' : 'bg-cyan-500/15'
+                        }`} />
+                        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              {isCourseFullyCompleted ? (
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                              ) : (
+                                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+                              )}
+                              <span className={`text-xs font-bold uppercase tracking-wider ${
+                                isCourseFullyCompleted ? 'text-emerald-400' : 'text-cyan-400'
+                              }`}>
+                                {isCourseFullyCompleted ? 'Course Completed 🎉' : 'Active Learning Session'}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-bold text-white">
+                              {isCourseFullyCompleted
+                                ? "Course Completed! You've mastered all modules"
+                                : 'Ready to learn? Resume your course modules'}
+                            </h3>
+                            <p className="text-xs text-slate-300">
+                              {isCourseFullyCompleted
+                                ? `All ${course.modules?.length || completedModules.length} modules completed • 100% overall progress`
+                                : `${completedModules.length} of ${course.modules?.length || 0} modules completed • ${enrollment?.progress_percent ?? 0}% overall progress`}
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
+                            className={`text-white font-extrabold text-sm rounded-2xl px-6 py-3.5 shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shrink-0 ${
+                              isCourseFullyCompleted
+                                ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 shadow-emerald-500/25'
+                                : 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-500/30'
+                            }`}
+                          >
+                            {isCourseFullyCompleted ? <BookOpen className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+                            <span>{isCourseFullyCompleted ? 'Review Modules' : 'Resume Learning'}</span>
+                            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* About */}
                   {course.description && (
@@ -865,446 +1053,19 @@ export function TraineeCourseDetails() {
                     </div>
                   )}
 
-                  {/* Announcements & Assessments */}
-                  {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'in_progress' || enrollment.status === 'completed') && (
-                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
-                      <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <Target className="w-4 h-4 text-cyan-600" /> Announcements & Assessments
-                      </h2>
-                      <div className="space-y-6">
-                        <CourseAnnouncements courseId={courseId!} isTrainer={false} />
-                        
-                        {course.assessments?.length > 0 && (
-                          <div className="space-y-3">
-                            {course.assessments.map((assessment: any) => (
-                          <div key={assessment.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-4 hover:border-cyan-300 transition-colors">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <h3 className="font-bold text-slate-900 text-sm truncate max-w-xs">{assessment.title}</h3>
-                                <span className={`shrink-0 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                                  assessment.assessment_type === 'daily_test' ? 'bg-blue-100 text-blue-700' :
-                                  assessment.assessment_type === 'mock_test' ? 'bg-amber-100 text-amber-700' :
-                                  'bg-rose-100 text-rose-700'
-                                }`}>
-                                  {assessment.assessment_type?.replace('_', ' ') || 'Assessment'}
-                                </span>
-                              </div>
-                              <p className="text-xs text-slate-500">
-                                {assessment.assessment_type === 'daily_test'
-                                  ? 'Optional practice test. Take at any time.'
-                                  : `Strictly timed: ${assessment.duration_minutes || 30} mins. Contributes to internal marks.`}
-                              </p>
-                              {assessment.scheduled_date && (
-                                <p className="text-xs text-cyan-700 mt-1 font-semibold flex items-center gap-1">
-                                  <Calendar className="w-3.5 h-3.5" /> Scheduled for {new Date(assessment.scheduled_date).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              onClick={() => navigate(`/trainee/courses/${course.id}/assessments/${assessment.id}`)}
-                              className="shrink-0 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold shadow-xs"
-                            >
-                              Start Test
-                            </Button>
-                          </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Course Modules with Sequential Quiz Progression Gate (≥80% required) */}
-                  {course.modules && Array.isArray(course.modules) && course.modules.length > 0 && (
-                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-5">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Layers className="w-4 h-4 text-cyan-600" />
-                            <h2 className="text-sm font-bold text-slate-900">
-                              Course Modules & Learning Roadmap
-                            </h2>
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
-                              {course.modules.length} Modules
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 mt-1">
-                            Complete each module and score <strong>≥80%</strong> on the module quiz to unlock the next module.
-                          </p>
-                        </div>
-
-                        {/* Module completion badge */}
-                        <div className="flex items-center gap-2 self-start sm:self-auto">
-                          <div className="text-right">
-                            <span className="text-xs font-bold text-cyan-700">
-                              {completedModules.length} / {course.modules.length} Completed
-                            </span>
-                            <div className="w-28 h-2 bg-slate-100 rounded-full overflow-hidden mt-1 border border-slate-200">
-                              <div
-                                className="h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${Math.round((completedModules.length / course.modules.length) * 100)}%`
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Modules list */}
-                      <div className="space-y-3">
-                        {course.modules.map((mod: any, mIdx: number) => {
-                          const isCompleted = completedModules.includes(mod.id)
-                          // Unlocked if first module or previous module was completed
-                          const isUnlocked = mIdx === 0 || completedModules.includes(course.modules[mIdx - 1]?.id)
-                          const isLocked = !isUnlocked
-                          const isOpen = openModules.has(mod.id) || (isUnlocked && !isCompleted && mIdx === completedModules.length)
-                          
-                          const items = mod.items || mod.content_items || []
-                          const quizQuestions = mod.quiz_questions || []
-                          const quizResult = moduleQuizScores[mod.id]
-                          const userAnswers = moduleQuizAnswers[mod.id] || {}
-
-                          return (
-                            <div
-                              key={mod.id || mIdx}
-                              className={`border rounded-2xl overflow-hidden transition-all duration-200 ${
-                                isCompleted
-                                  ? 'border-emerald-200 bg-emerald-50/20 shadow-xs'
-                                  : isLocked
-                                  ? 'border-slate-200 bg-slate-50/60 opacity-75'
-                                  : 'border-cyan-300 ring-2 ring-cyan-100/50 bg-white shadow-sm'
-                              }`}
-                            >
-                              {/* Module Header */}
-                              <button
-                                onClick={() => !isLocked && toggleModule(mod.id)}
-                                disabled={isLocked}
-                                className={`w-full flex items-center gap-4 p-4 text-left transition-colors ${
-                                  isLocked
-                                    ? 'cursor-not-allowed bg-slate-50/80'
-                                    : isCompleted
-                                    ? 'bg-emerald-50/40 hover:bg-emerald-50/60'
-                                    : 'bg-white hover:bg-cyan-50/30'
-                                }`}
-                              >
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-all ${
-                                  isCompleted
-                                    ? 'bg-emerald-600 text-white shadow-xs'
-                                    : isLocked
-                                    ? 'bg-slate-200 text-slate-400'
-                                    : 'bg-gradient-to-br from-cyan-600 to-blue-600 text-white shadow-xs'
-                                }`}>
-                                  {isCompleted ? <Check className="w-4 h-4" /> : isLocked ? <Lock className="w-3.5 h-3.5" /> : mIdx + 1}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                                    <p className={`text-sm font-bold truncate ${isLocked ? 'text-slate-500' : 'text-slate-900'}`}>
-                                      {mod.title}
-                                    </p>
-                                    {isCompleted ? (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                        Completed {quizResult?.score !== undefined ? `(${quizResult.score}%)` : ''}
-                                      </span>
-                                    ) : isLocked ? (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-500 border-slate-200 flex items-center gap-1">
-                                        <Lock className="w-3 h-3" /> Locked
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-cyan-50 text-cyan-700 border-cyan-200 flex items-center gap-1 animate-pulse">
-                                        <Sparkles className="w-3 h-3 text-cyan-600" /> In Progress
-                                      </span>
-                                    )}
-                                    {quizQuestions.length > 0 && (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
-                                        <HelpCircle className="w-3 h-3 text-amber-600" />
-                                        {quizQuestions.length} Q Quiz (≥80% to Unlock Next)
-                                      </span>
-                                    )}
-                                  </div>
-                                  {isLocked && (
-                                    <p className="text-[11px] text-slate-400">
-                                      Complete Module {mIdx} with a score of 80% or higher to unlock this module.
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {items.length > 0 && (
-                                    <span className="text-[11px] text-slate-600 font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-full">
-                                      {items.length} lesson item{items.length !== 1 ? 's' : ''}
-                                    </span>
-                                  )}
-                                  {!isLocked && (
-                                    isOpen
-                                      ? <ChevronUp className="w-4 h-4 text-cyan-600 shrink-0" />
-                                      : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                                  )}
-                                </div>
-                              </button>
-
-                              {/* Module Body */}
-                              <AnimatePresence initial={false}>
-                                {isOpen && !isLocked && (
-                                  <motion.div
-                                    key="mod-body"
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.2, ease: 'easeInOut' }}
-                                    style={{ overflow: 'hidden' }}
-                                  >
-                                    <div className="px-5 pb-5 pt-3 bg-white border-t border-slate-100 space-y-4">
-                                      {mod.description && (
-                                        <p className="text-xs text-slate-600 leading-relaxed">{mod.description}</p>
-                                      )}
-
-                                      {/* Content Items */}
-                                      {items.length > 0 && (
-                                        <div className="space-y-2">
-                                          <Label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                                            <FileText className="w-3.5 h-3.5 text-cyan-600" />
-                                            Module Resources & Lessons ({items.length})
-                                          </Label>
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {items.map((item: any, iIdx: number) => (
-                                              <div
-                                                key={item.id || iIdx}
-                                                onClick={() => {
-                                                  if (item.url) window.open(item.url, '_blank')
-                                                  else if (item.previewUrl) {
-                                                    setPreviewMaterial({ file_name: item.title, material_type: 'image' })
-                                                    setPreviewUrl(item.previewUrl)
-                                                  }
-                                                }}
-                                                className="p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-cyan-300 hover:shadow-xs transition-all cursor-pointer flex items-center gap-3"
-                                              >
-                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
-                                                  {item.type === 'photo' && <ImageIcon className="w-4 h-4 text-cyan-600" />}
-                                                  {item.type === 'video' && <Video className="w-4 h-4 text-blue-600" />}
-                                                  {item.type === 'link' && <ExternalLink className="w-4 h-4 text-emerald-600" />}
-                                                  {item.type === 'text' && <FileText className="w-4 h-4 text-purple-600" />}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                  <p className="text-xs font-bold text-slate-900 truncate">{item.title}</p>
-                                                  {item.content && (
-                                                    <p className="text-[10px] text-slate-500 line-clamp-1">{item.content}</p>
-                                                  )}
-                                                  {item.url && (
-                                                    <p className="text-[10px] text-cyan-600 truncate font-medium">{item.url}</p>
-                                                  )}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* Quiz Section */}
-                                      {quizQuestions.length > 0 ? (
-                                        <div className="pt-3 border-t border-slate-100 space-y-4">
-                                          <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-200">
-                                            <div className="flex items-center gap-2">
-                                              <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                                              <div>
-                                                <h4 className="text-xs font-bold text-amber-950">Module Mastery Quiz</h4>
-                                                <p className="text-[11px] text-amber-800">
-                                                  Minimum passing score: <strong>80%</strong>. Score 80%+ to unlock Module {mIdx + 2}.
-                                                </p>
-                                              </div>
-                                            </div>
-                                            {quizResult && (
-                                              <Badge className={`text-xs font-bold px-3 py-1 ${
-                                                quizResult.passed
-                                                  ? 'bg-emerald-600 text-white'
-                                                  : 'bg-rose-600 text-white'
-                                              }`}>
-                                                {quizResult.passed ? '✓ PASSED: ' : '✗ FAILED: '}{quizResult.score}%
-                                              </Badge>
-                                            )}
-                                          </div>
-
-                                          {/* Quiz Score Alert if failed */}
-                                          {quizResult && !quizResult.passed && (
-                                            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                              <div className="flex items-center gap-2.5 text-rose-900">
-                                                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-                                                <div>
-                                                  <p className="text-xs font-bold">You scored {quizResult.score}% (Under 80% Requirement)</p>
-                                                  <p className="text-[11px] text-rose-700">
-                                                    Review the explanations below and retake the quiz to unlock the next module.
-                                                  </p>
-                                                </div>
-                                              </div>
-                                              <Button
-                                                type="button"
-                                                size="sm"
-                                                onClick={() => handleRetakeModuleQuiz(mod.id)}
-                                                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shrink-0 gap-1.5"
-                                              >
-                                                <RotateCcw className="w-3.5 h-3.5" /> Retake Quiz
-                                              </Button>
-                                            </div>
-                                          )}
-
-                                          {/* Quiz Questions List */}
-                                          <div className="space-y-4">
-                                            {quizQuestions.map((q: any, qIdx: number) => {
-                                              const selectedOption = userAnswers[qIdx]
-                                              const isGraded = quizResult?.submitted
-                                              const isQuestionCorrect = selectedOption === q.correct_option
-
-                                              return (
-                                                <div
-                                                  key={q.id || qIdx}
-                                                  className={`p-4 rounded-2xl border transition-all ${
-                                                    isGraded
-                                                      ? isQuestionCorrect
-                                                        ? 'bg-emerald-50/40 border-emerald-200'
-                                                        : 'bg-rose-50/30 border-rose-200'
-                                                      : 'bg-slate-50 border-slate-200'
-                                                  }`}
-                                                >
-                                                  <div className="flex items-start gap-2.5 mb-3">
-                                                    <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
-                                                      {qIdx + 1}
-                                                    </span>
-                                                    <p className="text-xs font-bold text-slate-900 leading-relaxed flex-1">
-                                                      {q.question}
-                                                    </p>
-                                                  </div>
-
-                                                  <div className="space-y-2 pl-8">
-                                                    {q.options?.map((opt: string, optIdx: number) => {
-                                                      const isSelected = selectedOption === optIdx
-                                                      const isOptionCorrect = optIdx === q.correct_option
-
-                                                      return (
-                                                        <button
-                                                          key={optIdx}
-                                                          type="button"
-                                                          disabled={quizResult?.passed}
-                                                          onClick={() => handleSelectQuizAnswer(mod.id, qIdx, optIdx)}
-                                                          className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-xs text-left transition-all ${
-                                                            isGraded
-                                                              ? isOptionCorrect
-                                                                ? 'bg-emerald-100/80 border-emerald-400 text-emerald-950 font-bold'
-                                                                : isSelected
-                                                                ? 'bg-rose-100/80 border-rose-400 text-rose-950 font-semibold'
-                                                                : 'bg-white border-slate-200 text-slate-600 opacity-60'
-                                                              : isSelected
-                                                              ? 'bg-cyan-50 border-cyan-400 text-cyan-950 font-bold ring-2 ring-cyan-200'
-                                                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100/80'
-                                                          }`}
-                                                        >
-                                                          <span className={`w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center shrink-0 ${
-                                                            isGraded && isOptionCorrect
-                                                              ? 'bg-emerald-600 text-white'
-                                                              : isGraded && isSelected
-                                                              ? 'bg-rose-600 text-white'
-                                                              : isSelected
-                                                              ? 'bg-cyan-600 text-white'
-                                                              : 'bg-slate-100 text-slate-600'
-                                                          }`}>
-                                                            {String.fromCharCode(65 + optIdx)}
-                                                          </span>
-                                                          <span className="flex-1">{opt}</span>
-                                                          {isGraded && isOptionCorrect && (
-                                                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-200/70 px-2 py-0.5 rounded-full">
-                                                              Correct Answer
-                                                            </span>
-                                                          )}
-                                                          {isGraded && isSelected && !isOptionCorrect && (
-                                                            <span className="text-[10px] font-bold text-rose-700 bg-rose-200/70 px-2 py-0.5 rounded-full">
-                                                              Your Choice
-                                                            </span>
-                                                          )}
-                                                        </button>
-                                                      )
-                                                    })}
-                                                  </div>
-
-                                                  {isGraded && q.explanation && (
-                                                    <div className="mt-3 ml-8 p-2.5 rounded-xl bg-white/80 border border-slate-200 text-xs text-slate-600">
-                                                      <span className="font-bold text-slate-800">Explanation: </span>
-                                                      {q.explanation}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )
-                                            })}
-                                          </div>
-
-                                          {/* Submit Quiz CTA */}
-                                          {!quizResult?.passed && (
-                                            <div className="flex items-center justify-end pt-2">
-                                              <Button
-                                                type="button"
-                                                onClick={() => handleSubmitModuleQuiz(mod)}
-                                                className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl px-6 py-2.5 shadow-md shadow-cyan-600/20 gap-2 text-xs"
-                                              >
-                                                <CheckSquare className="w-4 h-4" />
-                                                Submit Module Quiz (80% Required)
-                                              </Button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        /* Content-only module completion button */
-                                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                                          <p className="text-xs text-slate-500">Review all materials in this module to proceed.</p>
-                                          {!isCompleted ? (
-                                            <Button
-                                              type="button"
-                                              onClick={() => handleCompleteContentModule(mod)}
-                                              className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 text-white font-bold text-xs rounded-xl gap-2"
-                                            >
-                                              <CheckCircle2 className="w-4 h-4" /> Mark as Completed & Unlock Next Module →
-                                            </Button>
-                                          ) : (
-                                            <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
-                                              <CheckCircle2 className="w-4 h-4" /> Module Completed
-                                            </span>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Learning Objectives */}
-                  {objectives.length > 0 && (
-                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
-                      <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <Target className="w-4 h-4 text-amber-500" /> What You'll Learn
-                      </h2>
-                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {objectives.map((obj: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                            <span className="text-xs text-emerald-900 leading-snug font-medium">{obj}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Course Outline */}
-                  {course.session_flow_text && (
-                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
-                      <div className="flex items-center justify-between mb-5">
+                  {/* 1. Course Outline & Learning Roadmap Overview */}
+                  <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                      <div>
                         <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                          <ListOrdered className="w-4 h-4 text-cyan-600" /> Course Outline
+                          <ListOrdered className="w-4 h-4 text-cyan-600" /> Course Outline & Roadmap
                         </h2>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Comprehensive sequence of modules, topics, practicals, and gated evaluations.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         {course.session_flow_document_path && (
                           <Button
                             variant="outline"
@@ -1316,32 +1077,179 @@ export function TraineeCourseDetails() {
                             {docLoading
                               ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               : <FileText className="w-3.5 h-3.5" />}
-                            View Outline Document
+                            View Syllabus Doc
                           </Button>
                         )}
                       </div>
+                    </div>
 
-                      {sessionFlowSteps.length > 0 ? (
-                        <div className="relative">
-                          <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-gradient-to-b from-cyan-300 via-sky-300 to-blue-300 rounded-full" />
-                          <ol className="space-y-4 pl-12">
-                            {sessionFlowSteps.map((step, i) => (
-                              <li key={i} className="relative">
-                                <div className="absolute -left-8 top-0.5 w-5 h-5 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-[10px] font-black shadow-xs">
-                                  {step.number || i + 1}
+                    {/* Syllabus Flow Steps (if defined) */}
+                    {course.session_flow_text && (
+                      <div className="bg-slate-50/70 border border-slate-200/70 rounded-2xl p-5">
+                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-cyan-600" /> Session Schedule & Timeline
+                        </h3>
+                        {sessionFlowSteps.length > 0 ? (
+                          <div className="relative">
+                            <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-gradient-to-b from-cyan-300 via-sky-300 to-blue-300 rounded-full" />
+                            <ol className="space-y-4 pl-12">
+                              {sessionFlowSteps.map((step, i) => (
+                                <li key={i} className="relative">
+                                  <div className="absolute -left-8 top-0.5 w-5 h-5 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-[10px] font-black shadow-xs">
+                                    {step.number || i + 1}
+                                  </div>
+                                  <div className="group">
+                                    <p className="text-sm font-bold text-slate-900 leading-snug">{step.title}</p>
+                                    {step.description && (
+                                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{step.description}</p>
+                                    )}
+                                  </div>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{course.session_flow_text}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Modules Overview Cards */}
+                    {course.modules && Array.isArray(course.modules) && course.modules.length > 0 && (
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <BookMarked className="w-3.5 h-3.5 text-cyan-600" /> Curriculum Modules ({course.modules.length})
+                          </h3>
+                          <span className="text-[11px] font-semibold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
+                            Passing Gate: ≥80% on Module Quizzes
+                          </span>
+                        </div>
+
+                        <div className="space-y-2.5">
+                          {course.modules.map((mod: any, mIdx: number) => {
+                            const isCompleted = completedModules.includes(mod.id)
+                            const isUnlocked = isApprovedTrainee && (mIdx === 0 || completedModules.includes(course.modules[mIdx - 1]?.id))
+                            const rawItems = mod.items || mod.content_items || []
+                            const quizCount = rawItems.filter((i: any) => i.type === 'quiz').length + (mod.quiz_questions?.length || 0)
+
+                            return (
+                              <div
+                                key={mod.id || mIdx}
+                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                  isCompleted
+                                    ? 'bg-emerald-50/40 border-emerald-200 shadow-xs'
+                                    : isUnlocked
+                                      ? 'bg-cyan-50/20 border-cyan-200/80 shadow-xs'
+                                      : 'bg-slate-50/50 border-slate-200/80 opacity-85'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3.5 min-w-0">
+                                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                                    isCompleted
+                                      ? 'bg-emerald-500 text-white'
+                                      : isUnlocked
+                                        ? 'bg-cyan-600 text-white'
+                                        : 'bg-slate-200 text-slate-500'
+                                  }`}>
+                                    {isCompleted ? <Check className="w-4 h-4 stroke-[3]" /> : mIdx + 1}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-bold text-slate-900 truncate">
+                                        {mod.title || `Module ${mIdx + 1}`}
+                                      </p>
+                                      {isCompleted ? (
+                                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] font-bold">
+                                          Completed
+                                        </Badge>
+                                      ) : isUnlocked ? (
+                                        <Badge className="bg-cyan-100 text-cyan-800 border-cyan-200 text-[10px] font-bold">
+                                          Unlocked
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-slate-400 border-slate-200 text-[10px] flex items-center gap-1">
+                                          <Lock className="w-2.5 h-2.5" /> Locked
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {mod.description && (
+                                      <p className="text-xs text-slate-500 truncate max-w-xl mt-0.5">{mod.description}</p>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="group">
-                                  <p className="text-sm font-bold text-slate-900 leading-snug">{step.title}</p>
-                                  {step.description && (
-                                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{step.description}</p>
+
+                                <div className="flex items-center gap-3 shrink-0 ml-4">
+                                  <div className="text-right hidden sm:block">
+                                    <span className="text-[11px] text-slate-500 font-medium">
+                                      {rawItems.length} item{rawItems.length !== 1 ? 's' : ''}
+                                      {quizCount > 0 ? ` • ${quizCount} Quiz` : ''}
+                                    </span>
+                                  </div>
+                                  {isApprovedTrainee ? (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
+                                      className="h-7 px-2.5 rounded-lg text-xs font-semibold text-cyan-700 hover:text-cyan-800 hover:bg-cyan-100/60"
+                                    >
+                                      Launch Player <ExternalLink className="w-3 h-3 ml-1" />
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                                      <Lock className="w-3 h-3" /> Locked
+                                    </span>
                                   )}
                                 </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Outcomes of Learning & Skills Developed */}
+                  {(objectives.length > 0 || (courseSkills && courseSkills.length > 0)) && (
+                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-6">
+                      {/* What You'll Learn */}
+                      {objectives.length > 0 && (
+                        <div>
+                          <h2 className="text-sm font-bold text-slate-900 mb-3.5 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-emerald-600" /> Outcomes of Learning (What You'll Master)
+                          </h2>
+                          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {objectives.map((obj: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2.5 p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100/80">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                <span className="text-xs text-emerald-950 leading-relaxed font-medium">{obj}</span>
                               </li>
                             ))}
-                          </ol>
+                          </ul>
                         </div>
-                      ) : (
-                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{course.session_flow_text}</p>
+                      )}
+
+                      {/* Skills Developed */}
+                      {courseSkills && courseSkills.length > 0 && (
+                        <div className={objectives.length > 0 ? 'pt-4 border-t border-slate-100' : ''}>
+                          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-cyan-600" /> Skills You'll Gain
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {courseSkills.map((cs: any, idx: number) => {
+                              const skillName = cs.skills?.name || cs.name || cs.skill_name || 'Skill'
+                              return (
+                                <span
+                                  key={cs.id || idx}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-50 to-sky-50 text-cyan-800 border border-cyan-200 text-xs font-semibold shadow-xs"
+                                >
+                                  <Award className="w-3.5 h-3.5 text-cyan-600" />
+                                  {skillName}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
@@ -1533,6 +1441,11 @@ export function TraineeCourseDetails() {
                     </div>
                   )}
 
+                  {/* Announcements */}
+                  <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
+                    <CourseAnnouncements courseId={courseId!} isTrainer={false} />
+                  </div>
+
                   {/* Course Chat */}
                   {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'completed' || enrollment.status === 'in_progress') && (
                     <div className="space-y-6 mt-6 pt-6 border-t border-slate-200">
@@ -1578,38 +1491,104 @@ export function TraineeCourseDetails() {
                   {/* Instructor */}
                   <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm">
                     <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-4">Instructor</h3>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-base shadow-xs shrink-0">
+                    <div className="flex items-start gap-3.5 mb-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-cyan-600/20 shrink-0">
                         {course.trainer?.full_name?.charAt(0) || 'T'}
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900">{course.trainer?.full_name || 'Assigned Instructor'}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-slate-900 leading-tight">{course.trainer?.full_name || 'Assigned Instructor'}</p>
                         {course.trainer?.years_of_experience && (
-                          <p className="text-xs text-slate-500">{course.trainer.years_of_experience} yrs experience</p>
+                          <p className="text-xs text-slate-500 font-medium mt-0.5">{course.trainer.years_of_experience} yrs experience</p>
                         )}
+
+                        {/* Trainer Social Links below name */}
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          <a
+                            href={
+                              course.trainer?.linkedin_url
+                                ? (course.trainer.linkedin_url.startsWith('http') ? course.trainer.linkedin_url : `https://${course.trainer.linkedin_url}`)
+                                : `https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(course.trainer?.full_name || 'MoES Trainer')}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition-all shadow-2xs hover:scale-105"
+                            title={course.trainer?.linkedin_url ? "LinkedIn Profile" : "Search LinkedIn Profile"}
+                          >
+                            <LinkedinIcon className="w-3.5 h-3.5" />
+                            <span>LinkedIn</span>
+                          </a>
+
+                          <a
+                            href={
+                              course.trainer?.github_url
+                                ? (course.trainer.github_url.startsWith('http') ? course.trainer.github_url : `https://${course.trainer.github_url}`)
+                                : `https://github.com/search?q=${encodeURIComponent(course.trainer?.full_name || 'MoES')}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-[11px] font-bold transition-all shadow-2xs hover:scale-105"
+                            title={course.trainer?.github_url ? "GitHub / Research Profile" : "Search GitHub Profile"}
+                          >
+                            <GithubIcon className="w-3.5 h-3.5" />
+                            <span>GitHub</span>
+                          </a>
+
+                          <a
+                            href={
+                              course.trainer?.website_url
+                                ? (course.trainer.website_url.startsWith('http') ? course.trainer.website_url : `https://${course.trainer.website_url}`)
+                                : 'https://moes.gov.in'
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold transition-all shadow-2xs hover:scale-105"
+                            title="Official Website / Portal"
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>Website</span>
+                          </a>
+
+                          <a
+                            href={`mailto:${course.trainer?.email || 'trainer@capacityconnect.in'}?subject=Regarding: ${encodeURIComponent(course.title || 'Course')}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-[11px] font-bold transition-all shadow-2xs hover:scale-105"
+                            title="Email Instructor"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            <span>Email</span>
+                          </a>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Professional Summary / Biography */}
                     {course.trainer?.bio && (
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-4 mb-3">{course.trainer.bio}</p>
+                      <div className="mb-3.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
+                        <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                          <User className="w-3 h-3 text-cyan-600" />
+                          Professional Summary / Biography
+                        </p>
+                        <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line font-normal">
+                          {course.trainer.bio}
+                        </p>
+                      </div>
                     )}
+
+                    {/* Academic & Professional Qualifications */}
                     {course.trainer?.qualifications && (
-                      <div className="mb-3 p-2.5 bg-cyan-50 rounded-xl border border-cyan-200">
-                        <p className="text-[11px] font-semibold text-cyan-800">
-                          <Award className="w-3 h-3 inline mr-1 text-amber-500" />
+                      <div className="mb-3.5 p-3.5 bg-blue-50/70 rounded-2xl border border-blue-100">
+                        <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                          <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+                          Academic & Professional Qualifications
+                        </p>
+                        <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-line font-medium">
                           {course.trainer.qualifications}
                         </p>
                       </div>
                     )}
-                    {course.trainer?.study_details && (
-                      <div className="mb-3 p-2.5 bg-blue-50 rounded-xl border border-blue-100">
-                        <p className="text-[11px] font-semibold text-blue-800">
-                          <GraduationCap className="w-3 h-3 inline mr-1 text-blue-500" />
-                          {course.trainer.study_details}
-                        </p>
-                      </div>
-                    )}
+
+                    {/* Expertise Areas */}
                     {course.trainer?.expertise_areas && course.trainer.expertise_areas.length > 0 && (
-                      <div className="mb-4">
+                      <div className="mt-3.5">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Expertise</p>
                         <div className="flex flex-wrap gap-1.5">
                           {course.trainer.expertise_areas.map((skill: string, idx: number) => (
@@ -1619,22 +1598,6 @@ export function TraineeCourseDetails() {
                           ))}
                         </div>
                       </div>
-                    )}
-                    {/* Contact email */}
-                    {course.trainer?.email && (
-                      <a
-                        href={`mailto:${course.trainer.email}?subject=Regarding: ${encodeURIComponent(course.title)}`}
-                        className="flex items-center gap-2.5 p-3 rounded-xl bg-cyan-50/70 border border-cyan-200 hover:bg-cyan-50 hover:shadow-xs transition-all group"
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-white border border-cyan-200 flex items-center justify-center shrink-0">
-                          <Mail className="w-3.5 h-3.5 text-cyan-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-wide">Contact</p>
-                          <p className="text-xs text-slate-900 font-semibold truncate">{course.trainer.email}</p>
-                        </div>
-                        <Send className="w-3.5 h-3.5 text-cyan-600 transition-colors shrink-0" />
-                      </a>
                     )}
                   </div>
 
@@ -1727,7 +1690,7 @@ export function TraineeCourseDetails() {
               </DialogTitle>
               <DialogDescription className="text-center text-slate-600 text-sm">
                 {otpSent 
-                  ? <>We've sent a 6-digit code to <strong>{profile?.email}</strong>. Enter it below to confirm.</>
+                  ? <>We've sent a verification code to <strong>{profile?.email}</strong>. Enter it below to confirm.</>
                   : <>Are you sure you want to {otpDialogType === 'enroll' ? 'enroll in' : 'drop'} this course? We will send a verification code to <strong>{profile?.email}</strong>.</>}
               </DialogDescription>
             </DialogHeader>
@@ -1759,11 +1722,11 @@ export function TraineeCourseDetails() {
                 <div className="py-4 space-y-4">
                   <div className="space-y-2">
                     <Input
-                      placeholder="Enter 6-digit OTP"
+                      placeholder="Enter verification OTP"
                       value={otpInput}
-                      onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                      onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
                       className="text-center text-lg tracking-[0.25em] font-bold h-12 rounded-xl border-slate-200 focus-visible:ring-cyan-500 bg-slate-50 text-slate-900"
-                      maxLength={6}
+                      maxLength={8}
                     />
                   </div>
                 </div>
@@ -1771,7 +1734,7 @@ export function TraineeCourseDetails() {
                 <DialogFooter className="flex-col sm:flex-col gap-2">
                   <Button
                     onClick={handleVerifyOtp}
-                    disabled={isVerifyingOtp || otpInput.length !== 6}
+                    disabled={isVerifyingOtp || otpInput.trim().length < 6 || otpInput.trim().length > 8}
                     className={`w-full font-bold h-11 rounded-xl text-white ${
                       otpDialogType === 'enroll' 
                         ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/20' 

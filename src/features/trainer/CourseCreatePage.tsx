@@ -18,10 +18,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
-  ArrowLeft, ArrowRight, CheckCircle, Loader2, Plus, Upload, X,
+  ArrowLeft, ArrowRight, CheckCircle, Check, Loader2, Plus, Upload, X,
   BookOpen, Settings, Target, Eye, AlertCircle, FileText, File, Image,
   Video, Link2, ExternalLink, Globe, Trash2, Layers, Trophy, Film, Camera,
-  Sparkles, AlignLeft, HelpCircle, CheckSquare, Award
+  Sparkles, AlignLeft, HelpCircle, CheckSquare, Award, ArrowUp, ArrowDown, Edit3, GripVertical, Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
@@ -39,15 +39,18 @@ export interface QuizQuestion {
 
 export interface ModuleItem {
   id: string
-  type: 'photo' | 'video' | 'link' | 'text'
+  type: 'photo' | 'video' | 'link' | 'text' | 'quiz'
   title: string
   content?: string
   url?: string
+  duration_minutes?: number
+  duration_seconds?: number
   file?: File
   previewUrl?: string
   storagePath?: string
   fileName?: string
   fileSize?: number
+  quiz_data?: QuizQuestion
 }
 
 export interface CourseModule {
@@ -180,10 +183,12 @@ export function CourseCreatePage() {
 
   // Active module item adding state
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null)
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [addingItemType, setAddingItemType] = useState<'photo' | 'video' | 'link' | 'text' | null>(null)
   const [itemTitle, setItemTitle] = useState('')
   const [itemContent, setItemContent] = useState('')
   const [itemUrl, setItemUrl] = useState('')
+  const [itemDurationMinutes, setItemDurationMinutes] = useState<string>('5')
   const [itemFile, setItemFile] = useState<File | null>(null)
   const [itemPreview, setItemPreview] = useState<string | null>(null)
   const moduleFileInputRef = useRef<HTMLInputElement>(null)
@@ -263,8 +268,24 @@ export function CourseCreatePage() {
   }
 
   useEffect(() => {
-    supabase.from('skills').select('*').order('name').then(({ data }) => {
-      if (data) setSkills(data)
+    supabase.from('skills').select('*').order('name').then(({ data, error }) => {
+      if (data && data.length > 0) {
+        setSkills(data)
+      } else {
+        const defaultSkills: Skill[] = [
+          { id: 'sk-1', name: 'Cyclone Tracking & Analysis', category: 'Meteorology', created_at: '' },
+          { id: 'sk-2', name: 'Emergency Warning Communication', category: 'Operations', created_at: '' },
+          { id: 'sk-3', name: 'Satellite & Radar Telemetry', category: 'Technical', created_at: '' },
+          { id: 'sk-4', name: 'Disaster Preparedness', category: 'Disaster Management', created_at: '' },
+          { id: 'sk-5', name: 'Flood Hazard Mapping', category: 'Hydrology', created_at: '' },
+          { id: 'sk-6', name: 'GIS & Spatial Modeling', category: 'GIS', created_at: '' },
+          { id: 'sk-7', name: 'Ocean Sensor Calibration', category: 'Oceanography', created_at: '' },
+          { id: 'sk-8', name: 'Search & Rescue Protocols', category: 'Operations', created_at: '' },
+          { id: 'sk-9', name: 'Weather Data Interpretation', category: 'Meteorology', created_at: '' },
+          { id: 'sk-10', name: 'Risk Assessment & Mitigation', category: 'Safety', created_at: '' },
+        ] as any
+        setSkills(defaultSkills)
+      }
     })
   }, [])
 
@@ -294,6 +315,7 @@ export function CourseCreatePage() {
       title: `Module ${modules.length + 1}: New Topic`,
       description: '',
       items: [],
+      quiz_questions: [],
     }
     setModules(prev => [...prev, newMod])
     toast.success('New module added')
@@ -312,14 +334,57 @@ export function CourseCreatePage() {
     setModules(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m))
   }
 
+  const moveModuleItem = (moduleId: string, fromIndex: number, toIndex: number) => {
+    setModules(prev => prev.map(m => {
+      if (m.id !== moduleId) return m
+      if (toIndex < 0 || toIndex >= m.items.length) return m
+      const newItems = [...m.items]
+      const [moved] = newItems.splice(fromIndex, 1)
+      newItems.splice(toIndex, 0, moved)
+      return { ...m, items: newItems }
+    }))
+  }
+
   const openAddItem = (moduleId: string, type: 'photo' | 'video' | 'link' | 'text') => {
     setActiveModuleId(moduleId)
+    setEditingItemId(null)
     setAddingItemType(type)
     setItemTitle('')
     setItemContent('')
     setItemUrl('')
+    setItemDurationMinutes('5')
     setItemFile(null)
     setItemPreview(null)
+  }
+
+  const openEditItem = (moduleId: string, item: ModuleItem) => {
+    if (item.type === 'quiz') {
+      const qData = item.quiz_data || {
+        id: item.id,
+        question: item.title.replace(/^Quiz:\s*/, '') || '',
+        options: ['', '', '', ''],
+        correct_option: 0,
+        explanation: item.content || '',
+      }
+      openEditQuizQuestion(moduleId, qData)
+      return
+    }
+
+    setActiveModuleId(moduleId)
+    setEditingItemId(item.id)
+    setAddingItemType(item.type)
+    setItemTitle(item.title)
+    setItemContent(item.content || '')
+    setItemUrl(item.url || '')
+    setItemDurationMinutes(
+      item.duration_minutes
+        ? String(item.duration_minutes)
+        : item.duration_seconds
+        ? String(Math.round(item.duration_seconds / 60))
+        : '5'
+    )
+    setItemFile(item.file || null)
+    setItemPreview(item.previewUrl || null)
   }
 
   const handleModuleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,31 +410,73 @@ export function CourseCreatePage() {
       return
     }
 
-    const newItem: ModuleItem = {
-      id: crypto.randomUUID(),
-      type: addingItemType,
-      title: itemTitle.trim() || itemFile?.name || (addingItemType === 'link' ? itemUrl : 'Untitled Item'),
-      content: itemContent.trim() || undefined,
-      url: itemUrl.trim() || undefined,
-      file: itemFile || undefined,
-      previewUrl: itemPreview || (itemFile && itemFile.type.startsWith('image/') ? URL.createObjectURL(itemFile) : undefined),
-      fileName: itemFile?.name,
-      fileSize: itemFile?.size,
-    }
+    const durationMin = addingItemType === 'video' ? Math.max(0.5, parseFloat(itemDurationMinutes) || 5) : undefined
+    const durationSec = durationMin ? Math.round(durationMin * 60) : undefined
 
-    setModules(prev => prev.map(m => m.id === activeModuleId ? { ...m, items: [...m.items, newItem] } : m))
-    toast.success(`Added ${addingItemType} to module`)
+    setModules(prev => prev.map(m => {
+      if (m.id !== activeModuleId) return m
+
+      if (editingItemId) {
+        return {
+          ...m,
+          items: m.items.map(item => item.id === editingItemId ? {
+            ...item,
+            type: addingItemType,
+            title: itemTitle.trim() || itemFile?.name || (addingItemType === 'link' ? itemUrl : 'Untitled Item'),
+            content: itemContent.trim() || undefined,
+            url: itemUrl.trim() || undefined,
+            duration_minutes: durationMin,
+            duration_seconds: durationSec,
+            file: itemFile || item.file || undefined,
+            previewUrl: itemPreview || item.previewUrl || (itemFile && itemFile.type.startsWith('image/') ? URL.createObjectURL(itemFile) : undefined),
+            fileName: itemFile?.name || item.fileName,
+            fileSize: itemFile?.size || item.fileSize,
+          } : item)
+        }
+      }
+
+      const newItem: ModuleItem = {
+        id: crypto.randomUUID(),
+        type: addingItemType,
+        title: itemTitle.trim() || itemFile?.name || (addingItemType === 'link' ? itemUrl : 'Untitled Item'),
+        content: itemContent.trim() || undefined,
+        url: itemUrl.trim() || undefined,
+        duration_minutes: durationMin,
+        duration_seconds: durationSec,
+        file: itemFile || undefined,
+        previewUrl: itemPreview || (itemFile && itemFile.type.startsWith('image/') ? URL.createObjectURL(itemFile) : undefined),
+        fileName: itemFile?.name,
+        fileSize: itemFile?.size,
+      }
+
+      return {
+        ...m,
+        items: [...m.items, newItem]
+      }
+    }))
+
+    toast.success(editingItemId ? `Updated ${addingItemType} item` : `Added ${addingItemType} to module`)
     setAddingItemType(null)
     setActiveModuleId(null)
+    setEditingItemId(null)
     setItemFile(null)
     setItemPreview(null)
     setItemTitle('')
     setItemContent('')
     setItemUrl('')
+    setItemDurationMinutes('5')
   }
 
   const removeModuleItem = (moduleId: string, itemId: string) => {
-    setModules(prev => prev.map(m => m.id === moduleId ? { ...m, items: m.items.filter(i => i.id !== itemId) } : m))
+    setModules(prev => prev.map(m => {
+      if (m.id !== moduleId) return m
+      return {
+        ...m,
+        items: m.items.filter(i => i.id !== itemId),
+        quiz_questions: (m.quiz_questions || []).filter(q => q.id !== itemId)
+      }
+    }))
+    toast.info('Item removed')
   }
 
   // Quiz questions helpers
@@ -413,18 +520,44 @@ export function CourseCreatePage() {
 
     setModules(prev => prev.map(m => {
       if (m.id !== activeQuizModuleId) return m
+
+      let updatedItems = [...m.items]
+      const existingItemIdx = updatedItems.findIndex(i => i.id === editingQuestionId || i.quiz_data?.id === editingQuestionId)
+      
+      if (existingItemIdx !== -1) {
+        updatedItems[existingItemIdx] = {
+          ...updatedItems[existingItemIdx],
+          type: 'quiz',
+          title: `Quiz: ${quizQuestionText.trim().slice(0, 50)}${quizQuestionText.trim().length > 50 ? '...' : ''}`,
+          content: quizExplanation.trim() || undefined,
+          quiz_data: questionData
+        }
+      } else {
+        const newQuizItem: ModuleItem = {
+          id: questionData.id,
+          type: 'quiz',
+          title: `Quiz: ${quizQuestionText.trim().slice(0, 50)}${quizQuestionText.trim().length > 50 ? '...' : ''}`,
+          content: quizExplanation.trim() || undefined,
+          quiz_data: questionData
+        }
+        updatedItems.push(newQuizItem)
+      }
+
+      // Keep quiz_questions in sync
       const currentQuestions = m.quiz_questions || []
       const updatedQuestions = editingQuestionId
         ? currentQuestions.map(q => q.id === editingQuestionId ? questionData : q)
         : [...currentQuestions, questionData]
+
       return {
         ...m,
+        items: updatedItems,
         quiz_questions: updatedQuestions,
         passing_score: m.passing_score ?? 80,
       }
     }))
 
-    toast.success(editingQuestionId ? 'Quiz question updated' : 'Quiz question added')
+    toast.success(editingQuestionId ? 'Quiz question updated' : 'Quiz question added to module sequence')
     setActiveQuizModuleId(null)
     setEditingQuestionId(null)
     setQuizQuestionText('')
@@ -438,6 +571,7 @@ export function CourseCreatePage() {
       if (m.id !== moduleId) return m
       return {
         ...m,
+        items: m.items.filter(i => i.id !== questionId && i.quiz_data?.id !== questionId),
         quiz_questions: (m.quiz_questions || []).filter(q => q.id !== questionId),
       }
     }))
@@ -488,13 +622,23 @@ export function CourseCreatePage() {
           explanation: 'Immediate escalation ensures rapid risk mitigation and disaster preparedness.'
         }
       ]
+
+      const aiQuizItems: ModuleItem[] = aiQuestions.map(q => ({
+        id: q.id,
+        type: 'quiz',
+        title: `Quiz: ${q.question.slice(0, 50)}...`,
+        content: q.explanation,
+        quiz_data: q
+      }))
+
       setModules(prev => prev.map(m => m.id === moduleId ? {
         ...m,
+        items: [...m.items, ...aiQuizItems],
         quiz_questions: [...(m.quiz_questions || []), ...aiQuestions],
         passing_score: 80,
       } : m))
       setIsGeneratingAiQuiz(false)
-      toast.success('Generated 3 AI quiz questions for this module!')
+      toast.success('Generated 3 AI quiz questions and added to module sequence!')
     }, 500)
   }
 
@@ -731,9 +875,12 @@ export function CourseCreatePage() {
               title: item.title,
               content: item.content || '',
               url: publicUrlData?.publicUrl || item.url || '',
+              duration_minutes: item.duration_minutes,
+              duration_seconds: item.duration_seconds,
               storagePath: storagePath,
               fileName: item.fileName,
               fileSize: item.fileSize,
+              quiz_data: item.quiz_data,
             })
           } else {
             uploadedItems.push({
@@ -742,7 +889,11 @@ export function CourseCreatePage() {
               title: item.title,
               content: item.content || '',
               url: item.url || '',
+              duration_minutes: item.duration_minutes,
+              duration_seconds: item.duration_seconds,
               fileName: item.fileName,
+              fileSize: item.fileSize,
+              quiz_data: item.quiz_data,
             })
           }
         }
@@ -786,12 +937,39 @@ export function CourseCreatePage() {
 
       // Insert skills
       if (selectedSkills.length > 0 && course) {
-        const skillInserts = selectedSkills.map(skillId => ({
-          course_id: course.id,
-          skill_id: skillId,
-          required_level: 3,
-        }))
-        await supabase.from('course_skills').insert(skillInserts)
+        try {
+          const skillInserts: any[] = []
+          for (const skillId of selectedSkills) {
+            if (skillId.startsWith('custom-')) {
+              const skillObj = skills.find(s => s.id === skillId)
+              if (skillObj) {
+                const { data: createdSkill } = await supabase
+                  .from('skills')
+                  .insert({ name: skillObj.name } as any)
+                  .select()
+                  .single()
+                if (createdSkill) {
+                  skillInserts.push({
+                    course_id: course.id,
+                    skill_id: createdSkill.id,
+                    required_level: 3,
+                  })
+                }
+              }
+            } else {
+              skillInserts.push({
+                course_id: course.id,
+                skill_id: skillId,
+                required_level: 3,
+              })
+            }
+          }
+          if (skillInserts.length > 0) {
+            await supabase.from('course_skills').insert(skillInserts)
+          }
+        } catch (sErr) {
+          console.warn('Could not insert course_skills:', sErr)
+        }
       }
 
       // Upload materials
@@ -855,20 +1033,51 @@ export function CourseCreatePage() {
   const addCustomSkill = async () => {
     const name = customSkillName.trim()
     if (!name) return
-    if (skills.some(s => s.name.toLowerCase() === name.toLowerCase())) {
-      toast.error('Skill already exists')
+    const existing = skills.find(s => s.name.toLowerCase() === name.toLowerCase())
+    if (existing) {
+      if (!selectedSkills.includes(existing.id)) {
+        setSelectedSkills(prev => [...prev, existing.id])
+        setCustomSkillName('')
+        toast.success(`Selected skill: "${existing.name}"`)
+        return
+      }
+      toast.info('Skill already selected')
+      setCustomSkillName('')
       return
     }
+
     setAddingSkill(true)
     try {
-      const { data, error } = await supabase.from('skills').insert({ name }).select().single()
-      if (error) throw error
-      setSkills(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
-      setSelectedSkills(prev => [...prev, data.id])
-      setCustomSkillName('')
-      toast.success(`Skill "${name}" created`)
+      const { data, error } = await supabase.from('skills').insert({ name } as any).select().single()
+      if (error || !data) {
+        // Local custom skill fallback so trainer is never blocked
+        const localSkill: Skill = {
+          id: `custom-${crypto.randomUUID()}`,
+          name: name,
+          category: 'Custom Outcome',
+          created_at: new Date().toISOString()
+        } as any
+        setSkills(prev => [...prev, localSkill].sort((a, b) => a.name.localeCompare(b.name)))
+        setSelectedSkills(prev => [...prev, localSkill.id])
+        setCustomSkillName('')
+        toast.success(`Added outcome: "${name}"`)
+      } else {
+        setSkills(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+        setSelectedSkills(prev => [...prev, data.id])
+        setCustomSkillName('')
+        toast.success(`Skill "${name}" added`)
+      }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to add skill')
+      const localSkill: Skill = {
+        id: `custom-${crypto.randomUUID()}`,
+        name: name,
+        category: 'Custom Outcome',
+        created_at: new Date().toISOString()
+      } as any
+      setSkills(prev => [...prev, localSkill].sort((a, b) => a.name.localeCompare(b.name)))
+      setSelectedSkills(prev => [...prev, localSkill.id])
+      setCustomSkillName('')
+      toast.success(`Added outcome: "${name}"`)
     } finally {
       setAddingSkill(false)
     }
@@ -1162,24 +1371,99 @@ export function CourseCreatePage() {
                     <Target className="w-4 h-4 text-cyan-600" />
                     <h3 className="text-sm font-bold text-slate-900">Outcomes of Learning (Skills Developed)</h3>
                   </div>
-                  <p className="text-xs text-slate-500">Select the skills this course builds and develops.</p>
+                  <p className="text-xs text-slate-500">
+                    Add custom learning outcomes or select standard competencies trainees will master upon completing this course.
+                  </p>
+
+                  {/* Add Custom Outcome / Skill */}
                   <div className="flex gap-2">
-                    <Input value={customSkillName} onChange={e => setCustomSkillName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill() } }} placeholder="Add a custom skill..." className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 text-xs rounded-xl" disabled={addingSkill} />
-                    <Button type="button" variant="outline" onClick={addCustomSkill} disabled={!customSkillName.trim() || addingSkill} className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-3.5 shrink-0 rounded-xl font-semibold">
-                      {addingSkill ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    <Input 
+                      value={customSkillName} 
+                      onChange={e => setCustomSkillName(e.target.value)} 
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomSkill() } }} 
+                      placeholder="Type custom skill or outcome (e.g. Cyclone Track Prediction, Database Normalization)..." 
+                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-10 text-xs rounded-xl font-medium" 
+                      disabled={addingSkill} 
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={addCustomSkill} 
+                      disabled={!customSkillName.trim() || addingSkill} 
+                      className="bg-cyan-600 hover:bg-cyan-700 text-white h-10 px-4 shrink-0 rounded-xl font-bold text-xs shadow-xs"
+                    >
+                      {addingSkill ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Plus className="w-3.5 h-3.5 mr-1.5" />}
+                      Add Outcome
                     </Button>
                   </div>
-                  {skills.length === 0 ? (
-                    <p className="text-sm text-slate-400 py-4 text-center">No skills yet. Add one above.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {skills.map(s => (
-                        <button key={s.id} onClick={() => toggleSkill(s.id)} className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${selectedSkills.includes(s.id) ? 'bg-cyan-600 text-white border-cyan-600 shadow-xs' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}>
-                          {s.name}
+
+                  {/* Selected Skills Summary */}
+                  {selectedSkills.length > 0 && (
+                    <div className="p-3 bg-cyan-50/60 border border-cyan-200 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-cyan-950 flex items-center gap-1.5">
+                          <CheckCircle className="w-3.5 h-3.5 text-cyan-700" />
+                          Selected Course Outcomes ({selectedSkills.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSkills([])}
+                          className="text-[11px] text-slate-500 hover:text-rose-600 font-medium"
+                        >
+                          Clear all
                         </button>
-                      ))}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedSkills.map(id => {
+                          const skill = skills.find(s => s.id === id)
+                          if (!skill) return null
+                          return (
+                            <span
+                              key={id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-600 text-white shadow-xs"
+                            >
+                              <span>{skill.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleSkill(id)}
+                                className="hover:bg-cyan-700 rounded-full p-0.5"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
+
+                  {/* Available Suggested Competencies */}
+                  <div className="space-y-2 pt-2">
+                    <Label className="text-xs font-bold text-slate-700">Click to select suggested competencies:</Label>
+                    {skills.length === 0 ? (
+                      <p className="text-sm text-slate-400 py-4 text-center">No skills available yet. Type an outcome above to add.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1">
+                        {skills.map(s => {
+                          const isSelected = selectedSkills.includes(s.id)
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => toggleSkill(s.id)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                                isSelected
+                                  ? 'bg-cyan-600 text-white border-cyan-600 shadow-xs'
+                                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3 h-3" />}
+                              <span>{s.name}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 font-medium">{selectedSkills.length} skill{selectedSkills.length !== 1 ? 's' : ''} selected</p>
                 </CardContent>
               </Card>
@@ -1262,228 +1546,262 @@ export function CourseCreatePage() {
                           </div>
                         </div>
 
-                        {/* Module Content Items */}
-                        <div className="space-y-3 pt-2">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <Label className="text-slate-900 text-xs font-bold flex items-center gap-1.5">
-                              <FileText className="w-3.5 h-3.5 text-cyan-600" />
-                              Module Content & Media ({mod.items.length})
-                            </Label>
-                            <div className="flex flex-wrap items-center gap-1.5">
+                        {/* Unified Module Content & Assessment Sequence */}
+                        <div className="space-y-4 pt-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Label className="text-slate-900 text-xs font-bold flex items-center gap-1.5">
+                                  <Layers className="w-3.5 h-3.5 text-cyan-600" />
+                                  Module Content & Assessment Sequence ({mod.items.length})
+                                </Label>
+                                {(mod.items.some(i => i.type === 'quiz') || (mod.quiz_questions || []).length > 0) && (
+                                  <Badge className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-bold px-2 py-0.5">
+                                    80% Quiz Pass Gate Active
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Add and sequence videos, diagrams, notes, and quiz questions in the exact order trainees will experience them.
+                              </p>
+                            </div>
+
+                            {/* Toolbar Buttons */}
+                            <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => openAddItem(mod.id, 'photo')}
-                                className="h-7 px-2.5 text-[11px] border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold"
+                                onClick={() => openAddItem(mod.id, 'text')}
+                                className="h-7 px-2 text-[11px] border-purple-200 text-purple-800 bg-purple-50/50 hover:bg-purple-100 rounded-lg font-semibold"
                               >
-                                <Camera className="w-3 h-3 mr-1 text-cyan-600" /> Photo
+                                <AlignLeft className="w-3 h-3 mr-1 text-purple-600" /> + Text
                               </Button>
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openAddItem(mod.id, 'video')}
-                                className="h-7 px-2.5 text-[11px] border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold"
+                                className="h-7 px-2 text-[11px] border-blue-200 text-blue-800 bg-blue-50/50 hover:bg-blue-100 rounded-lg font-semibold"
                               >
-                                <Film className="w-3 h-3 mr-1 text-blue-600" /> Video
+                                <Film className="w-3 h-3 mr-1 text-blue-600" /> + Video
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openAddItem(mod.id, 'photo')}
+                                className="h-7 px-2 text-[11px] border-cyan-200 text-cyan-800 bg-cyan-50/50 hover:bg-cyan-100 rounded-lg font-semibold"
+                              >
+                                <Camera className="w-3 h-3 mr-1 text-cyan-600" /> + Photo
                               </Button>
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openAddItem(mod.id, 'link')}
-                                className="h-7 px-2.5 text-[11px] border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold"
+                                className="h-7 px-2 text-[11px] border-emerald-200 text-emerald-800 bg-emerald-50/50 hover:bg-emerald-100 rounded-lg font-semibold"
                               >
-                                <Link2 className="w-3 h-3 mr-1 text-emerald-600" /> Link
+                                <Link2 className="w-3 h-3 mr-1 text-emerald-600" /> + Link
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => openAddQuizQuestion(mod.id)}
+                                className="h-7 px-2.5 text-[11px] bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg font-bold shadow-xs"
+                              >
+                                <HelpCircle className="w-3 h-3 mr-1" /> + Quiz Qn
                               </Button>
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => openAddItem(mod.id, 'text')}
-                                className="h-7 px-2.5 text-[11px] border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold"
+                                disabled={isGeneratingAiQuiz}
+                                onClick={() => handleGenerateAiQuiz(mod.id)}
+                                className="h-7 px-2 text-[11px] border-amber-300 bg-amber-50/70 text-amber-900 hover:bg-amber-100 rounded-lg font-bold"
                               >
-                                <AlignLeft className="w-3 h-3 mr-1 text-purple-600" /> Content Text
+                                <Sparkles className="w-3 h-3 mr-1 text-amber-600" />
+                                {isGeneratingAiQuiz ? '...' : 'AI Quiz'}
                               </Button>
                             </div>
                           </div>
 
-                          {/* Items List */}
+                          {/* Unified Sequential List of Items */}
                           {mod.items.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                              {mod.items.map((item) => (
-                                <div
-                                  key={item.id}
-                                  className="p-3 rounded-xl bg-slate-50 border border-slate-200/90 flex items-start gap-3 relative group hover:border-cyan-300 transition-all"
-                                >
-                                  <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
-                                    {item.type === 'photo' && <Image className="w-4 h-4 text-cyan-600" />}
-                                    {item.type === 'video' && <Video className="w-4 h-4 text-blue-600" />}
-                                    {item.type === 'link' && <Globe className="w-4 h-4 text-emerald-600" />}
-                                    {item.type === 'text' && <AlignLeft className="w-4 h-4 text-purple-600" />}
-                                  </div>
-                                  <div className="flex-1 min-w-0 pr-6">
-                                    <p className="text-xs font-bold text-slate-900 truncate">{item.title}</p>
-                                    {item.url && (
-                                      <p className="text-[10px] text-cyan-700 truncate font-medium">{item.url}</p>
-                                    )}
-                                    {item.content && (
-                                      <p className="text-[10px] text-slate-600 line-clamp-2 mt-0.5 leading-relaxed">{item.content}</p>
-                                    )}
-                                    {item.previewUrl && (
-                                      <img src={item.previewUrl} alt="" className="w-full h-20 object-cover rounded-lg mt-1.5 border border-slate-200" />
-                                    )}
-                                    <span className="inline-block text-[9px] font-semibold text-slate-400 capitalize mt-1">
-                                      {item.type} {item.fileSize ? `• ${formatFileSize(item.fileSize)}` : ''}
-                                    </span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeModuleItem(mod.id, item.id)}
-                                    className="absolute top-2 right-2 p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 text-center">
-                              <p className="text-xs text-slate-500">No media or content added to this module yet.</p>
-                              <p className="text-[10px] text-slate-400 mt-0.5">Use the buttons above to add photos, videos, links, or lesson notes.</p>
-                            </div>
-                          )}
-                        </div>
+                            <div className="space-y-2.5 pt-1">
+                              {mod.items.map((item, itemIdx) => {
+                                const isFirst = itemIdx === 0
+                                const isLast = itemIdx === mod.items.length - 1
+                                const isQuiz = item.type === 'quiz'
 
-                        {/* Module Quiz Questions Section */}
-                          <div className="space-y-3 pt-4 border-t border-slate-100">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <Label className="text-slate-900 text-xs font-bold flex items-center gap-1.5">
-                                  <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
-                                  Module Quiz Questions ({(mod.quiz_questions || []).length})
-                                </Label>
-                                <Badge className="bg-amber-50 text-amber-800 border-amber-200 text-[10px] font-bold px-2 py-0.5">
-                                  80% Score Required to Unlock Next Module
-                                </Badge>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={isGeneratingAiQuiz}
-                                  onClick={() => handleGenerateAiQuiz(mod.id)}
-                                  className="h-7 px-2.5 text-[11px] border-amber-200 bg-amber-50/50 text-amber-800 hover:bg-amber-100/70 rounded-lg font-bold"
-                                >
-                                  <Sparkles className="w-3 h-3 mr-1 text-amber-600" />
-                                  {isGeneratingAiQuiz ? 'Generating...' : '✨ AI Generate Quiz'}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  onClick={() => openAddQuizQuestion(mod.id)}
-                                  className="h-7 px-2.5 text-[11px] bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg font-bold shadow-xs"
-                                >
-                                  <Plus className="w-3 h-3 mr-1" /> Add Question
-                                </Button>
-                              </div>
-                            </div>
-
-                            {/* Quiz Questions List */}
-                            {(mod.quiz_questions || []).length > 0 ? (
-                              <div className="space-y-2.5 pt-1">
-                                {(mod.quiz_questions || []).map((q, qIdx) => (
+                                return (
                                   <div
-                                    key={q.id || qIdx}
-                                    className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2 relative group hover:border-amber-300 transition-all"
+                                    key={item.id || itemIdx}
+                                    className={`p-3.5 rounded-xl border transition-all flex items-start gap-3 relative group ${
+                                      isQuiz
+                                        ? 'bg-amber-50/40 border-amber-200/90 hover:border-amber-300'
+                                        : 'bg-slate-50 border-slate-200/90 hover:border-cyan-300'
+                                    }`}
                                   >
-                                    <div className="flex items-start justify-between gap-3 pr-14">
-                                      <div className="flex items-start gap-2">
-                                        <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5">
-                                          Q{qIdx + 1}
-                                        </span>
-                                        <div>
-                                          <p className="text-xs font-bold text-slate-900 leading-snug">{q.question}</p>
-                                          {q.explanation && (
-                                            <p className="text-[11px] text-slate-500 mt-1 italic">💡 {q.explanation}</p>
+                                    {/* Sequential Step Badge */}
+                                    <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+                                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shadow-xs ${
+                                        isQuiz
+                                          ? 'bg-amber-600 text-white'
+                                          : 'bg-slate-900 text-white'
+                                      }`}>
+                                        {itemIdx + 1}
+                                      </span>
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase">Step</span>
+                                    </div>
+
+                                    {/* Icon & Type Badge */}
+                                    <div className="flex-1 min-w-0 pr-24">
+                                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                                        <Badge className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                                          item.type === 'photo' ? 'bg-cyan-50 text-cyan-800 border-cyan-200' :
+                                          item.type === 'video' ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                                          item.type === 'link' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                                          item.type === 'text' ? 'bg-purple-50 text-purple-800 border-purple-200' :
+                                          'bg-amber-100 text-amber-900 border-amber-300'
+                                        }`}>
+                                          {item.type === 'photo' && <Camera className="w-3 h-3" />}
+                                          {item.type === 'video' && <Film className="w-3 h-3" />}
+                                          {item.type === 'link' && <Link2 className="w-3 h-3" />}
+                                          {item.type === 'text' && <AlignLeft className="w-3 h-3" />}
+                                          {item.type === 'quiz' && <HelpCircle className="w-3 h-3 text-amber-700" />}
+                                          <span className="capitalize">{item.type === 'quiz' ? 'Quiz Question' : item.type === 'text' ? 'Text / Notes' : item.type}</span>
+                                        </Badge>
+
+                                        {item.type === 'video' && (
+                                          <Badge className="bg-blue-100/80 text-blue-800 border-blue-300 text-[10px] font-bold flex items-center gap-1">
+                                            <Clock className="w-2.5 h-2.5" />
+                                            {item.duration_minutes || (item.duration_seconds ? Math.round(item.duration_seconds / 60) : 5)} min (90% required)
+                                          </Badge>
+                                        )}
+
+                                        <p className="text-xs font-bold text-slate-900 truncate">
+                                          {item.title}
+                                        </p>
+                                      </div>
+
+                                      {/* Quiz Details */}
+                                      {isQuiz && item.quiz_data && (
+                                        <div className="space-y-1.5 mt-1.5 pl-1">
+                                          <p className="text-xs text-slate-800 font-semibold">{item.quiz_data.question}</p>
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                            {item.quiz_data.options.map((opt, oIdx) => {
+                                              const isCorrect = oIdx === item.quiz_data?.correct_option
+                                              return (
+                                                <div
+                                                  key={oIdx}
+                                                  className={`p-1.5 px-2 rounded-lg text-[11px] flex items-center gap-1.5 border ${
+                                                    isCorrect
+                                                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold'
+                                                      : 'bg-white border-slate-200 text-slate-600'
+                                                  }`}
+                                                >
+                                                  <span className={`w-3.5 h-3.5 rounded-full text-[9px] font-black flex items-center justify-center shrink-0 ${
+                                                    isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                                                  }`}>
+                                                    {String.fromCharCode(65 + oIdx)}
+                                                  </span>
+                                                  <span className="truncate">{opt}</span>
+                                                  {isCorrect && (
+                                                    <span className="text-[9px] font-bold text-emerald-700 ml-auto bg-emerald-100 px-1 rounded">
+                                                      Correct
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                          {item.quiz_data.explanation && (
+                                            <p className="text-[10px] text-slate-500 italic mt-1">💡 {item.quiz_data.explanation}</p>
                                           )}
                                         </div>
-                                      </div>
-                                    </div>
+                                      )}
 
-                                    {/* Choices Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
-                                      {q.options.map((opt, optIdx) => {
-                                        const isCorrect = optIdx === q.correct_option
-                                        return (
-                                          <div
-                                            key={optIdx}
-                                            className={`p-2 rounded-lg text-xs flex items-center gap-2 border transition-all ${
-                                              isCorrect
-                                                ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 font-semibold'
-                                                : 'bg-white border-slate-200 text-slate-700'
-                                            }`}
-                                          >
-                                            <span className={`w-4 h-4 rounded-full text-[10px] font-black flex items-center justify-center shrink-0 ${
-                                              isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
-                                            }`}>
-                                              {String.fromCharCode(65 + optIdx)}
+                                      {/* Media & Content Details */}
+                                      {!isQuiz && (
+                                        <div className="space-y-1 mt-0.5">
+                                          {item.url && (
+                                            <p className="text-[11px] text-cyan-700 font-medium truncate flex items-center gap-1">
+                                              <ExternalLink className="w-3 h-3" /> {item.url}
+                                            </p>
+                                          )}
+                                          {item.content && (
+                                            <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed bg-white/70 p-2 rounded-lg border border-slate-100">
+                                              {item.content}
+                                            </p>
+                                          )}
+                                          {item.previewUrl && (
+                                            <div className="mt-1.5 w-40 h-24 rounded-lg overflow-hidden border border-slate-200 bg-white">
+                                              <img src={item.previewUrl} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                          )}
+                                          {item.fileSize && (
+                                            <span className="text-[10px] text-slate-400 font-medium">
+                                              File: {item.fileName || 'Uploaded media'} ({formatFileSize(item.fileSize)})
                                             </span>
-                                            <span className="truncate flex-1">{opt}</span>
-                                            {isCorrect && (
-                                              <span className="text-[10px] font-bold text-emerald-700 uppercase bg-emerald-100/80 px-1.5 py-0.5 rounded">
-                                                Correct
-                                              </span>
-                                            )}
-                                          </div>
-                                        )
-                                      })}
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
 
-                                    {/* Action Buttons */}
-                                    <div className="absolute top-3 right-3 flex items-center gap-1">
+                                    {/* Action Controls: Move Up, Move Down, Edit, Delete */}
+                                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 p-1 rounded-lg border border-slate-200/90 shadow-xs">
                                       <button
                                         type="button"
-                                        onClick={() => openEditQuizQuestion(mod.id, q)}
-                                        className="p-1 rounded-md text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors"
-                                        title="Edit Question"
+                                        disabled={isFirst}
+                                        onClick={() => moveModuleItem(mod.id, itemIdx, itemIdx - 1)}
+                                        className="p-1 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                                        title="Move Up in sequence"
                                       >
-                                        <FileText className="w-3.5 h-3.5" />
+                                        <ArrowUp className="w-3.5 h-3.5" />
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => removeQuizQuestion(mod.id, q.id)}
-                                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                        title="Delete Question"
+                                        disabled={isLast}
+                                        onClick={() => moveModuleItem(mod.id, itemIdx, itemIdx + 1)}
+                                        className="p-1 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                                        title="Move Down in sequence"
+                                      >
+                                        <ArrowDown className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => openEditItem(mod.id, item)}
+                                        className="p-1 rounded text-slate-500 hover:text-cyan-600 hover:bg-cyan-50"
+                                        title="Edit item"
+                                      >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeModuleItem(mod.id, item.id)}
+                                        className="p-1 rounded text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                                        title="Delete item"
                                       >
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </div>
                                   </div>
-                                ))}
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="p-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 text-center space-y-2">
+                              <Layers className="w-8 h-8 text-slate-300 mx-auto" />
+                              <div>
+                                <p className="text-xs font-bold text-slate-700">No items added to this module yet.</p>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                  Use the toolbar buttons (+ Text, + Video, + Photo, + Link, + Quiz Qn) to build this module's curriculum.
+                                </p>
                               </div>
-                            ) : (
-                              <div className="p-3.5 rounded-xl border border-dashed border-amber-200/80 bg-amber-50/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                                <div>
-                                  <p className="text-xs font-semibold text-amber-950">No quiz questions added for this module yet.</p>
-                                  <p className="text-[10px] text-amber-800/80 mt-0.5">
-                                    Add questions to enforce an 80% competency score before unlocking the next module, or generate them automatically with AI.
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => openAddQuizQuestion(mod.id)}
-                                  className="h-7 px-3 text-xs border-amber-300 text-amber-900 hover:bg-amber-100 font-bold shrink-0"
-                                >
-                                  <Plus className="w-3 h-3 mr-1" /> Add First Question
-                                </Button>
-                              </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   )
@@ -1530,7 +1848,7 @@ export function CourseCreatePage() {
                       onChange={e => setQuizQuestionText(e.target.value)}
                       placeholder="e.g. What is the standard protocol for classifying cyclone landfall zones?"
                       rows={2}
-                      className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl text-xs resize-none"
+                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 rounded-xl text-xs resize-none font-medium"
                     />
                   </div>
 
@@ -1562,10 +1880,10 @@ export function CourseCreatePage() {
                               setQuizOptions(newOpts)
                             }}
                             placeholder={`Option ${String.fromCharCode(65 + idx)}...`}
-                            className={`h-9 rounded-xl text-xs ${
+                            className={`h-9 rounded-xl text-xs font-medium placeholder:text-slate-400 ${
                               quizCorrectOption === idx
-                                ? 'bg-emerald-50/50 border-emerald-300 text-slate-900 font-medium'
-                                : 'bg-slate-50 border-slate-200 text-slate-900'
+                                ? 'bg-emerald-50/70 border-emerald-300 text-slate-900 focus:bg-white focus:text-slate-900'
+                                : 'bg-white border-slate-300 text-slate-900 focus:bg-white focus:text-slate-900'
                             }`}
                           />
                           {quizCorrectOption === idx && (
@@ -1584,7 +1902,7 @@ export function CourseCreatePage() {
                       value={quizExplanation}
                       onChange={e => setQuizExplanation(e.target.value)}
                       placeholder="Why is this the correct answer?"
-                      className="bg-slate-50 border-slate-200 h-9 rounded-xl text-xs"
+                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-9 rounded-xl text-xs font-medium"
                     />
                   </div>
                 </div>
@@ -1646,7 +1964,7 @@ export function CourseCreatePage() {
                       value={itemTitle}
                       onChange={e => setItemTitle(e.target.value)}
                       placeholder={`e.g. ${addingItemType === 'video' ? 'Introductory Lecture Video' : addingItemType === 'photo' ? 'Chart Diagram' : 'Topic Overview'}`}
-                      className="bg-slate-50 border-slate-200 h-9 rounded-xl text-xs"
+                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-10 rounded-xl text-xs font-medium"
                     />
                   </div>
 
@@ -1687,50 +2005,76 @@ export function CourseCreatePage() {
                           value={itemUrl}
                           onChange={e => setItemUrl(e.target.value)}
                           placeholder="https://..."
-                          className="bg-slate-50 border-slate-200 h-8 rounded-lg text-xs mt-1"
+                          className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-9 rounded-xl text-xs font-medium mt-1"
                         />
                       </div>
                     </div>
                   )}
 
                   {addingItemType === 'video' && (
-                    <div className="space-y-2">
-                      <Label className="text-xs font-semibold text-slate-700">Video Link (YouTube, Vimeo, MP4)</Label>
-                      <Input
-                        value={itemUrl}
-                        onChange={e => setItemUrl(e.target.value)}
-                        placeholder="e.g. https://www.youtube.com/watch?v=... or https://example.com/video.mp4"
-                        className="bg-slate-50 border-slate-200 h-9 rounded-xl text-xs"
-                      />
-                      <div className="text-center text-[10px] text-slate-400 font-semibold">— OR UPLOAD VIDEO FILE —</div>
-                      <input
-                        ref={moduleFileInputRef}
-                        type="file"
-                        accept="video/mp4,video/webm,video/quicktime"
-                        className="hidden"
-                        onChange={handleModuleFileSelect}
-                      />
-                      {itemFile ? (
-                        <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
-                          <span className="truncate">{itemFile.name} ({formatFileSize(itemFile.size)})</span>
+                    <div className="space-y-3">
+                      <div className="space-y-1.5 p-3 rounded-xl bg-blue-50/70 border border-blue-200/80">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-blue-600" /> Video Length / Duration (Minutes) *
+                          </Label>
+                          <Badge className="bg-blue-600 text-white text-[10px] font-extrabold shadow-xs">90% Gate</Badge>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            min="0.5"
+                            step="0.5"
+                            value={itemDurationMinutes}
+                            onChange={e => setItemDurationMinutes(e.target.value)}
+                            placeholder="e.g. 5"
+                            className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-9 rounded-xl text-xs font-semibold pr-16"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">minutes</span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 leading-snug">
+                          Trainees must watch at least <strong className="text-blue-700 font-bold">90%</strong> ({itemDurationMinutes ? (parseFloat(itemDurationMinutes) * 0.9).toFixed(1) : '4.5'} min) of this video before they can finish this module and submit the quiz.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-semibold text-slate-700">Video Link (YouTube, Vimeo, MP4)</Label>
+                        <Input
+                          value={itemUrl}
+                          onChange={e => setItemUrl(e.target.value)}
+                          placeholder="e.g. https://www.youtube.com/watch?v=... or https://example.com/video.mp4"
+                          className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-9 rounded-xl text-xs font-medium"
+                        />
+                        <div className="text-center text-[10px] text-slate-400 font-semibold">— OR UPLOAD VIDEO FILE —</div>
+                        <input
+                          ref={moduleFileInputRef}
+                          type="file"
+                          accept="video/mp4,video/webm,video/quicktime"
+                          className="hidden"
+                          onChange={handleModuleFileSelect}
+                        />
+                        {itemFile ? (
+                          <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+                            <span className="truncate">{itemFile.name} ({formatFileSize(itemFile.size)})</span>
+                            <button
+                              type="button"
+                              onClick={() => setItemFile(null)}
+                              className="p-1 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-600"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
                           <button
                             type="button"
-                            onClick={() => setItemFile(null)}
-                            className="p-1 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-600"
+                            onClick={() => moduleFileInputRef.current?.click()}
+                            className="w-full h-16 border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:text-blue-600 bg-slate-50/50"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <Upload className="w-4 h-4" />
+                            <span className="text-xs font-semibold">Upload MP4/WebM file (max 100MB)</span>
                           </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => moduleFileInputRef.current?.click()}
-                          className="w-full h-16 border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:text-blue-600 bg-slate-50/50"
-                        >
-                          <Upload className="w-4 h-4" />
-                          <span className="text-xs font-semibold">Upload MP4/WebM file (max 100MB)</span>
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -1741,7 +2085,7 @@ export function CourseCreatePage() {
                         value={itemUrl}
                         onChange={e => setItemUrl(e.target.value)}
                         placeholder="https://..."
-                        className="bg-slate-50 border-slate-200 h-9 rounded-xl text-xs"
+                        className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 h-9 rounded-xl text-xs font-medium"
                       />
                     </div>
                   )}
@@ -1755,7 +2099,7 @@ export function CourseCreatePage() {
                       onChange={e => setItemContent(e.target.value)}
                       rows={addingItemType === 'text' ? 5 : 2}
                       placeholder="Enter description, study notes, or reading material..."
-                      className="bg-slate-50 border-slate-200 rounded-xl text-xs resize-none"
+                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:text-slate-900 rounded-xl text-xs resize-none font-medium leading-relaxed"
                     />
                   </div>
                 </div>

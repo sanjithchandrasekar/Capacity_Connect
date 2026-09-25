@@ -20,8 +20,8 @@
 
 @layer base {
   :root {
-    /* Pure White Background #FFFFFF */
-    --background: 0 0% 100%;
+    /* Warm White / Cream Background #FAF9F6 */
+    --background: 40 20% 98%;
     /* Deep Midnight Purple #1E1333 */
     --foreground: 260 45% 14%;
 
@@ -60,6 +60,46 @@
 
     --radius: 0.75rem;
   }
+
+  .dark {
+    /* Balanced Deep Space Navy #0B0F19 */
+    --background: 222 47% 7%;
+    /* Soft Crisp Text #F8FAFC */
+    --foreground: 210 40% 98%;
+
+    /* Cards: Elevated Dark Slate #111827 */
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover */
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary: Royal Indigo / Purple */
+    --primary: 262 60% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Radiant Magenta Pink */
+    --secondary: 330 80% 62%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Accent: Vivid Amber */
+    --accent: 29 90% 53%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Muted: Soft Slate */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Destructive */
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders & Inputs */
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 262 60% 60%;
+  }
 }
 
 @layer base {
@@ -67,17 +107,17 @@
     border-color: hsl(var(--border));
   }
   body {
-    background-color: #FAF9F6;
-    color: #1E1333;
-    transition: background-color 0.8s cubic-bezier(0.16, 1, 0.3, 1), color 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
   body.theme-light {
-    background-color: #FAF9F6 !important;
-    color: #1E1333 !important;
+    background-color: #FAF9F6;
+    color: #1E1333;
   }
   body.theme-dark {
-    background-color: #FAF9F6 !important;
-    color: #1E1333 !important;
+    background-color: #0B0F19;
+    color: #F8FAFC;
   }
 }
 
