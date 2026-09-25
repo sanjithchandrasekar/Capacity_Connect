@@ -19,10 +19,11 @@ import {
 } from '@/components/ui/dialog'
 import {
   ArrowLeft, Plus, Trash2, Loader2, FileText,
-  Save, Send, Target, AlertCircle, Calendar, Clock, Brain, Sparkles
+  Save, Send, Target, AlertCircle, Calendar, Clock, Brain, Sparkles, CheckCircle2, XCircle, Eye, RefreshCw, Download
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { TraineeAssessmentResult } from '../courses/TraineeAssessmentResult'
 import { useConfirm } from '@/hooks/useConfirm'
 
 type Course = Database['public']['Tables']['courses']['Row']
@@ -56,6 +57,7 @@ export function AssessmentsPage() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [attemptsStats, setAttemptsStats] = useState<{ total: number, passRatio: number, avgScore: number } | null>(null)
   const [attempts, setAttempts] = useState<any[]>([])
+  const [enrollmentsList, setEnrollmentsList] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'questions' | 'grading'>('questions')
   const [gradingAttemptId, setGradingAttemptId] = useState<string | null>(null)
   const [gradingScore, setGradingScore] = useState<number>(0)
@@ -81,25 +83,32 @@ export function AssessmentsPage() {
     scheduled_date: '',
     start_time: '',
     end_time: '',
+    duration_minutes: 30,
     results_publish_date: '',
     passing_score: 50,
   })
 
   const [aiGenDialogOpen, setAiGenDialogOpen] = useState(false)
   const [aiGenForm, setAiGenForm] = useState({
+    title: '',
     type: 'daily_test',
     topic: '',
     material_ids: [] as string[],
     count: 5,
+    marks_per_question: 10,
     difficulty: 'mixed',
     scheduled_date: '',
     start_time: '',
     end_time: '',
+    duration_minutes: 30,
     results_publish_date: '',
     question_format: 'mcq' as 'mcq' | 'open_ended' | 'both',
     requires_sea: false,
     passing_score: 50,
+    instant_result_publication: true,
   })
+
+  const [viewingResultForAttempt, setViewingResultForAttempt] = useState<any>(null)
 
   const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId)
 
@@ -127,6 +136,32 @@ export function AssessmentsPage() {
     return timeStr;
   }
 
+  const calculateWindowDuration = (start: string, end: string) => {
+    if (!start || !end) return null;
+    const [startH, startM] = start.split(':').map(Number);
+    const [endH, endM] = end.split(':').map(Number);
+    if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) return null;
+    
+    let diffMin = (endH * 60 + endM) - (startH * 60 + startM);
+    if (diffMin < 0) diffMin += 24 * 60; // overnight
+    
+    const h = Math.floor(diffMin / 60);
+    const m = diffMin % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+  }
+
+  const minutesToTimeStr = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+  }
+
+  const timeStrToMinutes = (timeStr: string) => {
+    if (!timeStr) return 30;
+    const [h, m, s] = timeStr.split(':').map(Number);
+    return (h * 60) + (m || 0) + (s && s >= 30 ? 1 : 0);
+  }
+
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
     setLoading(true)
@@ -134,7 +169,7 @@ export function AssessmentsPage() {
       const { data: c } = await supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single()
       if (c) setCourse(c)
 
-      const { data: aList } = await supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).order('created_at')
+      const { data: aList } = await supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).order('created_at', { ascending: false })
       if (aList) setAssessments(aList)
       
       if (selectedAssessmentId) {
@@ -147,21 +182,69 @@ export function AssessmentsPage() {
           })))
         }
 
-        const { data: att } = await supabase.from('assessment_attempts' as any).select('*, profiles(first_name, last_name)').eq('assessment_id', selectedAssessmentId).order('submitted_at', { ascending: false })
-        if (att && att.length > 0) {
-           setAttempts(att)
-           const total = att.length;
-           const passed = att.filter((d: any) => d.passed).length;
-           const passRatio = Math.round((passed / total) * 100);
-           const avgScore = Math.round(att.reduce((acc: any, curr: any) => acc + (curr.score || 0), 0) / total);
+        const { data: attRaw } = await supabase.from('assessment_attempts' as any).select('*, attempt_answers(question_id, selected_answer)').eq('assessment_id', selectedAssessmentId).order('submitted_at', { ascending: false })
+        
+        let fetchedAttempts: any[] = []
+        if (attRaw && attRaw.length > 0) {
+           const allAttempts = await Promise.all(attRaw.map(async (a: any) => {
+             let parsedAnswers = a.answers;
+             if (typeof parsedAnswers === 'string') {
+                 try { parsedAnswers = JSON.parse(parsedAnswers); } catch(e) {}
+             }
+             const ansObj: Record<string, string> = typeof parsedAnswers === 'object' && parsedAnswers ? { ...parsedAnswers } : {}
+             if (a.attempt_answers && Array.isArray(a.attempt_answers)) {
+               a.attempt_answers.forEach((ans: any) => {
+                 ansObj[ans.question_id] = ans.selected_answer
+               })
+             }
+             
+             // Manually fetch profile to avoid foreign key issues
+             let profile = null;
+             const { data: tData } = await supabase.from('trainees').select('full_name').eq('id', a.user_id).maybeSingle();
+             if (tData) {
+                 profile = { first_name: (tData as any).full_name, last_name: '' };
+             }
+             
+             return { ...a, answers: ansObj, profiles: profile }
+           }))
+           
+           // Deduplicate attempts: Only keep the most recent attempt per user
+           const uniqueAttemptsMap = new Map();
+           allAttempts.forEach(attempt => {
+             if (!uniqueAttemptsMap.has(attempt.user_id)) {
+               uniqueAttemptsMap.set(attempt.user_id, attempt);
+             }
+           });
+           fetchedAttempts = Array.from(uniqueAttemptsMap.values());
+           
+           setAttempts(fetchedAttempts)
+           const total = fetchedAttempts.length;
+           const passed = fetchedAttempts.filter((d: any) => d.passed).length;
+           const passRatio = total > 0 ? Math.round((passed / total) * 100) : 0;
+           const avgScore = total > 0 ? Math.round(fetchedAttempts.reduce((acc: any, curr: any) => acc + (curr.score || 0), 0) / total) : 0;
            setAttemptsStats({ total, passRatio, avgScore });
         } else {
            setAttempts([])
            setAttemptsStats(null);
         }
+
+        const { data: enrollData } = await supabase.from('enrollments').select('user_id').eq('course_id', courseId).eq('status', 'enrolled')
+        if (enrollData) {
+           const enrichedEnrollments = await Promise.all(enrollData.map(async (enr: any) => {
+               const { data: tData } = await supabase.from('trainees').select('full_name').eq('id', enr.user_id).maybeSingle();
+               return {
+                   ...enr,
+                   profiles: tData ? { first_name: (tData as any).full_name, last_name: '' } : null
+               }
+           }));
+           setEnrollmentsList(enrichedEnrollments)
+        } else {
+           setEnrollmentsList([])
+        }
       } else {
          setAttempts([])
          setAttemptsStats(null);
+         setEnrollmentsList([]);
       }
       
       const { data: mList } = await supabase.from('materials').select('*').eq('course_id', courseId).order('created_at', { ascending: false })
@@ -174,6 +257,69 @@ export function AssessmentsPage() {
   }, [user, courseId, selectedAssessmentId])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  const handleDeleteAttempt = async (attempt: any) => {
+    const isConfirmed = await confirm('Are you sure you want to delete this attempt? The trainee will be able to take the assessment again.', 'Confirm Action')
+    if (!isConfirmed) return
+    setSaving(true)
+    try {
+      // Delete ALL attempts for this user and assessment to fix duplicates
+      const { error } = await supabase.from('assessment_attempts' as any)
+        .delete()
+        .eq('user_id', attempt.user_id)
+        .eq('assessment_id', attempt.assessment_id)
+        
+      if (error) throw error
+      
+      setAttempts(prev => {
+        const deletedCount = prev.filter(a => a.user_id === attempt.user_id && a.assessment_id === attempt.assessment_id).length;
+        setAttemptsStats(stats => {
+          if (!stats) return stats;
+          return { ...stats, total: Math.max(0, stats.total - deletedCount) }
+        });
+        return prev.filter(a => !(a.user_id === attempt.user_id && a.assessment_id === attempt.assessment_id));
+      });
+      
+      toast.success('Attempt(s) deleted successfully.')
+      fetchData() // Refresh to ensure sync
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleUnblockAttempt = async (attemptId: string) => {
+    const attempt = attempts.find(a => a.id === attemptId);
+    if (!attempt) return;
+    
+    // We bypass the confirm dialog since unblocking implicitly means we want to delete it to allow retest
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('assessment_attempts' as any)
+        .delete()
+        .eq('user_id', attempt.user_id)
+        .eq('assessment_id', attempt.assessment_id)
+        
+      if (error) throw error
+      
+      setAttempts(prev => {
+        const deletedCount = prev.filter(a => a.user_id === attempt.user_id && a.assessment_id === attempt.assessment_id).length;
+        setAttemptsStats(stats => {
+          if (!stats) return stats;
+          return { ...stats, total: Math.max(0, stats.total - deletedCount) }
+        });
+        return prev.filter(a => !(a.user_id === attempt.user_id && a.assessment_id === attempt.assessment_id));
+      });
+      
+      toast.success('Trainee unblocked! They can now retake the assessment.')
+      fetchData()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const handleGradeAttempt = async (attemptId: string) => {
     if (gradingScore < 0 || gradingScore > 100) {
@@ -192,6 +338,33 @@ export function AssessmentsPage() {
       fetchData()
     } catch(err: any) {
       toast.error(err.message || 'Failed to grade attempt')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleManualGradeSubmission = async (userId: string) => {
+    if (gradingScore < 0 || gradingScore > 100) {
+      toast.error('Score must be between 0 and 100')
+      return
+    }
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('assessment_attempts').insert({
+        assessment_id: selectedAssessmentId,
+        user_id: userId,
+        score: gradingScore,
+        passed: gradingScore >= (selectedAssessment?.passing_score ?? 50),
+        grade_status: 'graded',
+        submitted_at: new Date().toISOString()
+      } as any)
+      
+      if (error) throw error
+      toast.success('Manual grade added successfully')
+      setGradingAttemptId(null)
+      fetchData()
+    } catch(err: any) {
+      toast.error(err.message || 'Failed to add manual grade')
     } finally {
       setSaving(false)
     }
@@ -218,7 +391,7 @@ export function AssessmentsPage() {
 
       const key = allKeys[Math.floor(Math.random() * allKeys.length)]
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${key}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -280,15 +453,6 @@ export function AssessmentsPage() {
 
     setSaving(true)
     try {
-      let duration_minutes = null;
-      if (assessmentForm.start_time && assessmentForm.end_time) {
-        const [startH, startM] = assessmentForm.start_time.split(':').map(Number);
-        const [endH, endM] = assessmentForm.end_time.split(':').map(Number);
-        let diffMins = (endH * 60 + endM) - (startH * 60 + startM);
-        if (diffMins < 0) diffMins += 24 * 60;
-        duration_minutes = diffMins;
-      }
-
       const editingAssessment = assessments.find(a => a.id === editingAssessmentId);
       
       const payload = {
@@ -299,7 +463,7 @@ export function AssessmentsPage() {
         scheduled_date: assessmentForm.scheduled_date || null,
         start_time: assessmentForm.start_time || null,
         end_time: assessmentForm.end_time || null,
-        duration_minutes: duration_minutes,
+        duration_minutes: assessmentForm.duration_minutes,
         results_publish_date: assessmentForm.results_publish_date || null,
       }
 
@@ -347,31 +511,18 @@ export function AssessmentsPage() {
     }
   }
 
-  const handleUnblockAttempt = async (attemptId: string) => {
-    const isConfirmed = await confirm('Are you sure you want to unblock this user? This will delete the blocked record and allow them to take the assessment again.', 'Unblock Trainee')
-    if (!isConfirmed) return
-
+  const handleUpdateStatus = async (id: string, newStatus: 'draft' | 'pending_review' | 'published' | 'archived') => {
     try {
-      const { error } = await supabase.from('assessment_attempts' as any).delete().eq('id', attemptId)
+      const { error } = await supabase.from('assessments').update({ status: newStatus }).eq('id', id)
       if (error) throw error
-
-      toast.success('User unblocked successfully.')
-      setAttempts(prev => prev.filter(a => a.id !== attemptId))
-      
-      // Update attempts stats
-      setAttemptsStats(prev => {
-        if (!prev) return prev
-        const total = prev.total - 1
-        // We assume a blocked attempt wasn't counted as passed, but it lowered avgScore. 
-        // We'll just trigger a refetch of data to be perfectly accurate:
-        setTimeout(() => fetchData(), 500)
-        return { ...prev, total }
-      })
+      setAssessments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus as any } : a))
+      toast.success('Status updated')
     } catch (err: any) {
-      console.error('Unblock error:', err)
-      toast.error(err.message || 'Failed to unblock trainee')
+      console.error('Update status error:', err)
+      toast.error(err.message || 'Failed to update status')
     }
   }
+
 
 
   const handleSaveQuestion = async () => {
@@ -424,11 +575,12 @@ export function AssessmentsPage() {
     }
   }
 
-  const handlePublishResultsNow = async () => {
-    if (!selectedAssessment) return
+  const handlePublishResultsNow = async (id?: string) => {
+    const targetId = id || selectedAssessment?.id;
+    if (!targetId) return;
     try {
       setSaving(true)
-      const { error } = await supabase.from('assessments').update({ results_publish_date: null } as any).eq('id', selectedAssessment.id)
+      const { error } = await supabase.from('assessments').update({ results_publish_date: null } as any).eq('id', targetId)
       if (error) throw error
       toast.success('Results published instantly!')
       fetchData()
@@ -439,41 +591,68 @@ export function AssessmentsPage() {
     }
   }
 
-  const handleSubmitForReview = async () => {
-    if (!selectedAssessment) return
-    setSaving(true)
+  const handleHideResults = async (id?: string) => {
+    const targetId = id || selectedAssessment?.id;
+    if (!targetId) return;
     try {
-      if (selectedAssessment.assessment_type === 'final') {
-        await supabase.from('assessments').update({ status: 'pending_review' }).eq('id', selectedAssessment.id)
-        toast.success('Final Exam submitted to Admin for review')
-      } else {
-        await supabase.from('assessments').update({ status: 'published' }).eq('id', selectedAssessment.id)
-        // Also approve all questions for this assessment
-        await supabase.from('questions').update({ approved: true } as any).eq('assessment_id', selectedAssessment.id)
-        
-        // Notify enrolled trainees
-        const { data: enrollments } = await supabase.from('enrollments').select('user_id').eq('course_id', selectedAssessment.course_id).eq('status', 'enrolled')
-        if (enrollments && enrollments.length > 0) {
-            const notifications = enrollments.map(e => ({
-                user_id: e.user_id,
-                type: 'assessment',
-                title: 'New Assessment Published',
-                message: `A new assessment "${cleanTitle(selectedAssessment.title)}" is available for ${course?.title || 'your course'}.`,
-            }))
-            await supabase.from('notifications').insert(notifications as any)
-        }
-
-        toast.success('Assessment approved and published! Trainees notified.')
-      }
+      setSaving(true)
+      const futureDate = new Date()
+      futureDate.setFullYear(futureDate.getFullYear() + 10)
+      const { error } = await supabase.from('assessments').update({ results_publish_date: futureDate.toISOString() } as any).eq('id', targetId)
+      if (error) throw error
+      toast.success('Results are now hidden from trainees')
       fetchData()
-    } catch (err) {
-      toast.error('Failed')
+    } catch(err) {
+      toast.error('Failed to hide results')
     } finally {
       setSaving(false)
     }
   }
 
+  const handlePublishAssessment = async (assessmentToPublish: Assessment) => {
+    setSaving(true)
+    try {
+      if (assessmentToPublish.assessment_type === 'final') {
+        await supabase.from('assessments').update({ status: 'pending_review' }).eq('id', assessmentToPublish.id)
+        toast.success('Final Exam submitted to Admin for review')
+      } else {
+        await supabase.from('assessments').update({ status: 'published' }).eq('id', assessmentToPublish.id)
+        // Also approve all questions for this assessment
+        await supabase.from('questions').update({ approved: true } as any).eq('assessment_id', assessmentToPublish.id)
+        
+        // Notify enrolled trainees
+        const { data: enrollments } = await supabase.from('enrollments').select('user_id').eq('course_id', assessmentToPublish.course_id).eq('status', 'enrolled')
+        if (enrollments && enrollments.length > 0) {
+            const notifications = enrollments.map(e => ({
+                user_id: e.user_id,
+                type: 'assessment',
+                title: assessmentToPublish.status === 'published' ? 'Assessment Updated' : 'New Assessment Published',
+                message: assessmentToPublish.status === 'published' 
+                   ? `The assessment "${cleanTitle(assessmentToPublish.title)}" has been updated in ${course?.title || 'your course'}.`
+                   : `A new assessment "${cleanTitle(assessmentToPublish.title)}" is available for ${course?.title || 'your course'}.`,
+            }))
+            await supabase.from('notifications').insert(notifications as any)
+        }
+
+        toast.success(assessmentToPublish.status === 'published' ? 'Assessment updated and trainees notified!' : 'Assessment approved and published! Trainees notified.')
+      }
+      fetchData()
+    } catch (err) {
+      toast.error('Failed to publish assessment')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSubmitForReview = () => {
+    if (selectedAssessment) handlePublishAssessment(selectedAssessment)
+  }
+
   const handleAIGenerate = async () => {
+    if (!aiGenForm.title.trim()) {
+      toast.error('Please enter a test title');
+      return;
+    }
     if (aiGenForm.material_ids.length === 0 && !aiGenForm.topic) { 
       toast.error('Please enter a topic or select at least one material'); 
       return; 
@@ -493,15 +672,15 @@ export function AssessmentsPage() {
       if (!allKeys.length) throw new Error("Missing Gemini API Key in .env.local");
       
       let contextStr = "";
-      let testTitle = aiGenForm.topic ? `${aiGenForm.topic} Test` : "AI Generated Test";
+      let testTitle = aiGenForm.title.trim();
 
       let inlineData: { mimeType: string, data: string } | null = null;
 
       if (aiGenForm.material_ids.length > 0) {
         const selectedMaterials = materials.filter(m => aiGenForm.material_ids.includes(m.id));
-        if (!aiGenForm.topic && selectedMaterials.length === 1) {
+        if (!testTitle && !aiGenForm.topic && selectedMaterials.length === 1) {
           testTitle = `${selectedMaterials[0].file_name} Test`;
-        } else if (!aiGenForm.topic && selectedMaterials.length > 1) {
+        } else if (!testTitle && !aiGenForm.topic && selectedMaterials.length > 1) {
           testTitle = `Combined Materials Test`;
         }
 
@@ -630,7 +809,7 @@ export function AssessmentsPage() {
             Authorization: `Bearer ${groqKey.trim()}`,
           },
           body: JSON.stringify({
-            model: 'llama3-70b-8192',
+            model: 'openai/gpt-oss-20b',
             messages: [
               { role: 'system', content: 'You are an expert educator that generates multiple choice quiz questions in strict JSON format.' },
               { role: 'user', content: prompt }
@@ -678,15 +857,6 @@ export function AssessmentsPage() {
       // Daily test: result on the spot, no SEA; others need SEA
       const isDailyTest = aiGenForm.type === 'daily_test';
 
-      let duration_minutes = null;
-      if (!isDailyTest && aiGenForm.start_time && aiGenForm.end_time) {
-        const [startH, startM] = aiGenForm.start_time.split(':').map(Number);
-        const [endH, endM] = aiGenForm.end_time.split(':').map(Number);
-        let diffMins = (endH * 60 + endM) - (startH * 60 + startM);
-        if (diffMins < 0) diffMins += 24 * 60;
-        duration_minutes = diffMins;
-      }
-
       // Create Assessment record
       const { data: assessment, error: assessmentError } = await supabase.from('assessments').insert({
         course_id: courseId || '',
@@ -699,7 +869,10 @@ export function AssessmentsPage() {
         scheduled_date: aiGenForm.scheduled_date || null,
         start_time: (!isDailyTest && aiGenForm.start_time) ? aiGenForm.start_time : null,
         end_time: (!isDailyTest && aiGenForm.end_time) ? aiGenForm.end_time : null,
-        duration_minutes: duration_minutes
+        duration_minutes: aiGenForm.duration_minutes,
+        results_publish_date: aiGenForm.instant_result_publication 
+            ? null 
+            : (aiGenForm.results_publish_date ? new Date(aiGenForm.results_publish_date).toISOString() : new Date(new Date().setFullYear(new Date().getFullYear() + 10)).toISOString())
       }).select().single();
 
       if (assessmentError) throw assessmentError;
@@ -724,7 +897,7 @@ export function AssessmentsPage() {
 
       toast.success('Assessment generated successfully!')
       setAiGenDialogOpen(false)
-      setAiGenForm({ type: 'daily_test', topic: '', material_ids: [], count: 5, difficulty: 'mixed', scheduled_date: '', start_time: '', end_time: '', results_publish_date: '', question_format: 'mcq', requires_sea: false, passing_score: 50 })
+      setAiGenForm({ title: '', type: 'daily_test', topic: '', material_ids: [], count: 5, marks_per_question: 10, difficulty: 'mixed', scheduled_date: '', start_time: '', end_time: '', duration_minutes: 30, results_publish_date: '', question_format: 'mcq', requires_sea: false, passing_score: 50, instant_result_publication: true })
       fetchData()
     } catch (err) {
       console.error(err);
@@ -750,7 +923,7 @@ export function AssessmentsPage() {
   const openNewAssessmentDialog = () => {
     setEditingAssessmentId(null)
     setAssessmentForm({
-      title: '', assessment_type: 'final', requires_sea: true, scheduled_date: '', start_time: '', end_time: '', results_publish_date: '',
+      title: '', assessment_type: 'final', requires_sea: true, scheduled_date: '', start_time: '', end_time: '', duration_minutes: 30, results_publish_date: '',
       is_adaptive: false, is_simulation: false, simulation_dataset_url: '', passing_score: course?.passing_score ?? 60
     })
     setAssessmentDialogOpen(true)
@@ -765,6 +938,7 @@ export function AssessmentsPage() {
       scheduled_date: a.scheduled_date ? new Date(a.scheduled_date).toISOString().slice(0, 10) : '',
       start_time: extractTime(a.start_time),
       end_time: extractTime(a.end_time),
+      duration_minutes: a.duration_minutes || 30,
       results_publish_date: (a as any).results_publish_date ? new Date((a as any).results_publish_date).toISOString().slice(0, 10) : '',
       is_adaptive: (a as any).is_adaptive || false,
       is_simulation: (a as any).is_simulation || false,
@@ -773,6 +947,42 @@ export function AssessmentsPage() {
     })
     setAssessmentDialogOpen(true)
   }
+
+  const handleDownloadCSV = () => {
+    if (!attempts || attempts.length === 0) {
+      toast.error('No results available to download.');
+      return;
+    }
+
+    const headers = ['Trainee Name', 'Score', 'Passed', 'Status', 'Submitted At'];
+    
+    const rows = attempts.map(att => {
+      const name = `${att.profiles?.first_name || ''} ${att.profiles?.last_name || ''}`.trim();
+      const score = att.score === -1 ? 'Blocked (SEA Violation)' : `${att.score}%`;
+      const passed = att.score === -1 ? 'N/A' : (att.passed ? 'Yes' : 'No');
+      const status = att.grade_status === 'pending_manual' ? 'Needs Grading' : 'Graded';
+      const submittedAt = new Date(att.submitted_at).toLocaleString();
+      
+      return [
+        `"${name.replace(/"/g, '""')}"`,
+        `"${score}"`,
+        `"${passed}"`,
+        `"${status}"`,
+        `"${submittedAt}"`
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${cleanTitle(selectedAssessment?.title || 'Assessment')}_Results.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (loading && !assessments.length) {
     return (
@@ -883,9 +1093,72 @@ export function AssessmentsPage() {
                       <div>
                         <p className="text-sm font-semibold text-slate-700">Status: <span className="capitalize text-slate-900">{a.status.replace('_', ' ')}</span></p>
                       </div>
-                      <Button onClick={() => setSelectedAssessmentId(a.id)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
-                        Manage Questions
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {a.status === 'published' ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleUpdateStatus(a.id, 'draft')}
+                              className="border-rose-200 text-rose-700 font-semibold rounded-xl hover:bg-rose-50"
+                            >
+                              Unpublish
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => handlePublishAssessment(a)}
+                              disabled={saving}
+                              className="border-cyan-200 text-cyan-700 font-semibold rounded-xl hover:bg-cyan-50"
+                            >
+                              Update Published
+                            </Button>
+                            {a.results_publish_date && new Date(a.results_publish_date) > new Date() ? (
+                              <Button
+                                variant="outline"
+                                onClick={() => handlePublishResultsNow(a.id)}
+                                disabled={saving}
+                                className="border-indigo-200 text-indigo-700 font-semibold rounded-xl hover:bg-indigo-50"
+                              >
+                                Publish Results
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                onClick={() => handleHideResults(a.id)}
+                                disabled={saving}
+                                className="border-amber-200 text-amber-700 font-semibold rounded-xl hover:bg-amber-50"
+                              >
+                                Hide Results
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline"
+                              onClick={() => { setSelectedAssessmentId(a.id); setActiveTab('grading'); }}
+                              className="border-emerald-200 text-emerald-700 font-semibold rounded-xl hover:bg-emerald-50"
+                            >
+                              View Results
+                            </Button>
+                          </>
+                        ) : a.status === 'pending_review' ? (
+                            <Button
+                              variant="outline"
+                              disabled
+                              className="border-amber-200 text-amber-700 font-semibold rounded-xl bg-amber-50"
+                            >
+                              Under Review
+                            </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handlePublishAssessment(a)}
+                            disabled={saving}
+                            className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-xl shadow-sm border border-emerald-200"
+                          >
+                            {a.assessment_type === 'final' ? 'Submit for Review' : 'Publish'}
+                          </Button>
+                        )}
+                        <Button onClick={() => { setSelectedAssessmentId(a.id); setActiveTab('questions'); }} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
+                          Manage Questions
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -909,11 +1182,18 @@ export function AssessmentsPage() {
                   <p className="text-xs text-slate-500 mt-1 font-medium">{questions.length} questions | Passing: {selectedAssessment?.passing_score}%</p>
                 </div>
                 <div className="flex gap-2">
-                  {selectedAssessment?.results_publish_date && new Date(selectedAssessment.results_publish_date) > new Date() && (
-                    <Button onClick={handlePublishResultsNow} disabled={saving} variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-xl border border-emerald-200">
+                  {selectedAssessment?.results_publish_date && new Date(selectedAssessment.results_publish_date) > new Date() ? (
+                    <Button onClick={() => handlePublishResultsNow(selectedAssessment.id)} disabled={saving} variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold rounded-xl border border-indigo-200">
                       Publish Results Now
                     </Button>
+                  ) : (
+                    <Button onClick={() => handleHideResults(selectedAssessment?.id)} disabled={saving} variant="secondary" className="bg-amber-50 text-amber-700 hover:bg-amber-100 font-bold rounded-xl border border-amber-200">
+                      Hide Results
+                    </Button>
                   )}
+                  <Button onClick={handleDownloadCSV} variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">
+                    <Download className="w-4 h-4 mr-2" /> Download CSV
+                  </Button>
                   <Button onClick={() => { setEditingQuestion(emptyQuestion); setEditingQuestionId(null); setQuestionDialogOpen(true) }}
                     className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl shadow-sm">
                     <Plus className="w-4 h-4 mr-2" /> Add Question
@@ -926,17 +1206,29 @@ export function AssessmentsPage() {
 
               {/* Analytics Dashboard */}
               {attemptsStats && (
-                <div className="grid grid-cols-3 gap-4 mb-8">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-4 mb-8">
                   <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
-                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Total Attempts</p>
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1 text-center">Total Trainees</p>
+                    <p className="text-2xl font-black text-slate-900">{enrollmentsList.length}</p>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1 text-center">Trainees Attempted</p>
                     <p className="text-2xl font-black text-slate-900">{attemptsStats.total}</p>
                   </div>
                   <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
-                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Average Score</p>
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1 text-center">Passed</p>
+                    <p className="text-2xl font-black text-emerald-600">{attempts.filter(a => a.passed).length}</p>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1 text-center">Failed</p>
+                    <p className="text-2xl font-black text-rose-600">{attempts.filter(a => !a.passed && a.score !== -1).length}</p>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1 text-center">Average Score</p>
                     <p className="text-2xl font-black text-cyan-600">{attemptsStats.avgScore}%</p>
                   </div>
                   <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col justify-center items-center">
-                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Pass Ratio</p>
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1 text-center">Pass Ratio</p>
                     <p className={`text-2xl font-black ${attemptsStats.passRatio >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{attemptsStats.passRatio}%</p>
                   </div>
                 </div>
@@ -955,7 +1247,7 @@ export function AssessmentsPage() {
                   onClick={() => setActiveTab('grading')}
                   className={`px-6 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'grading' ? 'border-cyan-600 text-cyan-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
                 >
-                  Grading Queue
+                  Results & Grading Queue
                   {attempts.filter(a => a.grade_status === 'pending_manual').length > 0 && (
                     <span className="ml-2 px-2 py-0.5 bg-rose-500 text-white text-[10px] rounded-full font-bold">
                       {attempts.filter(a => a.grade_status === 'pending_manual').length}
@@ -1021,14 +1313,16 @@ export function AssessmentsPage() {
               </motion.div>
             )) : (
               <motion.div variants={fadeUp} className="space-y-4">
-                {attempts.length === 0 ? (
+                {attempts.length === 0 && enrollmentsList.length === 0 ? (
                   <Card className="bg-white border border-slate-200/90 shadow-sm rounded-3xl">
                     <CardContent className="py-12 text-center">
-                      <p className="text-slate-500 font-medium">No attempts submitted yet.</p>
+                      <p className="text-slate-500 font-medium">No trainees enrolled or attempts made in this course yet.</p>
                     </CardContent>
                   </Card>
                 ) : (
-                  attempts.map((att) => (
+                  <>
+                  {[...attempts].sort((a, b) => (a.profiles?.first_name || '').localeCompare(b.profiles?.first_name || '')).map((att) => {
+                      return (
                     <Card key={att.id} className="bg-white border border-slate-200/90 shadow-sm rounded-3xl overflow-hidden">
                       <CardHeader className={`border-b py-3.5 px-5 ${att.score === -1 ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
                         <div className="flex items-center justify-between">
@@ -1048,59 +1342,67 @@ export function AssessmentsPage() {
                                >
                                  Unblock
                                </Button>
-                             </div>
+                           </div>
                           ) : (
-                            <Badge className={att.grade_status === 'pending_manual' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100'}>
-                              {att.grade_status === 'pending_manual' ? 'Needs Grading' : `Graded: ${att.score}%`}
-                            </Badge>
+                          <div className="flex items-center gap-3">
+                             {att.passed ? (
+                                <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-0">Passed</Badge>
+                             ) : (
+                                <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100 border-0">Failed</Badge>
+                             )}
+                             <Badge className={att.grade_status === 'pending_manual' ? 'bg-amber-100 text-amber-800 hover:bg-amber-100' : 'bg-cyan-100 text-cyan-800 hover:bg-cyan-100'}>
+                               {att.grade_status === 'pending_manual' ? 'Needs Grading' : `Score: ${att.score}%`}
+                             </Badge>
+                             <Button 
+                               onClick={() => handleDeleteAttempt(att)} 
+                               variant="outline"
+                               size="sm"
+                               className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800 h-7 text-xs px-2 rounded-lg"
+                               title="Delete this attempt and allow the trainee to re-take the test"
+                             >
+                               <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Allow Retest
+                             </Button>
+                          </div>
                           )}
                         </div>
                       </CardHeader>
-                      <CardContent className="p-5 space-y-6">
+                      <CardContent className="p-0">
                         {att.score === -1 ? (
-                          <div className="text-center py-4">
+                          <div className="text-center py-6 px-5">
                             <p className="text-red-600 font-medium text-sm">This attempt was automatically blocked by the system due to repeated Secure Exam Area (SEA) violations.</p>
                             <p className="text-red-500/80 text-xs mt-1">Unblocking will delete this attempt record, allowing the trainee to retake the assessment.</p>
                           </div>
                         ) : (
                           <>
-                            {questions.filter(q => (q as any).question_type === 'open_ended').map((q) => {
-                              const traineeAnswer = att.answers?.[q.id] || 'No answer provided.';
-                              return (
-                                <div key={q.id} className="space-y-2 border-b border-slate-100 pb-4 last:border-0">
-                                  <p className="text-sm font-semibold text-slate-900"><span className="text-slate-400 mr-1">Q.</span>{q.question_text}</p>
-                                  <div className="bg-slate-50 p-3 rounded-xl text-sm text-slate-800 font-mono whitespace-pre-wrap border border-slate-200">
-                                    {traineeAnswer}
-                                  </div>
-                                  <div className="bg-emerald-50 p-3 rounded-xl text-xs text-emerald-900 italic border border-emerald-200">
-                                    <span className="font-bold block mb-1">Reference/Rubric:</span>
-                                    {q.correct_answer}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                            {att.grade_status === 'pending_manual' && (
-                              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                                <Label className="font-bold text-slate-900 whitespace-nowrap">Final Score (0-100):</Label>
-                                <Input 
-                                  type="number" 
-                                  min="0" max="100" 
-                                  className="w-24 bg-slate-50 border-slate-200 text-slate-900 rounded-xl"
-                                  placeholder={att.score?.toString()}
-                                  value={gradingAttemptId === att.id ? gradingScore : (att.score ?? '')}
-                                  onChange={(e) => {
-                                    setGradingAttemptId(att.id)
-                                    setGradingScore(parseInt(e.target.value) || 0)
-                                  }}
-                                />
-                                <Button 
-                                  size="sm" 
-                                  className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl"
-                                  onClick={() => handleGradeAttempt(att.id)}
-                                  disabled={saving || gradingAttemptId !== att.id}
-                                >
-                                  Save Grade
-                                </Button>
+                            <div className="p-5 bg-slate-50 border-b border-slate-100">
+                               <Button variant="outline" className="w-full text-cyan-700 border-cyan-200 hover:bg-cyan-50" onClick={() => setViewingResultForAttempt(att)}>
+                                 <Eye className="w-4 h-4 mr-2" /> View Detailed Result
+                               </Button>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-3 p-5 bg-white">
+                              <Label className="font-bold text-slate-900 whitespace-nowrap">Manual Correction Score (0-100):</Label>
+                              <Input 
+                                type="number" 
+                                min="0" max="100" 
+                                className="w-24 bg-slate-50 border-slate-200 text-slate-900 rounded-xl"
+                                placeholder={att.score?.toString()}
+                                value={gradingAttemptId === att.id ? gradingScore : (att.score ?? '')}
+                                onChange={(e) => {
+                                  setGradingAttemptId(att.id)
+                                  setGradingScore(parseInt(e.target.value) || 0)
+                                }}
+                              />
+                              <Button 
+                                size="sm" 
+                                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl"
+                                onClick={() => handleGradeAttempt(att.id)}
+                                disabled={saving || gradingAttemptId !== att.id}
+                              >
+                                Save Grade
+                              </Button>
+                              
+                              {att.grade_status === 'pending_manual' && (
                                 <Button 
                                   size="sm" 
                                   className="bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl ml-auto flex items-center gap-2"
@@ -1109,14 +1411,60 @@ export function AssessmentsPage() {
                                 >
                                   <Sparkles className="w-4 h-4" /> AI Auto-Grade
                                 </Button>
-                              </div>
-                            )}
+                              )}
+                            </div>
                       </>
                     )}
                   </CardContent>
                 </Card>
-              ))
-            )}
+                      )
+                    })}
+                  {enrollmentsList.filter(enr => !attempts.find(a => a.user_id === enr.user_id)).map((enr) => {
+                      return (
+                        <Card key={enr.user_id} className="bg-white border border-slate-200/90 shadow-sm rounded-3xl overflow-hidden">
+                          <CardHeader className="border-b py-3.5 px-5 bg-slate-50 border-slate-100">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-900">{enr.profiles?.first_name} {enr.profiles?.last_name}</span>
+                                <span className="text-xs text-slate-400 font-medium">Not Attempted</span>
+                              </div>
+                              <Badge className="bg-slate-200 text-slate-600 hover:bg-slate-200">
+                                Missing Submission
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-5 space-y-6">
+                            <div className="text-center py-4 text-slate-500 text-sm">
+                              Trainee has not submitted this assessment online. You can manually enter a score if they took it offline.
+                            </div>
+                            <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                                <Label className="font-bold text-slate-900 whitespace-nowrap">Manual Score (0-100):</Label>
+                                <Input 
+                                  type="number" 
+                                  min="0" max="100" 
+                                  className="w-24 bg-slate-50 border-slate-200 text-slate-900 rounded-xl"
+                                  placeholder="0"
+                                  value={gradingAttemptId === enr.user_id ? gradingScore : ''}
+                                  onChange={(e) => {
+                                    setGradingAttemptId(enr.user_id)
+                                    setGradingScore(parseInt(e.target.value) || 0)
+                                  }}
+                                />
+                                <Button 
+                                  size="sm" 
+                                  className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-semibold rounded-xl"
+                                  onClick={() => handleManualGradeSubmission(enr.user_id)}
+                                  disabled={saving || gradingAttemptId !== enr.user_id}
+                                >
+                                  Submit Score
+                                </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                  })}
+                  </>
+                )}
               </motion.div>
             )}
           </>
@@ -1274,7 +1622,7 @@ export function AssessmentsPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-slate-700 font-semibold text-xs">Start Time</Label>
                     <Input type="time" value={assessmentForm.start_time} onChange={e => setAssessmentForm({...assessmentForm, start_time: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10 disabled:opacity-60" />
@@ -1283,22 +1631,17 @@ export function AssessmentsPage() {
                     <Label className="text-slate-700 font-semibold text-xs">End Time</Label>
                     <Input type="time" value={assessmentForm.end_time} onChange={e => setAssessmentForm({...assessmentForm, end_time: e.target.value})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10 disabled:opacity-60" />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 font-semibold text-xs whitespace-nowrap overflow-hidden text-ellipsis">Duration (hh:mm:ss)</Label>
+                    <Input type="time" step="1" value={minutesToTimeStr(assessmentForm.duration_minutes)} onChange={e => setAssessmentForm({...assessmentForm, duration_minutes: timeStrToMinutes(e.target.value)})} className="bg-slate-50 border-slate-200 text-slate-900 rounded-xl h-10" />
+                  </div>
                 </div>
                 {assessmentForm.start_time && assessmentForm.end_time && (
-                  <div className="text-xs font-medium text-slate-600">
-                    Duration: <span className="text-cyan-700 font-bold">
-                      {(() => {
-                        const [startH, startM] = assessmentForm.start_time.split(':').map(Number);
-                        const [endH, endM] = assessmentForm.end_time.split(':').map(Number);
-                        let diffMins = (endH * 60 + endM) - (startH * 60 + startM);
-                        if (diffMins < 0) diffMins += 24 * 60;
-                        const h = Math.floor(diffMins / 60);
-                        const m = diffMins % 60;
-                        return `${h > 0 ? `${h}h ` : ''}${m > 0 ? `${m}m` : ''}` || '0m';
-                      })()}
-                    </span>
-                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium -mt-1">
+                    Time window reference: <span className="text-cyan-600 font-semibold">{calculateWindowDuration(assessmentForm.start_time, assessmentForm.end_time)}</span> (hh:mm:ss)
+                  </p>
                 )}
+
                     </>
                   );
                 })()}
@@ -1371,6 +1714,16 @@ export function AssessmentsPage() {
 
               <div className="space-y-5">
                 <div className="space-y-1.5">
+                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Test Title <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="e.g. Advanced Marine Biology Assessment..."
+                    value={aiGenForm.title}
+                    onChange={e => setAiGenForm({...aiGenForm, title: e.target.value})}
+                    className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
                   <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Assessment Type</Label>
                   <Select value={aiGenForm.type} onValueChange={v => setAiGenForm({...aiGenForm, type: v})}>
                     <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl">
@@ -1387,17 +1740,31 @@ export function AssessmentsPage() {
 
                 {/* ── Scheduling fields (vary by type) ── */}
                 {aiGenForm.type === 'daily_test' ? (
-                  <div className="space-y-1.5">
-                    <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                      Test Date <span className="text-red-500">*</span>
-                    </Label>
-                    <input
-                      type="date"
-                      value={aiGenForm.scheduled_date}
-                      onChange={e => setAiGenForm({ ...aiGenForm, scheduled_date: e.target.value })}
-                      className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    />
-                    <p className="text-[11px] text-slate-400">Trainees can attend on this date only. Result published instantly. Expires after this day.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        Test Date <span className="text-red-500">*</span>
+                      </Label>
+                      <input
+                        type="date"
+                        value={aiGenForm.scheduled_date}
+                        onChange={e => setAiGenForm({ ...aiGenForm, scheduled_date: e.target.value })}
+                        className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      />
+                      <p className="text-[11px] text-slate-400">Trainees can attend on this date only. Result published instantly. Expires after this day.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
+                        Duration (hh:mm:ss) <span className="text-red-500">*</span>
+                      </Label>
+                      <input
+                        type="time"
+                        step="1"
+                        value={minutesToTimeStr(aiGenForm.duration_minutes)}
+                        onChange={e => setAiGenForm({ ...aiGenForm, duration_minutes: timeStrToMinutes(e.target.value) })}
+                        className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1410,6 +1777,18 @@ export function AssessmentsPage() {
                           type="date"
                           value={aiGenForm.scheduled_date}
                           onChange={e => setAiGenForm({ ...aiGenForm, scheduled_date: e.target.value })}
+                          className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1 whitespace-nowrap">
+                          Duration (hh:mm:ss) <span className="text-red-500">*</span>
+                        </Label>
+                        <input
+                          type="time"
+                          step="1"
+                          value={minutesToTimeStr(aiGenForm.duration_minutes)}
+                          onChange={e => setAiGenForm({ ...aiGenForm, duration_minutes: timeStrToMinutes(e.target.value) })}
                           className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                         />
                       </div>
@@ -1436,18 +1815,58 @@ export function AssessmentsPage() {
                         />
                       </div>
                     </div>
+                    {aiGenForm.start_time && aiGenForm.end_time && (
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        Time window reference: <span className="text-cyan-600 font-semibold">{calculateWindowDuration(aiGenForm.start_time, aiGenForm.end_time)}</span> (hh:mm:ss)
+                      </p>
+                    )}
 
                     <div className="space-y-1.5 bg-slate-50 p-4 rounded-xl border border-slate-200">
                       <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider block mb-1">
                         Passing Score
                       </Label>
                       <p className="text-lg font-black text-cyan-700">
-                        {Math.round(aiGenForm.count * 10 * (aiGenForm.passing_score / 100))} <span className="text-sm font-bold text-slate-500">marks</span>
+                        {Math.round(aiGenForm.count * aiGenForm.marks_per_question * (aiGenForm.passing_score / 100))} <span className="text-sm font-bold text-slate-500">marks</span>
                       </p>
-                      <p className="text-[11px] font-medium text-slate-500">Calculated as {aiGenForm.passing_score}% of {aiGenForm.count * 10} total marks.</p>
+                      <p className="text-[11px] font-medium text-slate-500">Calculated as {aiGenForm.passing_score}% of {aiGenForm.count * aiGenForm.marks_per_question} total marks.</p>
                     </div>
                   </div>
                 )}
+                
+                <div className="space-y-1.5">
+                  <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1">
+                    Result Publication
+                  </Label>
+                  <div
+                    className="flex items-center space-x-3 border border-slate-200 p-3 rounded-xl transition-all cursor-pointer bg-slate-50 hover:bg-slate-100"
+                    onClick={() => setAiGenForm({ ...aiGenForm, instant_result_publication: !aiGenForm.instant_result_publication })}
+                  >
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0"
+                      checked={aiGenForm.instant_result_publication}
+                      onChange={e => setAiGenForm({ ...aiGenForm, instant_result_publication: e.target.checked })}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <div className="flex-1 font-bold text-sm text-[#3b34b1]">
+                      Instant Result Publication
+                    </div>
+                  </div>
+                  {!aiGenForm.instant_result_publication && (
+                    <div className="mt-3">
+                      <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider flex items-center gap-1">
+                        Result Publication Date (Optional)
+                      </Label>
+                      <input
+                        type="date"
+                        value={aiGenForm.results_publish_date}
+                        onChange={e => setAiGenForm({ ...aiGenForm, results_publish_date: e.target.value })}
+                        className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 mt-1"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">If set, results and answers will be hidden from trainees until this date. Leave blank to hide indefinitely.</p>
+                    </div>
+                  )}
+                </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -1515,15 +1934,25 @@ export function AssessmentsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Number of Questions</Label>
+                    <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis">No. of Questions</Label>
                     <Input
                       type="number"
                       min="1"
                       max="50"
                       value={aiGenForm.count}
                       onChange={e => setAiGenForm({...aiGenForm, count: parseInt(e.target.value) || 5})}
+                      className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-slate-700 font-semibold text-xs uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis">Marks per Q.</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={aiGenForm.marks_per_question}
+                      onChange={e => setAiGenForm({...aiGenForm, marks_per_question: parseInt(e.target.value) || 10})}
                       className="bg-slate-50 border-slate-200 text-slate-900 h-11 rounded-xl"
                     />
                   </div>
@@ -1601,6 +2030,27 @@ export function AssessmentsPage() {
                   <><Brain className="w-4 h-4 mr-2" /> Generate Now</>
                 )}
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        
+        <Dialog open={!!viewingResultForAttempt} onOpenChange={(o) => { if (!o) setViewingResultForAttempt(null) }}>
+          <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto bg-slate-50 border border-slate-200/90 shadow-2xl rounded-3xl p-0 text-slate-900">
+            <div className="p-6">
+             {viewingResultForAttempt && selectedAssessment && (
+                 <TraineeAssessmentResult 
+                    assessment={selectedAssessment}
+                    questions={questions}
+                    attemptData={viewingResultForAttempt}
+                    attemptAnswers={viewingResultForAttempt.attempt_answers || []}
+                    areResultsHidden={false}
+                    displayTitle={`${viewingResultForAttempt.profiles?.first_name}'s Result: ${selectedAssessment.title}`}
+                    traineeNavLinks={[]}
+                    profile={viewingResultForAttempt.profiles}
+                    course={{ title: 'Trainer Dashboard' }}
+                    isStandalone={true}
+                 />
+             )}
             </div>
           </DialogContent>
         </Dialog>

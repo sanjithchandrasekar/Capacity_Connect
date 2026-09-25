@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Progress } from '@/components/ui/progress'
 import { Lock, ShieldAlert } from 'lucide-react'
+import { TraineeAssessmentResult } from './TraineeAssessmentResult'
 
 export function TraineeAssessmentTest() {
   const { courseId, assessmentId } = useParams()
@@ -20,8 +21,9 @@ export function TraineeAssessmentTest() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
-  const [isAiGrading, setIsAiGrading] = useState(false)
+
   const [hasStarted, setHasStarted] = useState(false)
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
 
   // SEA states
   const [strikes, setStrikes] = useState(0)
@@ -81,26 +83,68 @@ export function TraineeAssessmentTest() {
         ...q,
         question_type: (q.options as any)?._question_type || 'mcq',
         difficulty: (q.options as any)?._difficulty || 'medium',
-      }))
+      })).filter((q: any) => q.question_type !== 'open_ended')
     },
     enabled: !!assessmentId,
   })
 
-  const { data: previousAttempt, isLoading: isAttemptLoading } = useQuery({
+  const { data: course, isLoading: isCourseLoading } = useQuery({
+    queryKey: ['course', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('courses').select('title, course_type').eq('id', courseId!).single()
+      if (error) {
+        console.error('Course fetch error:', error);
+        return null;
+      }
+      return data
+    },
+    enabled: !!courseId,
+  })
+
+  const { data: previousAttempt, isLoading: isAttemptLoading }: { data: any, isLoading: boolean } = useQuery({
     queryKey: ['assessment-attempt', assessmentId, profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase.from('assessment_attempts' as any)
-        .select('id, assessment_id, user_id, score, created_at, answers')
-        .eq('assessment_id', assessmentId!)
+        .select('*')
         .eq('user_id', profile!.id)
-        .maybeSingle()
-      if (error && error.code !== 'PGRST116') {
+        
+      if (error) {
         console.error('Attempt fetch error:', error)
         return null // Don't block the test if this fails
       }
-      return data as any
+      
+      const matchingAttempts = (data || []).filter((a: any) => a.assessment_id === assessmentId)
+      if (matchingAttempts.length === 0) return null
+      
+      // Return the most recent one (using submitted_at or created_at)
+      matchingAttempts.sort((a: any, b: any) => {
+        const dateA = new Date(a.submitted_at || a.created_at || 0).getTime()
+        const dateB = new Date(b.submitted_at || b.created_at || 0).getTime()
+        return dateB - dateA
+      })
+      
+      return matchingAttempts[0]
     },
     enabled: !!assessmentId && !!profile?.id,
+  })
+
+  // Check if results are hidden
+  const areResultsHidden = assessment?.results_publish_date ? new Date(assessment.results_publish_date) > new Date() : false;
+
+  const { data: attemptAnswers, isLoading: isAnswersLoading } = useQuery({
+    queryKey: ['attempt-answers', previousAttempt?.id],
+    queryFn: async () => {
+      if (!previousAttempt?.id) return []
+      const { data, error } = await supabase.from('attempt_answers' as any)
+        .select('*')
+        .eq('attempt_id', previousAttempt.id)
+      if (error) {
+        console.error('Attempt answers fetch error:', error)
+        return []
+      }
+      return data || []
+    },
+    enabled: !!previousAttempt?.id && !areResultsHidden,
   })
 
   // WebRTC Setup & Cleanup
@@ -122,7 +166,7 @@ export function TraineeAssessmentTest() {
 
   // Timer logic
   useEffect(() => {
-    if (hasStarted && timeLeft !== null && timeLeft > 0 && !previousAttempt && !isAiGrading && !isScanningRoom) {
+    if (hasStarted && timeLeft !== null && timeLeft > 0 && !previousAttempt && !isScanningRoom) {
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev && prev <= 1) {
@@ -135,7 +179,7 @@ export function TraineeAssessmentTest() {
       }, 1000)
       return () => clearInterval(timer)
     }
-  }, [hasStarted, timeLeft, previousAttempt, isAiGrading])
+  }, [hasStarted, timeLeft, previousAttempt])
 
   // Room Scan Progress
   useEffect(() => {
@@ -175,7 +219,7 @@ export function TraineeAssessmentTest() {
 
   // SEA monitoring
   useEffect(() => {
-    if (!hasStarted || previousAttempt || isAiGrading || !assessment?.requires_sea) return;
+    if (!hasStarted || previousAttempt || !assessment?.requires_sea) return;
 
     const handleVisibilityChange = () => {
       if (document.hidden) handleViolation('Tab switched or minimized')
@@ -219,7 +263,7 @@ export function TraineeAssessmentTest() {
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
       if (blurTimeout) clearTimeout(blurTimeout)
     }
-  }, [hasStarted, previousAttempt, assessment, isAiGrading])
+  }, [hasStarted, previousAttempt, assessment])
 
   const requestFullScreen = async () => {
     try {
@@ -353,24 +397,32 @@ export function TraineeAssessmentTest() {
       return arr;
     };
 
+    const INTERNAL_KEYS = new Set(['_question_type', '_difficulty', '_section']);
     const randomizedQs = shuffleArray(questions).map(q => {
        if (q.options && typeof q.options === 'object') {
-           const optionEntries = Object.entries(q.options);
-           const correctText = (q.options as Record<string, string>)[q.correct_answer];
+           // Filter out internal metadata keys before shuffling
+           const optionEntries = Object.entries(q.options).filter(([k]) => !INTERNAL_KEYS.has(k));
+           const correctKeys = (q.correct_answer || '').split(',').map((k: string) => k.trim()).filter(Boolean);
+           const correctTexts = correctKeys.map((k: string) => (q.options as Record<string, string>)[k]).filter(Boolean);
+           
+           const internalMeta: Record<string, string> = {};
+           Object.entries(q.options).filter(([k]) => INTERNAL_KEYS.has(k)).forEach(([k,v]) => { internalMeta[k] = v as string; });
            
            const shuffledEntries = shuffleArray(optionEntries);
            
-           const newOptions: Record<string, string> = {};
-           let newCorrectAnswer = q.correct_answer;
+           const newOptions: Record<string, string> = { ...internalMeta }; // preserve metadata
+           const newCorrectKeys: string[] = [];
            
            const labels = ['A', 'B', 'C', 'D', 'E', 'F'];
            shuffledEntries.forEach((entry: any, index) => {
                const label = labels[index] || String.fromCharCode(65 + index);
                newOptions[label] = entry[1];
-               if (entry[1] === correctText) {
-                   newCorrectAnswer = label;
+               if (correctTexts.includes(entry[1])) {
+                   newCorrectKeys.push(label);
                }
            });
+           
+           const newCorrectAnswer = newCorrectKeys.length > 0 ? newCorrectKeys.sort().join(',') : q.correct_answer;
            
            return { ...q, options: newOptions, correct_answer: newCorrectAnswer };
        }
@@ -396,49 +448,78 @@ export function TraineeAssessmentTest() {
 
   const submitMutation = useMutation({
     mutationFn: async (results: any) => {
-      // Insert attempt
-      const { data: attempt, error: attemptError } = await supabase.from('assessment_attempts' as any).insert({
-        assessment_id: assessmentId,
+      let attemptData: any;
+      // Insert attempt (only using valid schema columns based on types.ts)
+      const { data: attempt, error: attemptError } = await supabase.from('assessment_attempts').insert({
+        assessment_id: assessmentId!,
         user_id: profile!.id,
+        answers: results.answers,
         score: results.score,
         passed: results.score >= (assessment?.passing_score ?? 50),
-        answers: answers,
         grade_status: results.hasOpenEnded ? 'pending_manual' : 'graded',
         submitted_at: new Date().toISOString()
-      }).select().single()
+      } as any).select().single()
 
       if (attemptError) {
         console.error('Submit attempt error:', attemptError)
-        // Try without extra fields if schema mismatch
-        const { data: attempt2, error: attemptError2 } = await supabase.from('assessment_attempts' as any).insert({
-          assessment_id: assessmentId,
+        // Fallback for extreme cases (missing columns, but types say these exist)
+        const { data: attempt2, error: attemptError2 } = await supabase.from('assessment_attempts').insert({
+          assessment_id: assessmentId!,
           user_id: profile!.id,
           score: results.score,
-        }).select().single()
+          passed: results.score >= (assessment?.passing_score ?? 50),
+          submitted_at: new Date().toISOString()
+        } as any).select().single()
         if (attemptError2) throw attemptError2
-        return attempt2
+        
+        // Re-assign attemptData for the attempt_answers block to use
+        attemptData = attempt2 as any
+      } else {
+        attemptData = attempt as any
       }
-      const attemptData = attempt as any
 
       // Assuming attempt_answers table exists, but we'll mock it if it fails
       try {
-        const answersToInsert = Object.entries(answers).map(([qId, answer]) => {
-          const q = questions?.find(q => q.id === qId)
-          return {
-            attempt_id: attemptData.id,
-            question_id: qId,
-            selected_option: answer,
-            is_correct: q?.correct_answer === answer
+          const activeQs = randomizedQuestions.length > 0 ? randomizedQuestions : questions;
+          const answersToInsert = Object.entries(results.answers || {}).map(([qId, answer]) => {
+            const q = activeQs?.find(q => q.id === qId)
+            const is_correct = ((answer as string) || '').split(',').map(s=>s.trim()).sort().join(',') === (q?.correct_answer || '').split(',').map(s=>s.trim()).sort().join(',')
+            return {
+              attempt_id: attemptData.id,
+              question_id: qId,
+              selected_answer: answer
+            }
+          })
+        if (answersToInsert.length > 0) {
+          const { error: insertError } = await supabase.from('attempt_answers' as any).insert(answersToInsert)
+          if (insertError) {
+             console.error("Attempt answers insert error:", insertError)
           }
-        })
-        await supabase.from('attempt_answers' as any).insert(answersToInsert)
+          
+          // ALWAYS backup to local storage just in case DB fails (Schema might be missing tables/columns)
+          if (attemptData?.id) {
+              localStorage.setItem(`attempt_answers_${attemptData.id}`, JSON.stringify(results.answers));
+          }
+        }
       } catch (e) {
         console.error("Could not insert answers, table might not exist yet.", e)
       }
-      return attempt
+      return attemptData
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(console.error)
+      }
+      // Seed the cache with the new attempt so the Hub updates instantly
+      queryClient.setQueryData(['trainee_assessment_attempts', profile?.id], (old: any) => {
+        return [...(old || []), data]
+      })
       queryClient.invalidateQueries({ queryKey: ['assessment-attempt', assessmentId, profile?.id] })
+      queryClient.invalidateQueries({ queryKey: ['attempt-answers', data?.id] })
+      queryClient.invalidateQueries({ queryKey: ['trainee_assessments_v2'] })
+      queryClient.invalidateQueries({ queryKey: ['trainee_assessment_attempts'] })
+      toast.success('Test submitted successfully! Marked as completed.')
+      navigate('/trainee/assessments', { state: { tab: 'completed' } })
     },
     onError: (err: any) => toast.error(err.message || 'Failed to submit assessment')
   })
@@ -448,18 +529,25 @@ export function TraineeAssessmentTest() {
       toast.error('Cannot submit: no questions loaded.')
       return
     }
-    setIsAiGrading(true)
 
-    // Calculate score locally
-    setTimeout(() => {
-      if (isBlocked) {
-        submitMutation.mutate({ score: -1, hasOpenEnded: false })
-        setIsAiGrading(false)
-        return
-      }
+    if (isBlocked) {
+      submitMutation.mutate({ score: -1, hasOpenEnded: false, answers })
+      return
+    }
 
-      let correct = 0
-      let hasOpenEnded = false
+    setShowSubmitModal(true)
+  }
+
+  const confirmSubmit = () => {
+    setShowSubmitModal(false)
+    
+    ignoringViolationsRef.current = true
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(console.error)
+    }
+    
+    let correct = 0
+    let hasOpenEnded = false
 
       const getKeywords = (text: string) => {
         if (!text) return [];
@@ -470,40 +558,51 @@ export function TraineeAssessmentTest() {
           .filter(w => w.length > 2 && !stopWords.has(w));
       };
 
-      questions.forEach(q => {
-        const type = (q.options as any)?._question_type || (q as any).question_type || 'mcq'
-        if (type === 'open_ended') {
-          hasOpenEnded = true
+    const activeQs = randomizedQuestions.length > 0 ? randomizedQuestions : questions;
+    activeQs.forEach(q => {
+      const type = (q.options as any)?._question_type || (q as any).question_type || 'mcq'
+      if (type === 'open_ended') {
+        hasOpenEnded = true
+        
+        const studentAns = answers[q.id] || '';
+        const refAns = q.correct_answer || '';
+        
+        const refKeywords = getKeywords(refAns);
+        const studentKeywords = getKeywords(studentAns);
+        
+        if (refKeywords.length > 0) {
+          let matchCount = 0;
+          refKeywords.forEach(rk => {
+            if (studentKeywords.some(sk => sk === rk || (sk.length > 3 && (sk.includes(rk) || rk.includes(sk))))) {
+              matchCount++;
+            }
+          });
+          const ratio = matchCount / refKeywords.length;
           
-          const studentAns = answers[q.id] || '';
-          const refAns = q.correct_answer || '';
-          
-          const refKeywords = getKeywords(refAns);
-          const studentKeywords = getKeywords(studentAns);
-          
-          if (refKeywords.length > 0) {
-            let matchCount = 0;
-            refKeywords.forEach(rk => {
-              if (studentKeywords.some(sk => sk === rk || (sk.length > 3 && (sk.includes(rk) || rk.includes(sk))))) {
-                matchCount++;
-              }
-            });
-            const ratio = matchCount / refKeywords.length;
-            
-            if (ratio >= 0.5) correct += 1;
-            else if (ratio >= 0.25) correct += 0.5;
-          } else if (studentAns.trim().length > 10) {
-            // If no reference answer is provided but they wrote something substantial
-            correct += 0.5;
-          }
-        } else if (answers[q.id] === q.correct_answer) {
-          correct++
+          if (ratio >= 0.5) correct += 1;
+          else if (ratio >= 0.25) correct += 0.5;
+        } else if (studentAns.trim().length > 10) {
+          correct += 0.5;
         }
-      })
-      const score = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0
-      submitMutation.mutate({ score, hasOpenEnded })
-      setIsAiGrading(false)
-    }, 2500)
+      } else {
+        const cleanOpts = Object.entries(q.options || {}).filter(([k]) => !['_question_type','_difficulty','_section'].includes(k));
+        // Answers are stored as option text values now
+        const studentTexts = (answers[q.id] || '').split('|||').map((s: string) => s.trim()).filter(Boolean);
+        // Get the correct option text(s) by looking up the correct_answer key in options
+        const correctTexts = (q.correct_answer || '').split(',').map((k: string) => {
+          const t = k.trim();
+          return (q.options as any)?.[t] as string || t;
+        }).filter(Boolean);
+        
+        if (studentTexts.length > 0 && correctTexts.length > 0) {
+          const studentSorted = [...studentTexts].sort().join('|||');
+          const correctSorted = [...correctTexts].sort().join('|||');
+          if (studentSorted === correctSorted) correct++;
+        }
+      }
+    })
+    const score = activeQs.length > 0 ? Math.round((correct / activeQs.length) * 100) : 0
+    submitMutation.mutate({ score, hasOpenEnded, answers })
   }
 
   const formatTime = (seconds: number) => {
@@ -527,8 +626,8 @@ export function TraineeAssessmentTest() {
     { label: 'Settings', to: '/trainee/settings', icon: Settings }
   ]
 
-  if (isAssessmentLoading || isQuestionsLoading || isAttemptLoading) {
-    return <DashboardShell title="Assessment" icon={Target} navLinks={traineeNavLinks}><div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div></DashboardShell>
+  if (isAssessmentLoading || isQuestionsLoading || isAttemptLoading || (previousAttempt && !areResultsHidden && isAnswersLoading)) {
+    return <DashboardShell title="Assessment" icon={Target} navLinks={traineeNavLinks}><div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-cyan-600" /></div></DashboardShell>
   }
 
   if (!assessment || !questions) {
@@ -559,35 +658,21 @@ export function TraineeAssessmentTest() {
 
   const displayTitle = cleanTitle(assessment.title)
 
-  // Check if results are hidden
-  const areResultsHidden = assessment?.results_publish_date ? new Date(assessment.results_publish_date) > new Date() : false;
-
   // Completed State
   if (previousAttempt) {
     const attemptData = previousAttempt as any
     return (
-      <DashboardShell title={displayTitle} icon={Target} navLinks={traineeNavLinks}>
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Link to={`/trainee/assessments`} className="inline-flex items-center gap-2 text-sm text-zinc-200/60 hover:text-cyan-400 transition-colors mb-2 font-semibold">
-            <ArrowLeft className="w-4 h-4" /> Back to Assessments
-          </Link>
-          <div className="bg-[#070E20]/90 border border-cyan-500/30 rounded-3xl p-8 shadow-sm text-center">
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-            </div>
-            <h2 className="text-2xl font-black text-slate-900 mb-2">Assessment Completed</h2>
-            {areResultsHidden ? (
-                <p className="text-slate-600 mb-6 bg-cyan-50 p-4 rounded-2xl border border-cyan-200 max-w-sm mx-auto text-sm font-medium">
-                   Your results are currently hidden and will be published on <br/>
-                   <span className="font-bold text-cyan-700">{assessment.results_publish_date ? new Date(assessment.results_publish_date).toLocaleDateString() : 'a later date'}</span>.
-                </p>
-            ) : (
-                <p className="text-slate-600 mb-6 font-medium">You scored <span className="font-bold text-cyan-600">{attemptData.score}%</span>.</p>
-            )}
-            <Button onClick={() => navigate(`/trainee/assessments`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">Return to Assessments</Button>
-          </div>
-        </div>
-      </DashboardShell>
+      <TraineeAssessmentResult
+        assessment={assessment}
+        questions={questions || []}
+        attemptData={attemptData}
+        attemptAnswers={attemptAnswers || []}
+        areResultsHidden={areResultsHidden}
+        displayTitle={displayTitle}
+        traineeNavLinks={traineeNavLinks}
+        profile={profile}
+        course={course}
+      />
     )
   }
 
@@ -596,31 +681,28 @@ export function TraineeAssessmentTest() {
     let gating = { allowed: true, message: '' };
     if (assessment.scheduled_date) {
       const now = currentTime;
-      const scheduledDate = new Date(assessment.scheduled_date);
+      const startStr = `${assessment.scheduled_date}T${assessment.start_time || '00:00:00'}`;
+      const endStr = `${assessment.scheduled_date}T${assessment.end_time || '23:59:59'}`;
+      const startTime = new Date(startStr);
+      const endTime = new Date(endStr);
       
-      if (now.toDateString() !== scheduledDate.toDateString()) {
-        if (now < scheduledDate) gating = { allowed: false, message: `This assessment is scheduled for ${scheduledDate.toLocaleDateString()}` };
-        else gating = { allowed: false, message: 'This assessment has expired.' };
-      } else {
-        if (assessment.start_time) {
-          const [startH, startM] = assessment.start_time.split(':').map(Number);
-          const startTime = new Date(scheduledDate);
-          startTime.setHours(startH, startM, 0);
-          if (now < startTime) {
-            const diffSecs = Math.floor((startTime.getTime() - now.getTime()) / 1000);
-            const h = Math.floor(diffSecs / 3600);
-            const m = Math.floor((diffSecs % 3600) / 60);
-            const s = diffSecs % 60;
-            const countdownStr = `Starts in ${h > 0 ? `${h}h ` : ''}${m}m ${s < 10 ? '0' : ''}${s}s`;
-            gating = { allowed: false, message: `This assessment opens at ${assessment.start_time} (${countdownStr})` };
-          }
+      if (endTime < startTime) {
+        endTime.setDate(endTime.getDate() + 1);
+      }
+
+      if (now < startTime) {
+        if (now.toDateString() !== startTime.toDateString()) {
+           gating = { allowed: false, message: `This assessment is scheduled for ${startTime.toLocaleDateString()}` };
+        } else {
+           const diffSecs = Math.floor((startTime.getTime() - now.getTime()) / 1000);
+           const h = Math.floor(diffSecs / 3600);
+           const m = Math.floor((diffSecs % 3600) / 60);
+           const s = diffSecs % 60;
+           const countdownStr = `Starts in ${h > 0 ? `${h}h ` : ''}${m}m ${s < 10 ? '0' : ''}${s}s`;
+           gating = { allowed: false, message: `This assessment opens at ${assessment.start_time} (${countdownStr})` };
         }
-        if (assessment.end_time) {
-          const [endH, endM] = assessment.end_time.split(':').map(Number);
-          const endTime = new Date(scheduledDate);
-          endTime.setHours(endH, endM, 0);
-          if (now > endTime) gating = { allowed: false, message: 'This assessment has expired and is now closed.' };
-        }
+      } else if (now > endTime) {
+        gating = { allowed: false, message: 'This assessment has expired and is now closed.' };
       }
     }
     return (
@@ -691,177 +773,13 @@ export function TraineeAssessmentTest() {
     )
   }
 
-  // AI Grading Mock State
-  if (isAiGrading) {
-    return (
-      <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
-        <div className="max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[50vh] text-center">
-          <motion.div 
-            animate={{ scale: [1, 1.08, 1], rotate: [0, 4, -4, 0] }} 
-            transition={{ repeat: Infinity, duration: 2 }}
-            className="w-24 h-24 bg-gradient-to-br from-cyan-600 to-blue-600 rounded-3xl shadow-xl shadow-cyan-600/20 flex items-center justify-center mb-6 text-white"
-          >
-            <Brain className="w-12 h-12" />
-          </motion.div>
-          <h2 className="text-2xl font-black text-slate-900 mb-2">AI is evaluating your answers...</h2>
-          <p className="text-slate-500 font-medium">Analyzing responses and generating feedback</p>
-        </div>
-      </DashboardShell>
-    )
-  }
 
-  // Review State
-  if (submitMutation.isSuccess) {
-    const attemptData = submitMutation.data as any;
-    const now = new Date();
-    const areResultsHidden = assessment.results_publish_date ? new Date(assessment.results_publish_date) > now : false;
-    const isPendingManual = attemptData?.grade_status === 'pending_manual';
-
-    if (areResultsHidden || isPendingManual) {
-       return (
-        <DashboardShell title={assessment.title} icon={Target} navLinks={traineeNavLinks}>
-            <div className="max-w-4xl mx-auto space-y-6 text-center py-20">
-              <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-              <h2 className="text-3xl font-black text-slate-900 mb-2">Submitted Successfully!</h2>
-              <p className="text-slate-600 mb-8 max-w-md mx-auto font-medium">
-                 {isPendingManual 
-                   ? "Your assessment contains open-ended questions that require manual grading. Please check back later."
-                   : `Your assessment has been submitted. The results are hidden by your trainer until a future date.`
-                 }
-              </p>
-              <Button onClick={() => navigate(`/trainee/assessments`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white rounded-xl px-8 py-6 font-bold shadow-md shadow-cyan-600/10">Return to Assessments</Button>
-            </div>
-        </DashboardShell>
-       )
-    }
-
+  if (submitMutation.isPending || submitMutation.isSuccess) {
     return (
       <DashboardShell title={assessment.title} icon={Target} navLinks={traineeNavLinks}>
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-            <div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Assessment Results</h2>
-              <p className="text-sm text-slate-500 mt-1 font-medium">{assessment.title} - Completed on {previousAttempt?.created_at ? new Date(previousAttempt.created_at).toLocaleString() : new Date().toLocaleString()}</p>
-            </div>
-          </div>
-
-          {(() => {
-            const resultAnswers = previousAttempt?.answers || answers;
-            const totalQuestions = questions.length;
-            let correct = 0;
-            let incorrect = 0;
-            let skipped = 0;
-            let pending = 0;
-            
-            questions.forEach(q => {
-              const ans = resultAnswers[q.id];
-              if (!ans) {
-                skipped++;
-              } else if ((q as any).question_type === 'open_ended') {
-                pending++;
-              } else if (ans === q.correct_answer) {
-                correct++;
-              } else {
-                incorrect++;
-              }
-            });
-
-            const attempted = totalQuestions - skipped;
-            const finalScore = previousAttempt?.score ?? (submitMutation.data as any)?.score ?? 0;
-            const totalMarks = totalQuestions * 10;
-            const marksScored = Math.round((finalScore / 100) * totalMarks);
-
-            return (
-              <div className="space-y-4">
-                {/* Top Stats Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col items-center justify-center">
-                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Marks Scored</span>
-                    <span className="text-2xl font-black text-cyan-600">{marksScored} <span className="text-sm text-slate-400 font-bold">/ {totalMarks}</span></span>
-                  </div>
-                  <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col items-center justify-center">
-                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Total Questions</span>
-                    <span className="text-2xl font-black text-slate-900">{totalQuestions}</span>
-                  </div>
-                  <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm flex flex-col items-center justify-center">
-                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Attempted Questions</span>
-                    <span className="text-2xl font-black text-slate-900">{attempted}</span>
-                  </div>
-                </div>
-
-                {/* Secondary Stats Row */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold mb-1">Correct</span>
-                    <span className="text-xl font-black text-emerald-700">{correct}</span>
-                  </div>
-                  <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-widest text-rose-700 font-bold mb-1">Incorrect</span>
-                    <span className="text-xl font-black text-rose-700">{incorrect}</span>
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-widest text-amber-700 font-bold mb-1">Skipped</span>
-                    <span className="text-xl font-black text-amber-700">{skipped}</span>
-                  </div>
-                  <div className="bg-cyan-50 border border-cyan-200 rounded-2xl p-3 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-widest text-cyan-700 font-bold mb-1">Pending Eval</span>
-                    <span className="text-xl font-black text-cyan-700">{pending}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="space-y-6 mt-8">
-            {questions.map((q, idx) => {
-              const resultAnswers = previousAttempt?.answers || answers;
-              const isCorrect = resultAnswers[q.id] === q.correct_answer
-              return (
-                <div key={q.id} className={`p-6 rounded-3xl border shadow-sm ${isCorrect ? 'bg-white border-emerald-200' : 'bg-white border-rose-200'}`}>
-                  <div className="flex gap-4">
-                    <div className="shrink-0 mt-1">
-                      {isCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-600" /> : <XCircle className="w-6 h-6 text-rose-600" />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-slate-900 mb-4 text-base"><span className="text-slate-400 mr-2">{idx + 1}.</span>{q.question_text}</p>
-                      <div className="grid sm:grid-cols-2 gap-3 mb-4">
-                        {Object.entries(q.options as Record<string, string>).map(([key, opt]) => {
-                          const isSelected = resultAnswers[q.id] === key
-                          const isActuallyCorrect = q.correct_answer === key
-                          let style = 'bg-slate-50 border-slate-200 text-slate-600'
-                          if (isActuallyCorrect) style = 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold shadow-sm'
-                          else if (isSelected && !isActuallyCorrect) style = 'bg-rose-50 border-rose-300 text-rose-900 font-bold'
-
-                          return (
-                            <div key={key} className={`p-3.5 rounded-xl border text-sm flex items-center justify-between ${style}`}>
-                              <span><span className="font-bold mr-1">{key}.</span>{opt}</span>
-                              {isActuallyCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-                              {isSelected && !isActuallyCorrect && <XCircle className="w-4 h-4 text-rose-600" />}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      
-                      {/* AI Explanation Box */}
-                      <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Brain className="w-4 h-4 text-cyan-600" />
-                          <h4 className="text-xs font-bold text-cyan-800 uppercase tracking-wide">Explanation / Feedback</h4>
-                        </div>
-                        <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                          {q.explanation || 'No explanation provided.'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="flex justify-center pt-6 pb-20">
-            <Button onClick={() => navigate(`/trainee/assessments`)} className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl px-8 py-6 shadow-md shadow-cyan-600/10">Return to Assessments</Button>
-          </div>
+        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-cyan-600" />
+          <p className="text-slate-600 font-medium">Saving your assessment...</p>
         </div>
       </DashboardShell>
     )
@@ -875,9 +793,16 @@ export function TraineeAssessmentTest() {
     : ((currentQuestionIndex) / questions.length) * 100
 
   return (
-    <DashboardShell title={assessment.title} icon={Target} navLinks={[]}>
+    <>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center pb-24">
+      <div className="w-full bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between mb-8 shadow-sm">
+         <div className="flex items-center gap-2">
+            <Target className="w-6 h-6 text-cyan-600" />
+            <h1 className="text-xl font-bold text-slate-900">{assessment.title}</h1>
+         </div>
+      </div>
       <div 
-        className={`max-w-3xl mx-auto pt-4 ${assessment.requires_sea ? 'select-none' : ''}`}
+        className={`max-w-3xl w-full mx-auto px-4 ${assessment.requires_sea ? 'select-none' : ''}`}
         onCopy={handleCopyPaste}
         onPaste={handleCopyPaste}
       >
@@ -890,7 +815,7 @@ export function TraineeAssessmentTest() {
         )}
 
         {assessment.requires_sea && (
-          <div className="fixed bottom-4 right-4 w-48 h-36 bg-black rounded-2xl overflow-hidden shadow-2xl border-2 border-rose-500 z-50">
+          <div className="fixed bottom-4 left-4 w-48 h-36 bg-black rounded-2xl overflow-hidden shadow-2xl border-2 border-rose-500 z-50">
             <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
             <div className="absolute top-2 left-2 flex gap-1">
               <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
@@ -977,12 +902,28 @@ export function TraineeAssessmentTest() {
                   className="w-full min-h-[150px] p-4 rounded-2xl border-2 border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 transition-all outline-none text-slate-900 resize-y font-medium placeholder:text-slate-400 bg-slate-50"
                 />
               ) : (
-                Object.entries((currentQ?.options as Record<string, string>) || {}).map(([key, opt]) => {
-                  const isSelected = answers[currentQ.id] === key
+                Object.entries((currentQ?.options as Record<string, string>) || {})
+                  .filter(([key]) => !['_question_type', '_difficulty', '_section'].includes(key))
+                  .map(([key, opt]) => {
+                  const isMultiAnswer = currentQ?.correct_answer && currentQ.correct_answer.includes(',');
+                  // Store answers as option TEXT (not letter key) so they survive shuffle remapping
+                  const currentSelected = (answers[currentQ.id] || '').split('|||').map(s => s.trim()).filter(Boolean);
+                  const isSelected = isMultiAnswer ? currentSelected.includes(opt) : answers[currentQ.id] === opt;
+                  
                   return (
                     <button
                       key={key}
-                      onClick={() => setAnswers(prev => ({ ...prev, [currentQ.id]: key }))}
+                      onClick={() => {
+                        if (isMultiAnswer) {
+                          if (currentSelected.includes(opt)) {
+                            setAnswers(prev => ({ ...prev, [currentQ.id]: currentSelected.filter(k => k !== opt).join('|||') }));
+                          } else {
+                            setAnswers(prev => ({ ...prev, [currentQ.id]: [...currentSelected, opt].join('|||') }));
+                          }
+                        } else {
+                          setAnswers(prev => ({ ...prev, [currentQ.id]: opt }))
+                        }
+                      }}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between ${
                         isSelected 
                           ? 'border-cyan-500 bg-cyan-50/60 shadow-sm' 
@@ -990,8 +931,12 @@ export function TraineeAssessmentTest() {
                       }`}
                     >
                       <span className={`font-semibold text-sm ${isSelected ? 'text-cyan-950' : 'text-slate-700'}`}><span className="font-bold mr-1.5">{key}.</span>{opt}</span>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-cyan-600' : 'border-slate-300'}`}>
-                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-cyan-600" />}
+                      <div className={`w-5 h-5 flex items-center justify-center shrink-0 ${isMultiAnswer ? 'rounded' : 'rounded-full'} border-2 ${isSelected ? 'border-cyan-600 bg-cyan-600' : 'border-slate-300'}`}>
+                        {isSelected && (
+                          isMultiAnswer 
+                            ? <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                            : <div className="w-2 h-2 rounded-full bg-white" />
+                        )}
                       </div>
                     </button>
                   )
@@ -1002,17 +947,26 @@ export function TraineeAssessmentTest() {
         </AnimatePresence>
 
         {/* Footer Actions */}
-        <div className="flex justify-between items-center pb-20">
-          {!assessment.requires_sea && !assessment.is_adaptive ? (
-            <Button 
-              variant="outline" 
-              onClick={() => setCurrentQuestionIndex(p => Math.max(0, p - 1))}
-              disabled={currentQuestionIndex === 0}
-              className="rounded-xl font-bold border-slate-200 text-slate-700 hover:bg-slate-50"
-            >
-              Previous
-            </Button>
-          ) : <div />}
+        <div className="flex justify-between items-center pb-20 mt-6">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              if (assessment.is_adaptive) {
+                if (adaptiveHistory.length > 0) {
+                  const lastQId = adaptiveHistory[adaptiveHistory.length - 1];
+                  setAdaptiveHistory(prev => prev.slice(0, -1));
+                  const prevQIndex = randomizedQuestions.findIndex(q => q.id === lastQId);
+                  setCurrentQuestionIndex(prevQIndex);
+                }
+              } else {
+                setCurrentQuestionIndex(p => Math.max(0, p - 1));
+              }
+            }}
+            disabled={assessment.is_adaptive ? adaptiveHistory.length === 0 : currentQuestionIndex === 0}
+            className="rounded-xl font-bold border-slate-200 text-slate-700 hover:bg-slate-50 bg-white shadow-sm"
+          >
+            Previous
+          </Button>
           
           {(!assessment.is_adaptive && currentQuestionIndex === questions.length - 1) || (assessment.is_adaptive && adaptiveHistory.length + 1 >= questions.length) ? (
             <Button 
@@ -1025,7 +979,7 @@ export function TraineeAssessmentTest() {
             <Button 
               onClick={() => {
                 if (assessment.is_adaptive) {
-                  const isCorrect = answers[currentQ.id] === currentQ.correct_answer;
+                  const isCorrect = (answers[currentQ.id] || '').split(',').map(s=>s.trim()).sort().join(',') === (currentQ.correct_answer || '').split(',').map(s=>s.trim()).sort().join(',');
                   const nextDiff = isCorrect 
                     ? (currentDifficulty === 'easy' ? 'medium' : 'hard')
                     : (currentDifficulty === 'hard' ? 'medium' : 'easy');
@@ -1058,9 +1012,49 @@ export function TraineeAssessmentTest() {
             </Button>
           )}
         </div>
-        </div>
       </div>
     </div>
-    </DashboardShell>
+    </div>
+    </div>
+
+      {/* Custom Submit Confirmation Modal */}
+      <AnimatePresence>
+        {showSubmitModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-slate-100 text-center"
+            >
+              <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-100 text-amber-500">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 mb-2">Submit Assessment?</h2>
+              <p className="text-sm text-slate-500 font-medium mb-8">
+                Are you sure you want to submit? Once submitted, you cannot change your answers.
+              </p>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => setShowSubmitModal(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={confirmSubmit}
+                  className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-emerald-500/20"
+                >
+                  Submit
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
