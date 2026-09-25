@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNotifications, getNotificationRedirectUrl } from '@/hooks/useNotifications'
+import { useNotifications, getNotificationRedirectUrl, getNotificationMeta } from '@/hooks/useNotifications'
 import { TrainerLayout, fadeUp, stagger } from './TrainerLayout'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
@@ -103,28 +103,33 @@ export function NotificationsPage() {
           </motion.div>
         ) : (
           <motion.div variants={fadeUp} className="space-y-2.5">
-            {filteredNotifications.map(n => (
-              <div 
-                key={n.id} 
-                onClick={() => {
-                  if (!n.read_at) handleMarkAsRead(n.id)
-                  navigate(getNotificationRedirectUrl(n.type, profile?.role))
-                }}
-                className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${
-                  n.read_at
-                    ? 'bg-white border-slate-200/80 hover:border-slate-300'
-                    : 'bg-cyan-50/40 border-cyan-200/80 hover:border-cyan-300'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {!n.read_at && <div className="w-2 h-2 rounded-full bg-cyan-600 shrink-0" />}
-                      <p className="text-sm font-semibold text-slate-900">{n.title}</p>
+            {filteredNotifications.map(n => {
+              const meta = getNotificationMeta(n.type || '')
+              return (
+                <div 
+                  key={n.id} 
+                  onClick={() => {
+                    if (!n.read_at) handleMarkAsRead(n.id)
+                    navigate(getNotificationRedirectUrl(n.type, profile?.role))
+                  }}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${
+                    n.read_at
+                      ? 'bg-white border-slate-200/80 hover:border-slate-300'
+                      : 'bg-cyan-50/40 border-cyan-200/80 hover:border-cyan-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${meta.color}`}>
+                          {meta.label}
+                        </span>
+                        {!n.read_at && <div className="w-2 h-2 rounded-full bg-cyan-600 shrink-0" />}
+                        <p className="text-sm font-semibold text-slate-900">{n.title}</p>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">{n.message}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 font-medium">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed">{n.message}</p>
-                    <p className="text-[10px] text-slate-400 mt-1 font-medium">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
-                  </div>
                   <div className="flex items-center gap-2">
                     {!n.read_at && (
                       <button 
@@ -149,7 +154,7 @@ export function NotificationsPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </motion.div>
         )}
       </motion.div>

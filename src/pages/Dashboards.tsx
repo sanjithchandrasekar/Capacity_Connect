@@ -25,7 +25,7 @@ import {
   Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone, FileCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useNotifications, getNotificationRedirectUrl } from '@/hooks/useNotifications'
+import { useNotifications, getNotificationRedirectUrl, getNotificationMeta } from '@/hooks/useNotifications'
 import { formatDistanceToNow } from 'date-fns'
 import { useConfirm } from '@/hooks/useConfirm'
 import {
@@ -230,77 +230,108 @@ export function DashboardShell({
           <div className="flex items-center gap-1.5 md:gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all group">
-                  <Bell className="w-4 h-4 group-hover:text-cyan-600" />
-                  {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />}
+                <button className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all group border border-transparent hover:border-slate-200">
+                  <Bell className="w-4 h-4 group-hover:text-cyan-600 transition-colors" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white"></span>
+                    </span>
+                  )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72 max-h-96 overflow-y-auto bg-white border border-slate-200 shadow-xl rounded-2xl">
-                <div className="flex items-center justify-between px-3 py-2.5">
-                  <DropdownMenuLabel className="p-0 font-bold text-slate-900 text-sm">Notifications</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-80 sm:w-96 max-h-[30rem] overflow-y-auto bg-white border border-slate-200/90 shadow-2xl rounded-2xl p-0">
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-100 sticky top-0 z-10 backdrop-blur-xs">
+                  <div className="flex items-center gap-2">
+                    <DropdownMenuLabel className="p-0 font-bold text-slate-900 text-sm">Notifications</DropdownMenuLabel>
+                    {unreadCount > 0 && (
+                      <span className="bg-cyan-100 text-cyan-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-200">
+                        {unreadCount} new
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1.5">
                     {unreadCount > 0 && (
-                      <button onClick={(e) => { e.preventDefault(); markAllAsRead() }} className="text-[10px] font-bold text-cyan-700 hover:text-cyan-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded">
+                      <button onClick={(e) => { e.preventDefault(); markAllAsRead() }} className="text-[10px] font-bold text-cyan-700 hover:text-cyan-800 bg-white hover:bg-cyan-50 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors">
                         Mark read
                       </button>
                     )}
                     {notifications.length > 0 && (
-                      <button onClick={(e) => { e.preventDefault(); clearAllNotifications() }} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
+                      <button onClick={(e) => { e.preventDefault(); clearAllNotifications() }} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors">
                         Clear all
                       </button>
                     )}
                   </div>
                 </div>
-                <DropdownMenuSeparator className="bg-slate-100" />
                 
                 {notifsLoading ? (
-                  <div className="p-4 text-center text-xs text-slate-400">Loading...</div>
+                  <div className="py-10 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-cyan-600" />
+                    <span>Loading notifications...</span>
+                  </div>
                 ) : notifications.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-slate-500">No new notifications</div>
+                  <div className="py-12 text-center text-xs text-slate-500 px-4">
+                    <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2.5 opacity-60" />
+                    <p className="font-medium text-slate-700">No new notifications</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">You're completely up to date with sessions & announcements.</p>
+                  </div>
                 ) : (
-                  notifications.map((notif: any) => (
-                    <React.Fragment key={notif.id}>
-                      <DropdownMenuItem 
-                        className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notif.read_at ? 'bg-cyan-50/50' : 'hover:bg-slate-50'}`}
-                        onClick={() => {
-                          if (!notif.read_at) markAsRead(notif.id);
-                          navigate(getNotificationRedirectUrl(notif.type, profile?.role));
-                        }}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            {!notif.read_at && <div className="w-1.5 h-1.5 rounded-full bg-cyan-600 shrink-0" />}
-                            <span className="text-sm font-semibold text-slate-900 truncate max-w-[180px]">{notif.title}</span>
+                  <div className="divide-y divide-slate-100">
+                    {notifications.map((notif: any) => {
+                      const meta = getNotificationMeta(notif.type || '')
+                      return (
+                        <DropdownMenuItem 
+                          key={notif.id}
+                          className={`flex flex-col items-start gap-1 p-3.5 cursor-pointer transition-colors ${!notif.read_at ? 'bg-cyan-50/40 hover:bg-cyan-50/70' : 'hover:bg-slate-50'}`}
+                          onClick={() => {
+                            if (!notif.read_at) markAsRead(notif.id);
+                            navigate(getNotificationRedirectUrl(notif.type, profile?.role));
+                          }}
+                        >
+                          <div className="flex items-start justify-between w-full gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${meta.color}`}>
+                                {meta.label}
+                              </span>
+                              {!notif.read_at && <span className="w-1.5 h-1.5 rounded-full bg-cyan-600 shrink-0" />}
+                              <span className="text-xs font-bold text-slate-900 line-clamp-1">{notif.title}</span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                deleteNotification(notif.id)
+                              }}
+                              className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors shrink-0 -mr-1"
+                              title="Dismiss"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              deleteNotification(notif.id)
-                            }}
-                            className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors"
-                            title="Clear message"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <span className="text-xs text-slate-600">{notif.message}</span>
-                        <span className="text-[10px] text-slate-400 mt-1">
-                          {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-slate-100" />
-                    </React.Fragment>
-                  ))
+                          <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed mt-0.5">{notif.message}</p>
+                          <span className="text-[10px] font-medium text-slate-400 mt-1">
+                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                          </span>
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </div>
                 )}
                 
-                <DropdownMenuItem className="text-center text-xs font-semibold text-cyan-600 justify-center cursor-pointer py-2 hover:bg-cyan-50">
-                  View all notifications
-                </DropdownMenuItem>
+                {profile?.role === 'trainer' && (
+                  <div className="p-2 border-t border-slate-100 bg-slate-50/50">
+                    <DropdownMenuItem 
+                      onClick={() => navigate('/trainer/notifications')}
+                      className="w-full text-center text-xs font-bold text-cyan-700 justify-center cursor-pointer py-1.5 hover:bg-cyan-100/50 rounded-lg transition-colors"
+                    >
+                      View all in Notification Center &rarr;
+                    </DropdownMenuItem>
+                  </div>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Link to={`/${profile?.role}/profile`} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all" title="Profile">
+            <Link to={`/${profile?.role}/profile`} className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all border border-transparent hover:border-slate-200" title="Profile">
               <User className="w-4 h-4" />
             </Link>
           </div>
