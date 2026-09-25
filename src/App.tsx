@@ -115,6 +115,8 @@ function AnimatedAppRoutes() {
   // Transition smoothly between different page tiers
   const routeKey = isLandingPage
     ? 'landing'
+    : location.pathname === '/login' || location.pathname === '/register'
+    ? 'auth'
     : location.pathname.startsWith('/trainer')
     ? 'trainer'
     : location.pathname.startsWith('/trainee')

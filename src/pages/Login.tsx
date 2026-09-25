@@ -47,17 +47,32 @@ export function Login() {
     }
   }
 
+  const [isExiting, setIsExiting] = useState(false)
+
+  const handleGoToRegister = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsExiting(true)
+    setTimeout(() => navigate('/register'), 300)
+  }
+
   return (
-    <div className="min-h-screen bg-[#040814] text-white flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
+    <motion.div 
+      initial={false}
+      animate={{ backgroundColor: isExiting ? "#f8fafc" : "#040814" }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
+      className="min-h-screen text-white flex items-center justify-center p-4 md:p-6 relative overflow-hidden" 
+      style={{ perspective: 1200 }}
+    >
       {/* Decorative ambient gradients */}
       <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-cyan-500/20 via-blue-500/15 to-transparent blur-[120px]" />
       <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-sky-500/20 via-indigo-500/15 to-transparent blur-[120px]" />
 
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, rotateY: -90 }}
+        animate={isExiting ? { opacity: 0, rotateY: -90 } : { opacity: 1, rotateY: 0 }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
         className="w-full max-w-md relative z-10"
+        style={{ transformStyle: "preserve-3d" }}
       >
         <Link 
           to="/" 
@@ -140,9 +155,9 @@ export function Login() {
           <div className="mt-6 text-center pt-4 border-t border-slate-100">
             <p className="text-sm text-slate-600 font-medium">
               Don't have an account?{' '}
-              <Link to="/register" className="text-cyan-700 hover:text-cyan-800 font-bold transition-colors">
+              <a href="/register" onClick={handleGoToRegister} className="text-cyan-700 hover:text-cyan-800 font-bold transition-colors">
                 Create one
-              </Link>
+              </a>
             </p>
           </div>
         </div>
@@ -151,6 +166,6 @@ export function Login() {
           Ministry of Earth Sciences &nbsp;•&nbsp; Capacity Connect
         </p>
       </motion.div>
-    </div>
+    </motion.div>
   )
 }

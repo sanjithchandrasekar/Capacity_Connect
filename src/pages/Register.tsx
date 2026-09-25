@@ -58,6 +58,13 @@ export function Register() {
   const [isLoading, setIsLoading] = useState(false)
   const [role, setRole] = useState<'trainee' | 'trainer'>('trainee')
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
+  const [isExiting, setIsExiting] = useState(false)
+
+  const handleGoToLogin = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsExiting(true)
+    setTimeout(() => navigate('/login'), 300)
+  }
 
   React.useEffect(() => {
     if (user) {
@@ -266,10 +273,22 @@ export function Register() {
   // SUCCESS VIEW
   if (registrationSuccess) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center p-4 md:p-6 py-8 md:py-12 relative overflow-hidden">
+      <motion.div 
+        initial={false}
+        animate={{ backgroundColor: isExiting ? "#040814" : "#f8fafc" }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        className="min-h-screen text-slate-900 flex items-center justify-center p-4 md:p-6 py-8 md:py-12 relative overflow-hidden" 
+        style={{ perspective: 1200 }}
+      >
         <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-cyan-400/20 via-blue-400/15 to-transparent blur-[120px]" />
         <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-sky-400/20 via-indigo-400/15 to-transparent blur-[120px]" />
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md relative z-10 text-center bg-slate-900 text-white border border-slate-800 rounded-3xl p-8 shadow-2xl shadow-slate-900/20">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, rotateY: 90 }} 
+          animate={isExiting ? { opacity: 0, rotateY: 90 } : { opacity: 1, scale: 1, rotateY: 0 }} 
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="w-full max-w-md relative z-10 text-center bg-slate-900 text-white border border-slate-800 rounded-3xl p-8 shadow-2xl shadow-slate-900/20"
+          style={{ transformStyle: "preserve-3d" }}
+        >
           <div className="w-16 h-16 bg-emerald-950/60 text-emerald-400 border border-emerald-800/60 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md">
             <ShieldCheck className="w-8 h-8" />
           </div>
@@ -277,25 +296,32 @@ export function Register() {
           <p className="text-slate-300 mb-6 leading-relaxed text-sm">
             Your account is now pending admin approval. You will receive an email to set your password once your account is approved.
           </p>
-          <Button onClick={() => navigate('/login')} className="w-full bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold h-11 rounded-xl shadow-md shadow-cyan-600/20">
+          <Button onClick={handleGoToLogin} className="w-full bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold h-11 rounded-xl shadow-md shadow-cyan-600/20">
             Return to Login
           </Button>
         </motion.div>
-      </div>
+      </motion.div>
     )
   }
 
   // REGISTRATION FORM VIEW
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center p-4 md:p-6 py-8 md:py-12 relative overflow-hidden">
+    <motion.div 
+      initial={false}
+      animate={{ backgroundColor: isExiting ? "#040814" : "#f8fafc" }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
+      className="min-h-screen text-slate-900 flex items-center justify-center p-4 md:p-6 py-8 md:py-12 relative overflow-hidden" 
+      style={{ perspective: 1200 }}
+    >
       <div className="pointer-events-none absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-cyan-400/20 via-blue-400/15 to-transparent blur-[120px]" />
       <div className="pointer-events-none absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-bl from-sky-400/20 via-indigo-400/15 to-transparent blur-[120px]" />
 
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, rotateY: 90 }}
+        animate={isExiting ? { opacity: 0, rotateY: 90 } : { opacity: 1, rotateY: 0 }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
         className="w-full max-w-md relative z-10"
+        style={{ transformStyle: "preserve-3d" }}
       >
         <Link 
           to="/" 
@@ -392,12 +418,12 @@ export function Register() {
           <div className="mt-5 text-center pt-4 border-t border-slate-800">
             <p className="text-sm text-slate-400 font-medium">
               Already have an account?{' '}
-              <Link to="/login" className="text-cyan-400 hover:text-cyan-300 font-bold transition-colors">Sign in</Link>
+              <a href="/login" onClick={handleGoToLogin} className="text-cyan-400 hover:text-cyan-300 font-bold transition-colors">Sign in</a>
             </p>
           </div>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   )
 }
 
