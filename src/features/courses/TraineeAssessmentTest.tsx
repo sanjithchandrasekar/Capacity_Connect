@@ -483,7 +483,7 @@ export function TraineeAssessmentTest() {
           const activeQs = randomizedQuestions.length > 0 ? randomizedQuestions : questions;
           const answersToInsert = Object.entries(results.answers || {}).map(([qId, answer]) => {
             const q = activeQs?.find(q => q.id === qId)
-            const is_correct = ((answer as string) || '').split(',').map(s=>s.trim()).sort().join(',') === (q?.correct_answer || '').split(',').map(s=>s.trim()).sort().join(',')
+            const is_correct = ((answer as string) || '').split(',').map((s: string)=>s.trim()).sort().join(',') === (q?.correct_answer || '').split(',').map((s: string)=>s.trim()).sort().join(',')
             return {
               attempt_id: attemptData.id,
               question_id: qId,
@@ -558,7 +558,7 @@ export function TraineeAssessmentTest() {
           .filter(w => w.length > 2 && !stopWords.has(w));
       };
 
-    const activeQs = randomizedQuestions.length > 0 ? randomizedQuestions : questions;
+    const activeQs = randomizedQuestions.length > 0 ? randomizedQuestions : (questions || []);
     activeQs.forEach(q => {
       const type = (q.options as any)?._question_type || (q as any).question_type || 'mcq'
       if (type === 'open_ended') {
@@ -979,7 +979,7 @@ export function TraineeAssessmentTest() {
             <Button 
               onClick={() => {
                 if (assessment.is_adaptive) {
-                  const isCorrect = (answers[currentQ.id] || '').split(',').map(s=>s.trim()).sort().join(',') === (currentQ.correct_answer || '').split(',').map(s=>s.trim()).sort().join(',');
+                  const isCorrect = (answers[currentQ.id] || '').split(',').map((s: string)=>s.trim()).sort().join(',') === (currentQ.correct_answer || '').split(',').map((s: string)=>s.trim()).sort().join(',');
                   const nextDiff = isCorrect 
                     ? (currentDifficulty === 'easy' ? 'medium' : 'hard')
                     : (currentDifficulty === 'hard' ? 'medium' : 'easy');
