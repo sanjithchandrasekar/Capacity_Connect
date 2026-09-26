@@ -493,6 +493,13 @@ export function AdminCourses(): React.JSX.Element {
                 {courses.length} course{courses.length !== 1 ? 's' : ''} total &bull; Manage modules, sessions, assessments and trainee performance.
               </CardDescription>
             </div>
+            <Button
+              onClick={() => navigate('/admin/courses/new')}
+              className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold h-9 px-4 rounded-xl text-xs gap-1.5 shadow-sm sm:w-auto w-full shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Create Course
+            </Button>
           </div>
 
           <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200 w-fit gap-1">
