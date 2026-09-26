@@ -10,6 +10,9 @@ import { TrainerAssignmentBanner } from '@/features/admin/TrainerAssignmentBanne
 import { AdminAnnouncements } from '@/features/admin/AdminAnnouncements'
 import { AdminHomePageSettings } from '@/features/admin/AdminHomePageSettings'
 import { AdminContactMessages } from '@/features/admin/AdminContactMessages'
+import { AdminAssessmentsHub } from '@/features/admin/AdminAssessmentsHub'
+import { UniversalNotificationsPage } from '@/features/notifications/UniversalNotificationsPage'
+import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 import { Button } from '@/components/ui/button'
 import { ResponsiveContainer, Tooltip, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
@@ -22,7 +25,7 @@ import {
   XCircle, Clock, Ban, ArrowUpRight, Compass, Bell,
   Award, Target, FileText, Settings, User, Mail,
   RefreshCw, Star, MessageSquare, Eye,
-  Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone, FileCheck
+  Menu, X, Trash2, Loader2, LayoutDashboard, Megaphone, FileCheck, UserCheck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNotifications, getNotificationRedirectUrl, getNotificationMeta } from '@/hooks/useNotifications'
@@ -55,299 +58,9 @@ const scaleIn = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
 }
 
-/* ─── Shared Shell ─────────────────────────────────────────── */
-export function DashboardShell({
-  title, icon: Icon, children, navLinks,
-}: {
-  title: string
-  icon: React.ElementType
-  children: React.ReactNode
-  navLinks?: { id?: string; to?: string; label: string; icon: React.ElementType; badge?: number; isActive?: boolean; onClick?: () => void }[]
-}) {
-  const { signOut, profile } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const { notifications, loading: notifsLoading, unreadCount, markAsRead, clearAllNotifications, deleteNotification, markAllAsRead } = useNotifications()
+import { DashboardShell } from '@/components/layout/DashboardShell'
+export { DashboardShell }
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
-
-  const roleColor: Record<string, string> = {
-    admin: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
-    super_admin: 'bg-pink-500/10 text-pink-400 border-pink-500/30',
-    trainer: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
-    trainee: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-  }
-
-  const sidebarContent = (
-    <>
-      {/* Logo */}
-      <div className="h-16 flex items-center px-5 border-b border-slate-800">
-        <Link to="/" className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain shrink-0" />
-          {(!sidebarCollapsed || mobileOpen) && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-sm font-bold whitespace-nowrap"
-            >
-              <span className="text-white">Capacity</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-sky-400"> Connect</span>
-            </motion.span>
-          )}
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto scrollbar-thin">
-        {navLinks?.map(link => {
-          const isActive = link.isActive !== undefined ? link.isActive : (link.to ? location.pathname === link.to : false)
-          
-          const buttonContent = (
-            <button 
-              onClick={() => {
-                if (link.onClick) link.onClick()
-                setMobileOpen(false)
-              }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium group ${
-              isActive
-                ? 'bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white shadow-md shadow-cyan-600/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60 border border-transparent'
-            }`}>
-              <link.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-cyan-400'} transition-colors`} />
-              {(!sidebarCollapsed || mobileOpen) && (
-                <>
-                  <span className="flex-1 text-left">{link.label}</span>
-                  {link.badge !== undefined && link.badge > 0 && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full">
-                      {link.badge > 99 ? '99+' : link.badge}
-                    </span>
-                  )}
-                  <ChevronRight className={`w-3.5 h-3.5 transition-opacity ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
-                </>
-              )}
-            </button>
-          )
-
-          if (link.to) {
-            return (
-              <Link key={link.to || link.id || link.label} to={link.to}>
-                {buttonContent}
-              </Link>
-            )
-          }
-
-          return <div key={link.id || link.label}>{buttonContent}</div>
-        })}
-      </nav>
-
-      {/* Profile summary & logout */}
-      <div className="p-3 border-t border-slate-800 space-y-2">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-800/50 transition-all cursor-pointer group">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 ring-2 ring-cyan-500/20 overflow-hidden">
-            {profile?.avatar_path ? (
-              <img src={profile.avatar_path} alt={profile.full_name} className="w-full h-full object-cover" />
-            ) : (
-              profile?.full_name?.[0]?.toUpperCase() ?? 'U'
-            )}
-          </div>
-          {(!sidebarCollapsed || mobileOpen) && (
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-200 truncate group-hover:text-cyan-400 transition-colors">
-                {profile?.full_name ?? 'User'}
-              </p>
-              <p className="text-[11px] text-slate-400 truncate">
-                {profile?.email}
-              </p>
-            </div>
-          )}
-        </div>
-        {(!sidebarCollapsed || mobileOpen) && (
-          <div className="flex items-center gap-1.5 px-3">
-            <span className={`text-xs px-2 py-0.5 rounded-full border capitalize font-semibold ${roleColor[profile?.role ?? ''] ?? 'bg-cyan-950/30 text-cyan-400 border-cyan-500/30'}`}>
-              {profile?.role?.replace('_', ' ')}
-            </span>
-          </div>
-        )}
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all text-sm font-medium"
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          {(!sidebarCollapsed || mobileOpen) && <span>Sign Out</span>}
-        </button>
-      </div>
-    </>
-  )
-
-  return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex">
-      <AnnouncementModal />
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)} />
-      )}
-
-      {/* Mobile sidebar drawer */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-slate-800 bg-[#040814] text-white flex flex-col transition-transform duration-300 md:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="absolute top-4 right-4 z-10">
-          <button onClick={() => setMobileOpen(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        {sidebarContent}
-      </aside>
-
-      {/* Desktop sidebar */}
-      <aside className={`relative z-20 hidden md:flex ${sidebarCollapsed ? 'w-[72px]' : 'w-64'} border-r border-slate-800 bg-[#040814] text-white flex-col shrink-0 h-screen sticky top-0 transition-all duration-300`}>
-        {sidebarContent}
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 min-w-0 flex flex-col">
-        {/* Topbar */}
-        <header className="h-14 md:h-16 border-b border-slate-200 bg-white/95 backdrop-blur-md sticky top-0 z-30 flex items-center px-4 md:px-6 gap-3 shadow-xs">
-          <button
-            onClick={() => {
-              if (window.innerWidth < 768) {
-                setMobileOpen(true)
-              } else {
-                setSidebarCollapsed(!sidebarCollapsed)
-              }
-            }}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 shadow-xs">
-              <Icon className="w-4 h-4 md:w-5 md:h-5" />
-            </div>
-            <h1 className="text-sm md:text-base font-bold text-slate-900 truncate">{title}</h1>
-          </div>
-          <div className="flex-1" />
-          <div className="flex items-center gap-1.5 md:gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all group border border-transparent hover:border-slate-200">
-                  <Bell className="w-4 h-4 group-hover:text-cyan-600 transition-colors" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white"></span>
-                    </span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 sm:w-96 max-h-[30rem] overflow-y-auto bg-white border border-slate-200/90 shadow-2xl rounded-2xl p-0">
-                <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-100 sticky top-0 z-10 backdrop-blur-xs">
-                  <div className="flex items-center gap-2">
-                    <DropdownMenuLabel className="p-0 font-bold text-slate-900 text-sm">Notifications</DropdownMenuLabel>
-                    {unreadCount > 0 && (
-                      <span className="bg-cyan-100 text-cyan-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-200">
-                        {unreadCount} new
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {unreadCount > 0 && (
-                      <button onClick={(e) => { e.preventDefault(); markAllAsRead() }} className="text-[10px] font-bold text-cyan-700 hover:text-cyan-800 bg-white hover:bg-cyan-50 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors">
-                        Mark read
-                      </button>
-                    )}
-                    {notifications.length > 0 && (
-                      <button onClick={(e) => { e.preventDefault(); clearAllNotifications() }} className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors">
-                        Clear all
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                {notifsLoading ? (
-                  <div className="py-10 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-cyan-600" />
-                    <span>Loading notifications...</span>
-                  </div>
-                ) : notifications.length === 0 ? (
-                  <div className="py-12 text-center text-xs text-slate-500 px-4">
-                    <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2.5 opacity-60" />
-                    <p className="font-medium text-slate-700">No new notifications</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">You're completely up to date with sessions & announcements.</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {notifications.map((notif: any) => {
-                      const meta = getNotificationMeta(notif.type || '')
-                      return (
-                        <DropdownMenuItem 
-                          key={notif.id}
-                          className={`flex flex-col items-start gap-1 p-3.5 cursor-pointer transition-colors ${!notif.read_at ? 'bg-cyan-50/40 hover:bg-cyan-50/70' : 'hover:bg-slate-50'}`}
-                          onClick={() => {
-                            if (!notif.read_at) markAsRead(notif.id);
-                            navigate(getNotificationRedirectUrl(notif.type, profile?.role));
-                          }}
-                        >
-                          <div className="flex items-start justify-between w-full gap-2">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${meta.color}`}>
-                                {meta.label}
-                              </span>
-                              {!notif.read_at && <span className="w-1.5 h-1.5 rounded-full bg-cyan-600 shrink-0" />}
-                              <span className="text-xs font-bold text-slate-900 line-clamp-1">{notif.title}</span>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                deleteNotification(notif.id)
-                              }}
-                              className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-rose-50 transition-colors shrink-0 -mr-1"
-                              title="Dismiss"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed mt-0.5">{notif.message}</p>
-                          <span className="text-[10px] font-medium text-slate-400 mt-1">
-                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
-                          </span>
-                        </DropdownMenuItem>
-                      )
-                    })}
-                  </div>
-                )}
-                
-                {profile?.role === 'trainer' && (
-                  <div className="p-2 border-t border-slate-100 bg-slate-50/50">
-                    <DropdownMenuItem 
-                      onClick={() => navigate('/trainer/notifications')}
-                      className="w-full text-center text-xs font-bold text-cyan-700 justify-center cursor-pointer py-1.5 hover:bg-cyan-100/50 rounded-lg transition-colors"
-                    >
-                      View all in Notification Center &rarr;
-                    </DropdownMenuItem>
-                  </div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Link to={`/${profile?.role}/profile`} className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all border border-transparent hover:border-slate-200" title="Profile">
-              <User className="w-4 h-4" />
-            </Link>
-          </div>
-        </header>
-
-        <main className="p-4 md:p-6 lg:p-8 flex-1">
-          {children}
-        </main>
-      </div>
-    </div>
-  )
-}
 
 /* ─── Status Badge ──────────────────────────────────────────── */
 function StatusBadge({ status }: { status: string }) {
@@ -573,15 +286,15 @@ export function TraineeDashboard() {
         .from('enrollments')
         .select(`
           *,
-          course:courses(
-            id, title, duration_minutes,
+          course:courses!enrollments_course_id_fkey(
+            id, title, status, duration_minutes,
             trainer:trainers!courses_trainer_id_fkey(full_name)
           )
         `)
         .eq('user_id', profile!.id)
         .order('enrolled_at', { ascending: false })
       if (error) throw error
-      return data || []
+      return (data || []).filter((e: any) => e.course && e.course.status !== 'archived')
     },
     enabled: !!profile?.id,
   })
@@ -715,6 +428,7 @@ export function TraineeDashboard() {
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
         { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+        { to: '/trainee/notifications', label: 'Notifications', icon: Bell },
         { to: '/trainee/profile', label: 'Profile', icon: User },
       ]}
     >
@@ -1137,14 +851,56 @@ export function TrainerDashboard() {
 /* ─── Admin Dashboard ───────────────────────────────────────── */
 export function AdminDashboard() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { profile } = useAuth()
   const [users, setUsers] = useState<Profile[]>([])
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'logs' | 'announcements' | 'messages' | 'home_page'>('overview')
+  const getInitialTab = () => {
+    const queryTab = new URLSearchParams(location.search).get('tab')
+    if (queryTab) return queryTab as any
+    if ((location.state as any)?.tab) return (location.state as any).tab
+    if (location.pathname === '/admin/courses') return 'courses'
+    if (location.pathname === '/admin/assessments') return 'assessments'
+    if (location.pathname === '/admin/announcements') return 'announcements'
+    if (location.pathname === '/admin/notifications') return 'notifications'
+    if (location.pathname === '/admin/messages') return 'messages'
+    return 'overview'
+  }
+
+  const [activeTab, setActiveTab] = useState<'overview' | 'trainees' | 'trainers' | 'admins' | 'courses' | 'assessments' | 'logs' | 'announcements' | 'notifications' | 'messages' | 'home_page'>(
+    getInitialTab()
+  )
+
+  useEffect(() => {
+    const queryTab = new URLSearchParams(location.search).get('tab')
+    if (queryTab) {
+      setActiveTab(queryTab as any)
+    } else if ((location.state as any)?.tab) {
+      setActiveTab((location.state as any).tab)
+    } else if (location.pathname === '/admin/courses') {
+      setActiveTab('courses')
+    } else if (location.pathname === '/admin/assessments') {
+      setActiveTab('assessments')
+    } else if (location.pathname === '/admin/announcements') {
+      setActiveTab('announcements')
+    } else if (location.pathname === '/admin/notifications') {
+      setActiveTab('notifications')
+    } else if (location.pathname === '/admin/messages') {
+      setActiveTab('messages')
+    } else if (location.pathname === '/admin') {
+      setActiveTab('overview')
+    }
+  }, [location.pathname, location.search, location.state])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'suspended' | 'rejected'>('all')
   const [ConfirmDialog, confirm] = useConfirm()
+
+  const [traineeSubTab, setTraineeSubTab] = useState<'enrollment_requests' | 'accounts'>('enrollment_requests')
+  const [detailedEnrollments, setDetailedEnrollments] = useState<any[]>([])
+  const [isProcessingEnrollmentId, setIsProcessingEnrollmentId] = useState<string | null>(null)
+  const [enrollmentSearchQuery, setEnrollmentSearchQuery] = useState('')
+  const [enrollmentStatusFilter, setEnrollmentStatusFilter] = useState<'all' | 'pending_approval' | 'enrolled' | 'rejected' | 'waitlisted'>('pending_approval')
 
   const [previewMaterial, setPreviewMaterial] = useState<{file_name: string, storage_path: string} | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -1157,7 +913,7 @@ export function AdminDashboard() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [trRes, trnRes, admRes, logRes, pendingCoursesRes, allCoursesRes, enrollmentsRes] = await Promise.all([
+      const [trRes, trnRes, admRes, logRes, pendingCoursesRes, allCoursesRes, enrollmentsRes, detailedEnrollmentsRes] = await Promise.all([
         supabase.from('trainees').select('*').order('created_at', { ascending: false }),
         supabase.from('trainers').select('*').order('created_at', { ascending: false }),
         supabase.from('admins').select('*').order('created_at', { ascending: false }),
@@ -1165,6 +921,11 @@ export function AdminDashboard() {
         supabase.from('courses').select('id', { count: 'exact' }).eq('status', 'pending_review'),
         supabase.from('courses').select('id, title, status, delivery_mode, department, course_type, created_at'),
         supabase.from('enrollments').select('id, course_id, user_id, status, progress_percent, completed_at, enrolled_at'),
+        supabase.from('enrollments').select(`
+          id, course_id, user_id, status, progress_percent, completed_at, enrolled_at,
+          course:courses(id, title, course_type, department, trainer:trainers(full_name)),
+          trainee:trainees(id, full_name, email, department, avatar_path, phone)
+        `).order('enrolled_at', { ascending: false }),
       ])
 
       const allUsers = [
@@ -1177,6 +938,7 @@ export function AdminDashboard() {
       setPendingCoursesCount(pendingCoursesRes.count || 0)
       if (allCoursesRes.data) setCoursesList(allCoursesRes.data)
       if (enrollmentsRes.data) setEnrollmentsList(enrollmentsRes.data)
+      if (detailedEnrollmentsRes.data) setDetailedEnrollments(detailedEnrollmentsRes.data)
     } catch (e) {
       console.error('Exception in fetchData:', e)
     } finally {
@@ -1262,6 +1024,22 @@ export function AdminDashboard() {
     )
   }, [users, searchQuery, activeTab, statusFilter])
 
+  const filteredEnrollments = useMemo(() => {
+    let list = detailedEnrollments
+    if (enrollmentStatusFilter !== 'all') {
+      list = list.filter(e => e.status === enrollmentStatusFilter)
+    }
+    if (!enrollmentSearchQuery.trim()) return list
+    const q = enrollmentSearchQuery.toLowerCase().trim()
+    return list.filter(e =>
+      e.trainee?.full_name?.toLowerCase().includes(q) ||
+      e.trainee?.email?.toLowerCase().includes(q) ||
+      e.trainee?.department?.toLowerCase().includes(q) ||
+      e.course?.title?.toLowerCase().includes(q) ||
+      e.course?.trainer?.full_name?.toLowerCase().includes(q)
+    )
+  }, [detailedEnrollments, enrollmentStatusFilter, enrollmentSearchQuery])
+
   const handleUpdateUser = async (userId: string, email: string | null, role: Profile['role'], status: Profile['approval_status']) => {
     try {
       const { error } = await supabase.rpc('admin_update_user', {
@@ -1341,6 +1119,36 @@ export function AdminDashboard() {
     }
   }
 
+  const handleEnrollmentDecision = async (enrollmentId: string, action: 'approve' | 'reject', enrollment: any) => {
+    setIsProcessingEnrollmentId(enrollmentId)
+    try {
+      const newStatus = action === 'approve' ? 'enrolled' : 'rejected'
+      const { error } = await supabase
+        .from('enrollments')
+        .update({ status: newStatus } as any)
+        .eq('id', enrollmentId)
+      if (error) throw error
+
+      if (enrollment.trainee?.id && enrollment.course?.title) {
+        await supabase.from('notifications').insert({
+          user_id: enrollment.trainee.id,
+          title: action === 'approve' ? 'Course Enrollment Approved! 🎉' : 'Course Enrollment Update',
+          message: action === 'approve'
+            ? `Your enrollment for "${enrollment.course.title}" has been approved. You can now access all learning modules and assessments.`
+            : `Your enrollment request for "${enrollment.course.title}" was not approved by administration.`,
+          type: 'enrollment'
+        } as any)
+      }
+
+      toast.success(`Course enrollment ${action === 'approve' ? 'approved' : 'rejected'} successfully!`)
+      fetchData()
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update enrollment')
+    } finally {
+      setIsProcessingEnrollmentId(null)
+    }
+  }
+
   const [isCleaningFiles, setIsCleaningFiles] = useState(false)
   const cleanupOrphanedFiles = async () => {
     setIsCleaningFiles(true)
@@ -1400,21 +1208,28 @@ export function AdminDashboard() {
     { key: 'trainers', label: 'Trainers', icon: Users },
     ...(isSuperAdmin ? [{ key: 'admins', label: 'Admins', icon: Shield }] : []),
     { key: 'courses', label: 'Courses', icon: BookOpen },
+    { key: 'assessments', label: 'Assessments', icon: FileCheck },
     { key: 'announcements', label: 'Announcements', icon: Megaphone },
+    { key: 'notifications', label: 'Notifications', icon: Bell },
     { key: 'messages', label: 'Messages', icon: Mail },
     { key: 'home_page', label: 'Home Page', icon: Globe },
     ...(isSuperAdmin ? [{ key: 'logs', label: 'Audit Logs', icon: BarChart3 }] : []),
+    { key: 'profile', label: 'Profile', icon: User, to: isSuperAdmin ? '/super-admin/profile' : '/admin/profile' },
   ] as const
 
-  const pendingCount = users.filter(u => u.approval_status === 'pending').length
-  const pendingTrainees = users.filter(u => u.approval_status === 'pending' && u.role === 'trainee').length
+  const pendingEnrollmentsCount = detailedEnrollments.filter(e => e.status === 'pending_approval').length
+  const pendingTraineeAccountsCount = users.filter(u => u.approval_status === 'pending' && u.role === 'trainee').length
+  const totalPendingTrainees = pendingEnrollmentsCount + pendingTraineeAccountsCount
+
+  const pendingCount = users.filter(u => u.approval_status === 'pending').length + pendingEnrollmentsCount
+  const pendingTrainees = totalPendingTrainees
   const pendingTrainers = users.filter(u => u.approval_status === 'pending' && u.role === 'trainer').length
   const pendingAdmins = isSuperAdmin ? users.filter(u => u.approval_status === 'pending' && u.role === 'admin').length : 0
 
   const stats = [
     { label: 'Total Users', value: users.length, icon: Users, gradient: 'from-cyan-600 to-blue-700', badgeText: 'Registered' },
-    { label: 'Pending Approval', value: pendingCount, icon: Clock, gradient: 'from-amber-500 to-orange-600', badgeText: pendingCount > 0 ? 'Action Needed' : 'All Clear' },
-    { label: 'Approved Users', value: users.filter(u => u.approval_status === 'approved').length, icon: CheckCircle, gradient: 'from-emerald-500 to-teal-700', badgeText: 'Verified' },
+    { label: 'Pending Approvals', value: pendingCount, icon: Clock, gradient: 'from-amber-500 to-orange-600', badgeText: pendingCount > 0 ? `${pendingCount} Action Needed` : 'All Clear' },
+    { label: 'Pending Course Requests', value: pendingEnrollmentsCount, icon: GraduationCap, gradient: 'from-purple-600 to-indigo-700', badgeText: pendingEnrollmentsCount > 0 ? 'Course Requests' : 'None' },
   ]
 
   const activities = useMemo(() => {
@@ -1567,12 +1382,13 @@ export function AdminDashboard() {
           id: tab.key,
           label: tab.label,
           icon: tab.icon,
+          to: 'to' in tab ? (tab as any).to : undefined,
           badge: tab.key === 'trainees' ? pendingTrainees || undefined :
                  tab.key === 'trainers' ? pendingTrainers || undefined :
                  tab.key === 'admins' ? pendingAdmins || undefined :
                  tab.key === 'courses' ? pendingCoursesCount || undefined : undefined,
-          isActive: activeTab === tab.key,
-          onClick: () => setActiveTab(tab.key as any)
+          isActive: 'to' in tab ? location.pathname === (tab as any).to : activeTab === tab.key,
+          onClick: 'to' in tab ? undefined : () => setActiveTab(tab.key as any)
         }))}
       >
         <ConfirmDialog />
@@ -1721,139 +1537,401 @@ export function AdminDashboard() {
                     initial="hidden"
                     animate="visible"
                     exit="hidden"
-                    className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm overflow-hidden"
+                    className="space-y-6"
                   >
-                    <div className="pb-4 border-b border-slate-100 space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    {/* Header & Sub-Tab Switcher */}
+                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-slate-100">
                         <div>
-                          <h3 className="text-base font-bold text-slate-900 capitalize">Trainees Management</h3>
-                          <p className="text-xs text-slate-500 mt-0.5">Approve, reject, promote, or suspend trainee accounts.</p>
+                          <h3 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+                            <Users className="w-5 h-5 text-cyan-600" />
+                            Trainee Operations & Approvals
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Review course enrollment requests, approve trainee access, and manage user accounts.
+                          </p>
                         </div>
-                        <div className="relative w-full sm:w-64 shrink-0">
-                          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            placeholder="Search trainees..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white transition-all shadow-xs"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-fit overflow-x-auto hide-scrollbar">
-                        {(['all', 'pending', 'approved', 'suspended', 'rejected'] as const).map(f => (
+
+                        {/* Top Sub-Tab Navigation */}
+                        <div className="flex items-center gap-2 bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 shrink-0">
                           <button
-                            key={f}
-                            onClick={() => setStatusFilter(f)}
-                            className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize whitespace-nowrap ${
-                              statusFilter === f ? 'bg-white text-cyan-700 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                            onClick={() => setTraineeSubTab('enrollment_requests')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                              traineeSubTab === 'enrollment_requests'
+                                ? 'bg-white text-cyan-800 shadow-sm border border-slate-200/80'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                             }`}
                           >
-                            {f}
+                            <GraduationCap className="w-4 h-4 text-cyan-600" />
+                            <span>Course Enrollment Requests</span>
+                            {pendingEnrollmentsCount > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+                                {pendingEnrollmentsCount}
+                              </span>
+                            )}
                           </button>
-                        ))}
+                          <button
+                            onClick={() => setTraineeSubTab('accounts')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                              traineeSubTab === 'accounts'
+                                ? 'bg-white text-cyan-800 shadow-sm border border-slate-200/80'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                            }`}
+                          >
+                            <UserCheck className="w-4 h-4 text-cyan-600" />
+                            <span>Trainee Accounts Directory</span>
+                            {pendingTraineeAccountsCount > 0 && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500 text-white">
+                                {pendingTraineeAccountsCount}
+                              </span>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    </div>
 
-                    {loading ? (
-                      <div className="p-8 text-center text-slate-400 text-sm">Loading trainees...</div>
-                    ) : (
-                      <div className="overflow-x-auto mt-2">
-                        <table className="w-full min-w-[620px]">
-                          <thead>
-                            <tr className="border-b border-slate-200 text-left text-xs text-slate-600 font-bold bg-slate-50">
-                              <th className="px-3 py-3">Name</th>
-                              <th className="px-3 py-3">Email</th>
-                              <th className="px-3 py-3">Department</th>
-                              <th className="px-3 py-3">Proof</th>
-                              <th className="px-3 py-3">Status</th>
-                              <th className="px-3 py-3 text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {filteredUsers.length === 0 ? (
-                              <tr>
-                                <td colSpan={6} className="text-center py-8 text-slate-400 text-sm">
-                                  {searchQuery ? 'No trainees match your search.' : 'No trainees found.'}
-                                </td>
-                              </tr>
-                            ) : filteredUsers.map(u => (
-                              <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                                <td className="px-3 py-3">
-                                  <div
-                                    onClick={() => { setSelectedUserForModal(u); setIsUserDetailsModalOpen(true); }}
-                                    className="flex items-center gap-2.5 cursor-pointer group"
-                                    title="Click to view full profile details"
-                                  >
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs overflow-hidden">
-                                      {u.avatar_path ? (
-                                        <img src={u.avatar_path} alt={u.full_name} className="w-full h-full object-cover" />
-                                      ) : (
-                                        u.full_name?.charAt(0)?.toUpperCase() ?? '?'
-                                      )}
-                                    </div>
-                                    <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition-colors truncate max-w-[130px]">{u.full_name}</span>
-                                  </div>
-                                </td>
-                                <td className="px-3 py-3 text-xs text-slate-600 truncate max-w-[150px]">{u.email}</td>
-                                <td className="px-3 py-3 text-xs text-slate-600 truncate max-w-[90px]">{u.department ?? '—'}</td>
-                                <td className="px-3 py-3">
-                                  {u.proof_path ? (
-                                    <div className="flex flex-col gap-1.5">
-                                      <div className="flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 w-fit" title="Securely stored in MoES Cloud">
-                                        <Shield className="w-3 h-3 text-emerald-600" />
-                                        <span className="truncate max-w-[100px]">{u.proof_path.split('/').pop()}</span>
-                                      </div>
-                                      <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all w-fit cursor-pointer">
-                                        View Document
-                                      </button>
-                                    </div>
+                      {/* SUB-TAB 1: COURSE ENROLLMENT REQUESTS */}
+                      {traineeSubTab === 'enrollment_requests' && (
+                        <div className="pt-5 space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            {/* Filter Buttons */}
+                            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-fit overflow-x-auto hide-scrollbar">
+                              {[
+                                { key: 'pending_approval', label: 'Pending Approval', count: detailedEnrollments.filter(e => e.status === 'pending_approval').length },
+                                { key: 'enrolled', label: 'Approved / Active', count: detailedEnrollments.filter(e => e.status === 'enrolled').length },
+                                { key: 'waitlisted', label: 'Waitlisted', count: detailedEnrollments.filter(e => e.status === 'waitlisted').length },
+                                { key: 'rejected', label: 'Rejected', count: detailedEnrollments.filter(e => e.status === 'rejected').length },
+                                { key: 'all', label: 'All Requests', count: detailedEnrollments.length },
+                              ].map(f => (
+                                <button
+                                  key={f.key}
+                                  onClick={() => setEnrollmentStatusFilter(f.key as any)}
+                                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                                    enrollmentStatusFilter === f.key
+                                      ? 'bg-white text-cyan-700 shadow-xs border border-slate-200'
+                                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                                  }`}
+                                >
+                                  <span>{f.label}</span>
+                                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                                    enrollmentStatusFilter === f.key ? 'bg-cyan-100 text-cyan-800' : 'bg-slate-200 text-slate-600'
+                                  }`}>
+                                    {f.count}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Search Box */}
+                            <div className="relative w-full sm:w-72 shrink-0">
+                              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                placeholder="Search by trainee, course, trainer..."
+                                value={enrollmentSearchQuery}
+                                onChange={(e) => setEnrollmentSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white transition-all shadow-xs"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Enrollments Table */}
+                          {loading ? (
+                            <div className="p-12 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin text-cyan-600" />
+                              <span>Loading enrollment requests...</span>
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                              <table className="w-full min-w-[700px]">
+                                <thead>
+                                  <tr className="border-b border-slate-200 text-left text-xs text-slate-600 font-bold bg-slate-50/80">
+                                    <th className="px-4 py-3.5">Trainee</th>
+                                    <th className="px-4 py-3.5">Target Course</th>
+                                    <th className="px-4 py-3.5">Trainer</th>
+                                    <th className="px-4 py-3.5">Applied Date</th>
+                                    <th className="px-4 py-3.5">Status</th>
+                                    <th className="px-4 py-3.5 text-right">Approval Decision</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {filteredEnrollments.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={6} className="text-center py-12 text-slate-400 text-xs">
+                                        <GraduationCap className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-60" />
+                                        <p className="font-semibold text-slate-600">No enrollment requests match this criteria</p>
+                                        <p className="text-[11px] text-slate-400 mt-0.5">Trainee course registration submissions will appear here for review.</p>
+                                      </td>
+                                    </tr>
                                   ) : (
-                                    <span className="text-xs text-slate-400">—</span>
+                                    filteredEnrollments.map((item) => {
+                                      const isProcessing = isProcessingEnrollmentId === item.id
+                                      const trainee = item.trainee || {}
+                                      const course = item.course || {}
+                                      const trainerName = course.trainer?.full_name || 'Assigned Trainer'
+                                      const enrolledDate = item.enrolled_at ? new Date(item.enrolled_at) : null
+
+                                      return (
+                                        <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                                          {/* Trainee Info */}
+                                          <td className="px-4 py-3.5">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-xs overflow-hidden">
+                                                {trainee.avatar_path ? (
+                                                  <img src={trainee.avatar_path} alt={trainee.full_name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                  trainee.full_name?.charAt(0)?.toUpperCase() ?? 'T'
+                                                )}
+                                              </div>
+                                              <div>
+                                                <p className="text-xs font-bold text-slate-900">{trainee.full_name || 'Trainee'}</p>
+                                                <p className="text-[11px] text-slate-500 truncate max-w-[150px]">{trainee.email || '—'}</p>
+                                                {trainee.department && (
+                                                  <span className="text-[10px] text-slate-400 font-medium">{trainee.department}</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </td>
+
+                                          {/* Course Info */}
+                                          <td className="px-4 py-3.5">
+                                            <div className="max-w-[220px]">
+                                              <p className="text-xs font-bold text-slate-900 line-clamp-1">{course.title || 'Course Details'}</p>
+                                              <div className="flex items-center gap-1.5 mt-0.5">
+                                                {course.course_type && (
+                                                  <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
+                                                    {course.course_type}
+                                                  </span>
+                                                )}
+                                                {course.department && (
+                                                  <span className="text-[10px] text-slate-500 font-medium truncate">
+                                                    {course.department}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </td>
+
+                                          {/* Trainer */}
+                                          <td className="px-4 py-3.5">
+                                            <span className="text-xs text-slate-700 font-medium">{trainerName}</span>
+                                          </td>
+
+                                          {/* Applied Date */}
+                                          <td className="px-4 py-3.5">
+                                            <span className="text-xs text-slate-500 font-medium">
+                                              {enrolledDate ? formatDistanceToNow(enrolledDate, { addSuffix: true }) : '—'}
+                                            </span>
+                                          </td>
+
+                                          {/* Status */}
+                                          <td className="px-4 py-3.5">
+                                            {item.status === 'pending_approval' ? (
+                                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80">
+                                                <Clock className="w-3 h-3 text-amber-600" />
+                                                Pending Approval
+                                              </span>
+                                            ) : item.status === 'enrolled' ? (
+                                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                                                <CheckCircle className="w-3 h-3 text-emerald-600" />
+                                                Enrolled & Approved
+                                              </span>
+                                            ) : item.status === 'rejected' ? (
+                                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80">
+                                                <X className="w-3 h-3 text-rose-600" />
+                                                Rejected
+                                              </span>
+                                            ) : item.status === 'waitlisted' ? (
+                                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200/80">
+                                                <Clock className="w-3 h-3 text-purple-600" />
+                                                Waitlisted
+                                              </span>
+                                            ) : (
+                                              <span className="text-xs text-slate-600 font-medium capitalize">{item.status}</span>
+                                            )}
+                                          </td>
+
+                                          {/* Actions */}
+                                          <td className="px-4 py-3.5 text-right">
+                                            <div className="flex items-center justify-end gap-1.5">
+                                              {isProcessing ? (
+                                                <Loader2 className="w-4 h-4 animate-spin text-cyan-600" />
+                                              ) : item.status === 'pending_approval' ? (
+                                                <>
+                                                  <button
+                                                    onClick={() => handleEnrollmentDecision(item.id, 'approve', item)}
+                                                    className="text-xs px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer hover:scale-105"
+                                                    title="Approve Trainee Enrollment"
+                                                  >
+                                                    <CheckCircle className="w-3.5 h-3.5" /> Approve
+                                                  </button>
+                                                  <button
+                                                    onClick={() => handleEnrollmentDecision(item.id, 'reject', item)}
+                                                    className="text-xs px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                                                    title="Reject Enrollment"
+                                                  >
+                                                    <X className="w-3.5 h-3.5" /> Reject
+                                                  </button>
+                                                </>
+                                              ) : item.status === 'enrolled' ? (
+                                                <button
+                                                  onClick={() => handleEnrollmentDecision(item.id, 'reject', item)}
+                                                  className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-slate-200 font-bold transition-all"
+                                                >
+                                                  Revoke Access
+                                                </button>
+                                              ) : (
+                                                <button
+                                                  onClick={() => handleEnrollmentDecision(item.id, 'approve', item)}
+                                                  className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all"
+                                                >
+                                                  Re-Approve
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )
+                                    })
                                   )}
-                                </td>
-                                <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
-                                <td className="px-3 py-3 text-right">
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        setSelectedUserForModal(u)
-                                        setIsUserDetailsModalOpen(true)
-                                      }}
-                                      className="text-xs px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-300 hover:bg-sky-100 hover:border-sky-400 font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
-                                      title="View Complete Trainee Info"
-                                    >
-                                      <Eye className="w-3.5 h-3.5 text-sky-700" /> Info
-                                    </button>
-                                    {u.approval_status === 'pending' && (
-                                      <>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs cursor-pointer">Approve</button>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'rejected')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Reject</button>
-                                      </>
-                                    )}
-                                    {u.approval_status === 'approved' && (
-                                      <>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all shadow-xs cursor-pointer">→ Trainer</button>
-                                        <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Suspend</button>
-                                      </>
-                                    )}
-                                    {u.approval_status === 'suspended' && (
-                                      <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs cursor-pointer">Unsuspend</button>
-                                    )}
-                                    {u.approval_status !== 'pending' && (
-                                      <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer" title="Permanently Delete Account">Delete</button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* SUB-TAB 2: TRAINEE USER ACCOUNTS DIRECTORY */}
+                      {traineeSubTab === 'accounts' && (
+                        <div className="pt-5 space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-fit overflow-x-auto hide-scrollbar">
+                              {(['all', 'pending', 'approved', 'suspended', 'rejected'] as const).map(f => (
+                                <button
+                                  key={f}
+                                  onClick={() => setStatusFilter(f)}
+                                  className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize whitespace-nowrap ${
+                                    statusFilter === f ? 'bg-white text-cyan-700 shadow-sm border border-slate-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                                  }`}
+                                >
+                                  {f}
+                                </button>
+                              ))}
+                            </div>
+
+                            <div className="relative w-full sm:w-64 shrink-0">
+                              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                              <input
+                                type="text"
+                                placeholder="Search trainee accounts..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-cyan-500 focus:bg-white transition-all shadow-xs"
+                              />
+                            </div>
+                          </div>
+
+                          {loading ? (
+                            <div className="p-8 text-center text-slate-400 text-sm">Loading trainees...</div>
+                          ) : (
+                            <div className="overflow-x-auto mt-2">
+                              <table className="w-full min-w-[620px]">
+                                <thead>
+                                  <tr className="border-b border-slate-200 text-left text-xs text-slate-600 font-bold bg-slate-50">
+                                    <th className="px-3 py-3">Name</th>
+                                    <th className="px-3 py-3">Email</th>
+                                    <th className="px-3 py-3">Department</th>
+                                    <th className="px-3 py-3">Proof</th>
+                                    <th className="px-3 py-3">Status</th>
+                                    <th className="px-3 py-3 text-right">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {filteredUsers.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={6} className="text-center py-8 text-slate-400 text-sm">
+                                        {searchQuery ? 'No trainees match your search.' : 'No trainees found.'}
+                                      </td>
+                                    </tr>
+                                  ) : filteredUsers.map(u => (
+                                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                                      <td className="px-3 py-3">
+                                        <div
+                                          onClick={() => { setSelectedUserForModal(u); setIsUserDetailsModalOpen(true); }}
+                                          className="flex items-center gap-2.5 cursor-pointer group"
+                                          title="Click to view full profile details"
+                                        >
+                                          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs overflow-hidden">
+                                            {u.avatar_path ? (
+                                              <img src={u.avatar_path} alt={u.full_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                              u.full_name?.charAt(0)?.toUpperCase() ?? '?'
+                                            )}
+                                          </div>
+                                          <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition-colors truncate max-w-[130px]">{u.full_name}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-3 text-xs text-slate-600 truncate max-w-[150px]">{u.email}</td>
+                                      <td className="px-3 py-3 text-xs text-slate-600 truncate max-w-[90px]">{u.department ?? '—'}</td>
+                                      <td className="px-3 py-3">
+                                        {u.proof_path ? (
+                                          <div className="flex flex-col gap-1.5">
+                                            <div className="flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 w-fit" title="Securely stored in MoES Cloud">
+                                              <Shield className="w-3 h-3 text-emerald-600" />
+                                              <span className="truncate max-w-[100px]">{u.proof_path.split('/').pop()}</span>
+                                            </div>
+                                            <button onClick={() => handleViewProof(u.proof_path!)} className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all w-fit cursor-pointer">
+                                              View Document
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <span className="text-xs text-slate-400">—</span>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-3"><StatusBadge status={u.approval_status} /></td>
+                                      <td className="px-3 py-3 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.preventDefault()
+                                              e.stopPropagation()
+                                              setSelectedUserForModal(u)
+                                              setIsUserDetailsModalOpen(true)
+                                            }}
+                                            className="text-xs px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-300 hover:bg-sky-100 hover:border-sky-400 font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                                            title="View Complete Trainee Info"
+                                          >
+                                            <Eye className="w-3.5 h-3.5 text-sky-700" /> Info
+                                          </button>
+                                          {u.approval_status === 'pending' && (
+                                            <>
+                                              <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs cursor-pointer">Approve</button>
+                                              <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'rejected')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Reject</button>
+                                            </>
+                                          )}
+                                          {u.approval_status === 'approved' && (
+                                            <>
+                                              <button onClick={() => handleUpdateUser(u.id, u.email, 'trainer', 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100 font-bold transition-all shadow-xs cursor-pointer">→ Trainer</button>
+                                              <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'suspended')} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer">Suspend</button>
+                                            </>
+                                          )}
+                                          {u.approval_status === 'suspended' && (
+                                            <button onClick={() => handleUpdateUser(u.id, u.email, u.role, 'approved')} className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-bold transition-all shadow-xs cursor-pointer">Unsuspend</button>
+                                          )}
+                                          {u.approval_status !== 'pending' && (
+                                            <button onClick={() => handleDeleteUser(u.id)} className="text-xs px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold transition-all shadow-xs cursor-pointer" title="Permanently Delete Account">Delete</button>
+                                          )}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 )}
 
@@ -2116,10 +2194,24 @@ export function AdminDashboard() {
                 </motion.div>
               )}
 
+              {/* Tab: Assessments */}
+              {activeTab === 'assessments' && (
+                <motion.div key="assessments" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
+                  <AdminAssessmentsHub />
+                </motion.div>
+              )}
+
               {/* Tab: Announcements */}
               {activeTab === 'announcements' && (
                 <motion.div key="announcements" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
                   <AdminAnnouncements />
+                </motion.div>
+              )}
+
+              {/* Tab: Notifications */}
+              {activeTab === 'notifications' && (
+                <motion.div key="notifications" variants={scaleIn} initial="hidden" animate="visible" exit="hidden">
+                  <UniversalNotificationsPage hideShell />
                 </motion.div>
               )}
 

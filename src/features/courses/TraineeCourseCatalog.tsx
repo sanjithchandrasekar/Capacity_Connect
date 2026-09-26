@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
-import { Compass, BookOpen, Clock, Search, BookMarked, ArrowRight, Sparkles, FileCheck, User, BarChart3, CheckCircle2, Play, AlertCircle } from 'lucide-react'
+import { Compass, BookOpen, Clock, Search, BookMarked, ArrowRight, Sparkles, FileCheck, User, BarChart3, CheckCircle2, Play, AlertCircle, Bell } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 
 const fadeUp = {
@@ -97,6 +97,7 @@ export function TraineeCourseCatalog() {
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
         { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+        { to: '/trainee/notifications', label: 'Notifications', icon: Bell },
         { to: '/trainee/profile', label: 'Profile', icon: User },
       ]}
     >

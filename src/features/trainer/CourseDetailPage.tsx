@@ -15,7 +15,7 @@ import {
   Video, BookOpen, CheckCircle2, XCircle, UserCheck, Layers, Trophy, Globe,
   Image as ImageIcon, ExternalLink, HelpCircle, ChevronDown, ChevronUp, Sparkles,
   Eye, AlertCircle, Send, Check, Film, Camera, AlignLeft, Link2, Download, Trash2,
-  Star, MessageSquare
+  Star, MessageSquare, Info, BookMarked
 } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
@@ -81,9 +81,47 @@ function formatTime12(timeStr?: string | null): string {
   return `${hour.toString().padStart(2, '0')}:${minute} ${ampm}`
 }
 
+function parseSessionFlowText(text: string): Array<{ number: string; title: string; description: string }> {
+  if (!text) return []
+  const lines = text.split(/\r?\n/).filter(l => l.trim())
+  const results: Array<{ number: string; title: string; description: string }> = []
+
+  for (const line of lines) {
+    const sessionMatch = line.match(/^[Ss]ession\s+(\d+)\s*[–\-:]\s*([^:]+?)(?::\s*(.+))?$/)
+    if (sessionMatch) {
+      results.push({
+        number: sessionMatch[1],
+        title: sessionMatch[2].trim(),
+        description: sessionMatch[3]?.trim() || '',
+      })
+      continue
+    }
+    const numMatch = line.match(/^(\d+)\.\s+([^:]+?)(?::\s*(.+))?$/)
+    if (numMatch) {
+      results.push({
+        number: numMatch[1],
+        title: numMatch[2].trim(),
+        description: numMatch[3]?.trim() || '',
+      })
+      continue
+    }
+    if (results.length > 0 && !results[results.length - 1].description) {
+      results[results.length - 1].description = line.trim()
+    } else {
+      results.push({
+        number: String(results.length + 1),
+        title: line.trim(),
+        description: '',
+      })
+    }
+  }
+
+  return results
+}
+
 export function CourseDetailPage() {
   const { courseId } = useParams<{ courseId: string }>()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [course, setCourse] = useState<Course | null>(null)
   const [courseSkills, setCourseSkills] = useState<CourseSkill[]>([])
@@ -92,10 +130,17 @@ export function CourseDetailPage() {
   const [assessmentCount, setAssessmentCount] = useState(0)
   const [enrollmentCount, setEnrollmentCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [docLoading, setDocLoading] = useState(false)
+  const [aboutModalOpen, setAboutModalOpen] = useState(false)
+  const [aboutActiveTab, setAboutActiveTab] = useState<'about' | 'outline'>('about')
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [allEnrollments, setAllEnrollments] = useState<any[]>([])
   const [isProcessingId, setIsProcessingId] = useState<string | null>(null)
+
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+  const isTrainer = profile?.role === 'trainer'
+  const baseCoursePath = isTrainer ? '/trainer/courses' : '/admin/courses'
 
   // Module Preview Expansion State
   const [openModules, setOpenModules] = useState<Set<string>>(new Set())
@@ -158,11 +203,21 @@ export function CourseDetailPage() {
     if (!user || !courseId) return
     if (isInitial) setLoading(true)
     try {
+      let courseQuery = supabase.from('courses').select('*').eq('id', courseId)
+      if (profile?.role === 'trainer') {
+        courseQuery = courseQuery.eq('trainer_id', user.id)
+      }
+
+      let assessQuery = supabase.from('assessments').select('id', { count: 'exact', head: true }).eq('course_id', courseId)
+      if (profile?.role === 'trainer') {
+        assessQuery = assessQuery.eq('created_by', user.id)
+      }
+
       const [cRes, csRes, mRes, aRes, eRes, sRes, enrollmentsRes] = await Promise.all([
-        supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single(),
+        courseQuery.single(),
         supabase.from('course_skills').select('*, skills(name)').eq('course_id', courseId),
         supabase.from('materials').select('*').eq('course_id', courseId),
-        supabase.from('assessments').select('id', { count: 'exact', head: true }).eq('course_id', courseId).eq('created_by', user.id),
+        assessQuery,
         supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('course_id', courseId).in('status', ['enrolled', 'in_progress', 'completed']),
         supabase.from('course_sessions').select('*').eq('course_id', courseId).order('order_index'),
         supabase.from('enrollments').select('*').eq('course_id', courseId).order('enrolled_at', { ascending: false }),
@@ -183,7 +238,20 @@ export function CourseDetailPage() {
       }
 
       if (cRes.data) {
-        const loadedCourse = cRes.data as Course
+        let loadedCourse = cRes.data as Course
+        if (!loadedCourse.modules || !Array.isArray(loadedCourse.modules) || loadedCourse.modules.length === 0) {
+          const { data: dbModules } = await (supabase as any)
+            .from('course_modules')
+            .select('*, quiz_questions:quiz_questions(*)')
+            .eq('course_id', courseId)
+            .order('order_index', { ascending: true })
+          if (dbModules && dbModules.length > 0) {
+            loadedCourse = {
+              ...loadedCourse,
+              modules: dbModules
+            }
+          }
+        }
         setCourse(loadedCourse)
         // Default open first 2 modules on initial load
         if (isInitial && loadedCourse.modules && Array.isArray(loadedCourse.modules)) {
@@ -201,9 +269,64 @@ export function CourseDetailPage() {
     } finally {
       if (isInitial) setLoading(false)
     }
-  }, [user, courseId])
+  }, [user, profile?.role, courseId])
 
   useEffect(() => { fetchData(true) }, [fetchData])
+
+  const handleOpenSessionDoc = async () => {
+    if (!course?.session_flow_document_path) return
+    setDocLoading(true)
+    try {
+      const { data, error } = await supabase.storage
+        .from('materials')
+        .createSignedUrl(course.session_flow_document_path, 300)
+      if (error) throw error
+      if (data?.signedUrl) {
+        setPreviewMaterial({
+          id: 'syllabus-doc',
+          file_name: 'Course Syllabus Document',
+          storage_path: course.session_flow_document_path,
+          material_type: 'document',
+          course_id: course.id,
+          created_at: new Date().toISOString(),
+          description: 'Uploaded Course Syllabus Document',
+          duration_minutes: null,
+          external_url: null,
+          order_index: 0,
+          thumbnail_url: null,
+          title: 'Course Outline & Syllabus',
+          topic_name: 'Outline',
+          uploader_id: course.trainer_id
+        } as any)
+        setPreviewUrl(data.signedUrl)
+      }
+    } catch {
+      toast.error('Could not open syllabus document.')
+    } finally {
+      setDocLoading(false)
+    }
+  }
+
+  const handleDownload = async (mat: Material) => {
+    if (!mat.storage_path) return
+    try {
+      const { data, error } = await supabase.storage
+        .from('materials')
+        .download(mat.storage_path)
+      if (error) throw error
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = mat.file_name || 'download'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('Downloaded successfully')
+    } catch {
+      toast.error('Failed to download file')
+    }
+  }
 
   const handleApproval = async (enrollmentId: string, action: 'approve' | 'reject', trainee: any) => {
     setIsProcessingId(enrollmentId)
@@ -304,7 +427,7 @@ export function CourseDetailPage() {
     new Date(course.edit_window_expires_at).getTime() > Date.now()
   )
 
-  const canDirectEdit = course?.status === 'draft' || course?.status === 'pending_review' || isEditWindowActive
+  const canDirectEdit = isAdmin || course?.status === 'draft' || course?.status === 'pending_review' || isEditWindowActive
 
   // Format countdown string for active editing window
   const getRemainingTimeStr = () => {
@@ -333,7 +456,7 @@ export function CourseDetailPage() {
       <TrainerLayout>
         <div className="max-w-3xl mx-auto py-20 text-center">
           <p className="text-slate-500 mb-4">Course not found or you don't have access.</p>
-          <RouterLink to="/trainer/courses"><Button variant="outline" className="border-slate-200 text-slate-700">Back to Courses</Button></RouterLink>
+          <RouterLink to={isTrainer ? '/trainer/courses' : '/admin'}><Button variant="outline" className="border-slate-200 text-slate-700">Back to Courses</Button></RouterLink>
         </div>
       </TrainerLayout>
     )
@@ -343,13 +466,13 @@ export function CourseDetailPage() {
     <TrainerLayout>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-4xl mx-auto space-y-6">
         <motion.div variants={fadeUp}>
-          <RouterLink to="/trainer/courses" className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors mb-4">
+          <RouterLink to={isTrainer ? '/trainer/courses' : '/admin'} className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Courses
           </RouterLink>
         </motion.div>
 
         {/* 1. Active Editing Window Banner (if authorized by Admin) */}
-        {isEditWindowActive && (
+        {isEditWindowActive && !isAdmin && (
           <motion.div variants={fadeUp} className="p-5 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -364,7 +487,7 @@ export function CourseDetailPage() {
                 <strong>{new Date(course.edit_window_expires_at!).toLocaleString()}</strong>.
               </p>
             </div>
-            <RouterLink to={`/trainer/courses/${courseId}/edit`}>
+            <RouterLink to={isTrainer ? `/trainer/courses/${courseId}/edit` : `/admin/courses/${courseId}/edit`}>
               <Button size="sm" className="bg-white text-cyan-900 hover:bg-cyan-50 font-bold text-xs rounded-xl shadow-md shrink-0">
                 <Edit3 className="w-3.5 h-3.5 mr-1.5 text-cyan-700" /> Open Course Editor
               </Button>
@@ -373,7 +496,7 @@ export function CourseDetailPage() {
         )}
 
         {/* 2. Pending Edit Request Status Banner */}
-        {!isEditWindowActive && course.edit_request_status === 'pending' && (
+        {!isEditWindowActive && !isAdmin && course.edit_request_status === 'pending' && (
           <motion.div variants={fadeUp} className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
             <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0 text-xs">
@@ -406,12 +529,25 @@ export function CourseDetailPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-2">
                   <div>
                     <Badge className={`${statusColors[course.status]} text-[10px] font-semibold mb-2`}>{course.status.replace('_', ' ')}</Badge>
-                    <h1 className="text-2xl font-black text-slate-900 leading-tight">{course.title}</h1>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <h1 className="text-2xl font-black text-slate-900 leading-tight">{course.title}</h1>
+                      <button
+                        onClick={() => {
+                          setAboutActiveTab('about')
+                          setAboutModalOpen(true)
+                        }}
+                        title="About Course"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 text-xs font-bold transition-all shadow-xs cursor-pointer group shrink-0"
+                      >
+                        <Info className="w-3.5 h-3.5 text-cyan-600 group-hover:scale-110 transition-transform" />
+                        <span>About</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
                     {canDirectEdit ? (
-                      <RouterLink to={`/trainer/courses/${courseId}/edit`}>
+                      <RouterLink to={isTrainer ? `/trainer/courses/${courseId}/edit` : `/admin/courses/${courseId}/edit`}>
                         <Button size="sm" className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-xs">
                           <Edit3 className="w-3.5 h-3.5 mr-1.5" /> Edit Course
                         </Button>
@@ -558,7 +694,7 @@ export function CourseDetailPage() {
         <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           {/* Card 1: Sessions */}
           <div
-            onClick={() => navigate(`/trainer/courses/${courseId}/sessions`)}
+            onClick={() => navigate(`${baseCoursePath}/${courseId}/sessions`)}
             className="bg-[#0c1322] border border-slate-800 hover:border-cyan-500/50 text-white rounded-2xl p-4 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg group hover:bg-[#0f172a]"
           >
             <div className="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform shrink-0">
@@ -572,7 +708,7 @@ export function CourseDetailPage() {
 
           {/* Card 2: Materials */}
           <div
-            onClick={() => navigate(`/trainer/courses/${courseId}/materials`)}
+            onClick={() => navigate(`${baseCoursePath}/${courseId}/materials`)}
             className="bg-[#0c1322] border border-slate-800 hover:border-blue-500/50 text-white rounded-2xl p-4 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg group hover:bg-[#0f172a]"
           >
             <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform shrink-0">
@@ -586,7 +722,7 @@ export function CourseDetailPage() {
 
           {/* Card 3: Assessments */}
           <div
-            onClick={() => navigate(`/trainer/courses/${courseId}/assessments`)}
+            onClick={() => navigate(`${baseCoursePath}/${courseId}/assessments`)}
             className="bg-[#0c1322] border border-slate-800 hover:border-emerald-500/50 text-white rounded-2xl p-4 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg group hover:bg-[#0f172a]"
           >
             <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
@@ -600,7 +736,7 @@ export function CourseDetailPage() {
 
           {/* Card 4: Performance */}
           <div
-            onClick={() => navigate(`/trainer/courses/${courseId}/performance`)}
+            onClick={() => navigate(`${baseCoursePath}/${courseId}/performance`)}
             className="bg-[#0c1322] border border-slate-800 hover:border-purple-500/50 text-white rounded-2xl p-4 flex items-center gap-3.5 transition-all cursor-pointer shadow-lg group hover:bg-[#0f172a]"
           >
             <div className="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform shrink-0">
@@ -613,26 +749,7 @@ export function CourseDetailPage() {
           </div>
         </motion.div>
 
-        {/* 4. LEARNING OBJECTIVES CARD */}
-        {(course.learning_objectives || course.description) && (
-          <motion.div variants={fadeUp}>
-            <Card className="bg-gradient-to-br from-[#0c1322] via-[#090e1a] to-[#040814] text-white border border-slate-800/90 rounded-3xl shadow-xl overflow-hidden">
-              <CardContent className="p-6 md:p-8 space-y-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 shadow-[0_0_12px_rgba(6,182,212,0.15)]">
-                    <Target className="w-4 h-4" />
-                  </div>
-                  <h3 className="text-base font-bold text-white tracking-wide">Learning Objectives</h3>
-                </div>
-                <div className="p-5 rounded-2xl bg-[#070c18]/90 border border-slate-800/80 text-xs md:text-sm text-slate-300 leading-relaxed font-normal whitespace-pre-line">
-                  {getFormattedObjectives(course.learning_objectives) || course.description}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* 5. COMPLETE INTERACTIVE COURSE MODULES PREVIEW */}
+        {/* 4. COMPLETE INTERACTIVE COURSE MODULES PREVIEW */}
         {(course as any).modules && Array.isArray((course as any).modules) && (course as any).modules.length > 0 && (
           <motion.div variants={fadeUp}>
             <Card className="bg-white border border-slate-200/90 rounded-3xl shadow-sm space-y-4">
@@ -640,7 +757,7 @@ export function CourseDetailPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-cyan-600" />
+                      <BookOpen className="w-4 h-4 text-cyan-600" />
                       <h3 className="text-base font-bold text-slate-900">
                         Course Modules Preview ({(course as any).modules.length})
                       </h3>
@@ -1165,6 +1282,209 @@ export function CourseDetailPage() {
               Save Attendance Record
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <MaterialPreviewDialog
+        material={previewMaterial}
+        previewUrl={previewUrl}
+        onClose={() => setPreviewMaterial(null)}
+        onDownload={() => previewMaterial && handleDownload(previewMaterial)}
+      />
+
+      {/* About Course & Course Outline Modal */}
+      <Dialog open={aboutModalOpen} onOpenChange={setAboutModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl p-6 md:p-8 bg-white border border-slate-200 shadow-2xl">
+          <DialogHeader className="pb-4 border-b border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1 pr-6">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] font-bold uppercase text-cyan-800 bg-cyan-50 border-cyan-200">
+                    {course?.course_type || 'Standard'} Program
+                  </Badge>
+                  {course?.department && (
+                    <Badge variant="outline" className="text-[10px] font-semibold text-slate-600 border-slate-200">
+                      {course.department}
+                    </Badge>
+                  )}
+                </div>
+                <DialogTitle className="text-xl md:text-2xl font-black text-slate-900 leading-tight">
+                  {course?.title}
+                </DialogTitle>
+                <p className="text-xs text-slate-500 font-medium">
+                  {course?.duration_minutes ? `${Math.floor(course.duration_minutes / 60)} Hours` : 'Self-Paced'} &bull; Pass Gate: {course?.passing_score || 80}%
+                </p>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="flex items-center gap-2 pt-4">
+              <button
+                type="button"
+                onClick={() => setAboutActiveTab('about')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  aboutActiveTab === 'about'
+                    ? 'bg-cyan-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                About This Course
+              </button>
+              <button
+                type="button"
+                onClick={() => setAboutActiveTab('outline')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  aboutActiveTab === 'outline'
+                    ? 'bg-cyan-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Course Outline & Roadmap
+              </button>
+            </div>
+          </DialogHeader>
+
+          {/* TAB 1: ABOUT THIS COURSE */}
+          {aboutActiveTab === 'about' && (
+            <div className="space-y-6 pt-2">
+              {/* Description */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-cyan-600" /> Course Overview
+                </h4>
+                <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200/80 whitespace-pre-line">
+                  {course?.description || 'Comprehensive competency-based training designed for operational excellence.'}
+                </p>
+              </div>
+
+              {/* Objectives */}
+              {course?.learning_objectives && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5 text-cyan-600" /> Key Learning Objectives
+                  </h4>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2 text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line font-normal">
+                    {getFormattedObjectives(course.learning_objectives)}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Course Specifications Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-2xl bg-cyan-50/50 border border-cyan-200/60">
+                  <span className="text-[10px] font-bold text-cyan-800 uppercase tracking-wider block">Passing Threshold</span>
+                  <span className="text-sm font-extrabold text-cyan-950 mt-0.5 block">{course?.passing_score || 80}% Overall</span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Duration</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{course?.duration_minutes ? `${Math.floor(course.duration_minutes / 60)} Hours` : 'Flexible'}</span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Max Trainees</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{course?.max_trainees || 'Unlimited'} Seats</span>
+                </div>
+              </div>
+
+              {/* Skills Covered */}
+              {courseSkills && courseSkills.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-600" /> Core Competencies & Skills
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {courseSkills.map((cs, idx) => (
+                      <span key={(cs as any).id || cs.skill_id || idx} className="px-3 py-1.5 rounded-xl bg-cyan-50 border border-cyan-200/80 text-cyan-900 text-xs font-bold">
+                        {cs.skills?.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: COURSE OUTLINE & ROADMAP */}
+          {aboutActiveTab === 'outline' && (
+            <div className="space-y-6 pt-2">
+              {/* Syllabus Document Download / Preview */}
+              {course?.session_flow_document_path && (
+                <div className="p-4 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-5 h-5 text-cyan-700 shrink-0" />
+                    <div>
+                      <h5 className="text-xs font-bold text-cyan-950">Official Syllabus Document</h5>
+                      <p className="text-[11px] text-cyan-700">Detailed curriculum plan and reading materials</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleOpenSessionDoc}
+                    disabled={docLoading}
+                    className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs h-8 rounded-xl shrink-0"
+                  >
+                    {docLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+                    View Document
+                  </Button>
+                </div>
+              )}
+
+              {/* Session Schedule & Timeline */}
+              {course?.session_flow_text && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-cyan-600" /> Session Schedule & Timeline
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
+                    {course.session_flow_text}
+                  </div>
+                </div>
+              )}
+
+              {/* Structured Modules Preview */}
+              {course?.modules && Array.isArray(course.modules) && course.modules.length > 0 && (
+                <div className="space-y-3 pt-1">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <BookMarked className="w-3.5 h-3.5 text-cyan-600" /> Learning Modules Breakdown ({course.modules.length})
+                  </h4>
+                  <div className="space-y-2.5">
+                    {course.modules.map((mod: any, mIdx: number) => {
+                      const rawItems = mod.items || mod.content_items || []
+                      const quizQuestions = mod.quiz_questions || []
+                      const videoCount = rawItems.filter((i: any) => i.type === 'video').length
+                      const notesCount = rawItems.filter((i: any) => i.type === 'notes' || i.type === 'pdf' || i.type === 'doc').length
+                      const quizCount = quizQuestions.length + rawItems.filter((i: any) => i.type === 'quiz').length
+
+                      return (
+                        <div key={mod.id || mIdx} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <span className="w-6 h-6 rounded-lg bg-cyan-100 text-cyan-800 font-bold text-xs flex items-center justify-center shrink-0">
+                                {mIdx + 1}
+                              </span>
+                              <h5 className="text-xs sm:text-sm font-bold text-slate-900">{mod.title || `Module ${mIdx + 1}`}</h5>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] font-semibold bg-white border-slate-200 text-slate-600 shrink-0">
+                              {rawItems.length} activities
+                            </Badge>
+                          </div>
+                          {mod.description && (
+                            <p className="text-xs text-slate-500 pl-8 line-clamp-2">{mod.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 pl-8 pt-1 text-[10px] text-slate-500 font-medium">
+                            {videoCount > 0 && <span className="text-blue-600 font-semibold">{videoCount} Video{videoCount > 1 ? 's' : ''}</span>}
+                            {notesCount > 0 && <span className="text-emerald-600 font-semibold">{notesCount} Note{notesCount > 1 ? 's' : ''}</span>}
+                            {quizCount > 0 && <span className="text-purple-600 font-semibold">{quizCount} Quiz Qs</span>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </TrainerLayout>

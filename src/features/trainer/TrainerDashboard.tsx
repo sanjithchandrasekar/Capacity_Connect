@@ -35,6 +35,7 @@ export function TrainerDashboard() {
         .from('courses')
         .select('*')
         .eq('trainer_id', user.id)
+        .neq('status', 'archived')
         .order('created_at', { ascending: false })
       if (c) setCourses(c)
 

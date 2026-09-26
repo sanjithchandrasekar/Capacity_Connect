@@ -28,7 +28,9 @@ interface TraineeRow {
 
 export function PerformancePage() {
   const { courseId } = useParams<{ courseId: string }>()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const isTrainer = profile?.role === 'trainer'
+  const baseCoursePath = isTrainer ? '/trainer/courses' : '/admin/courses'
   const [course, setCourse] = useState<Course | null>(null)
   const [traineeRows, setTraineeRows] = useState<TraineeRow[]>([])
   const [_questions, setQuestions] = useState<Question[]>([])
@@ -38,27 +40,54 @@ export function PerformancePage() {
     if (!user || !courseId) return
     setLoading(true)
     try {
-      const { data: c } = await supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single()
+      let query = supabase.from('courses').select('*').eq('id', courseId)
+      if (profile?.role === 'trainer') {
+        query = query.eq('trainer_id', user.id)
+      }
+      const { data: c } = await query.single()
       if (c) setCourse(c)
 
-      const { data: e } = await supabase.from('enrollments').select('*, trainees(*)').eq('course_id', courseId)
-      const enrollments = (e ?? []) as any as (Enrollment & { trainees: Trainee | null })[]
+      // 1. Fetch all enrollments for this course
+      const { data: e, error: eErr } = await supabase
+        .from('enrollments')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('enrolled_at', { ascending: false })
 
+      if (eErr) console.error('Error fetching enrollments:', eErr)
+      const enrollments = e ?? []
+
+      // 2. Fetch trainee profile details
+      let traineesMap: Record<string, Trainee> = {}
+      if (enrollments.length > 0) {
+        const userIds = [...new Set(enrollments.map(item => item.user_id))]
+        const { data: tData } = await supabase.from('trainees').select('*').in('id', userIds)
+        if (tData) {
+          traineesMap = tData.reduce((acc, curr) => {
+            acc[curr.id] = curr
+            return acc
+          }, {} as Record<string, Trainee>)
+        }
+      }
+
+      // 3. Fetch course assessments
       const { data: assessmentsList } = await supabase
         .from('assessments')
         .select('id, title, assessment_type, passing_score')
         .eq('course_id', courseId)
-        .eq('created_by', user.id)
 
       const assessmentIds = assessmentsList?.map(a => a.id) || []
 
+      // 4. Fetch all trainee attempts for these assessments
       let allAttempts: AssessmentAttempt[] = []
       if (assessmentIds.length > 0) {
         const { data: a } = await supabase.from('assessment_attempts').select('*').in('assessment_id', assessmentIds)
         if (a) allAttempts = a
       }
 
+      // 5. Build computed trainee rows with grade breakdowns
       const rows: TraineeRow[] = enrollments.map(en => {
+        const traineeInfo = traineesMap[en.user_id] || null
         const userAttempts = allAttempts.filter(at => at.user_id === en.user_id)
         const scores = userAttempts.filter(at => at.score !== null).map(at => at.score ?? 0)
 
@@ -71,7 +100,7 @@ export function PerformancePage() {
 
         return {
           enrollment: en,
-          trainee: en.trainees,
+          trainee: traineeInfo,
           attempts: userAttempts,
           bestScore: scores.length > 0 ? Math.max(...scores) : null,
           attemptCount: userAttempts.length,
@@ -85,25 +114,24 @@ export function PerformancePage() {
         if (q) setQuestions(q)
       }
     } catch (err) {
-      console.error(err)
+      console.error('Error fetching performance data:', err)
     } finally {
       setLoading(false)
     }
-  }, [user, courseId])
+  }, [user, profile?.role, courseId])
 
   useEffect(() => { fetchData() }, [fetchData])
 
   const activeTraineeRows = traineeRows.filter(r => ['enrolled', 'in_progress', 'completed'].includes(r.enrollment.status))
   const totalEnrolled = activeTraineeRows.length
-  const completed = activeTraineeRows.filter(r => r.enrollment.status === 'completed').length
+  const completed = activeTraineeRows.filter(r => r.enrollment.status === 'completed' || r.gradeBreakdown.isCompleted).length
   const completionRate = totalEnrolled > 0 ? Math.round((completed / totalEnrolled) * 100) : 0
-  const avgProgress = totalEnrolled > 0 ? Math.round(activeTraineeRows.reduce((s, r) => s + r.enrollment.progress_percent, 0) / totalEnrolled) : 0
-  const scoresFiltered = activeTraineeRows.filter(r => r.bestScore !== null)
-  const avgScore = scoresFiltered.length > 0 ? Math.round(scoresFiltered.reduce((s, r) => s + (r.bestScore ?? 0), 0) / scoresFiltered.length) : 0
-  const passedCount = scoresFiltered.filter(r => (r.bestScore ?? 0) >= (course?.passing_score ?? 60)).length
-  const passRate = scoresFiltered.length > 0 ? Math.round((passedCount / scoresFiltered.length) * 100) : 0
-  const avgAttempts = totalEnrolled > 0 ? Math.round(activeTraineeRows.reduce((s, r) => s + r.attemptCount, 0) / totalEnrolled * 10) / 10 : 0
-  const needsSupport = activeTraineeRows.filter(r => r.enrollment.status !== 'completed' && r.bestScore !== null && (r.bestScore ?? 0) < (course?.passing_score ?? 60))
+  const avgProgress = totalEnrolled > 0 ? Math.round(activeTraineeRows.reduce((s, r) => s + (r.enrollment.progress_percent || 0), 0) / totalEnrolled) : 0
+  const avgScore = totalEnrolled > 0 ? Math.round(activeTraineeRows.reduce((s, r) => s + (r.gradeBreakdown.totalScore || 0), 0) / totalEnrolled) : 0
+  const passedCount = activeTraineeRows.filter(r => r.gradeBreakdown.isPassed).length
+  const passRate = totalEnrolled > 0 ? Math.round((passedCount / totalEnrolled) * 100) : 0
+  const avgAttempts = totalEnrolled > 0 ? Math.round((activeTraineeRows.reduce((s, r) => s + r.attemptCount, 0) / totalEnrolled) * 10) / 10 : 0
+  const needsSupport = activeTraineeRows.filter(r => !r.gradeBreakdown.isPassed && r.attemptCount > 0)
 
   const stats = [
     { label: 'Enrolled', value: totalEnrolled, icon: Users, iconColor: 'text-cyan-600', iconBg: 'bg-cyan-50 border-cyan-200' },
@@ -129,7 +157,7 @@ export function PerformancePage() {
     <TrainerLayout>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-6xl mx-auto space-y-6">
         <motion.div variants={fadeUp}>
-          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors mb-4">
+          <Link to={`${baseCoursePath}/${courseId}`} className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Trainee Performance</h2>

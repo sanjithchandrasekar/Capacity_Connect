@@ -17,10 +17,24 @@ import {
 } from '@/components/ui/dialog'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
-import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers, Plus, CheckCircle2, XCircle, AlertCircle, ShieldAlert, Timer, Check, Sparkles, PlayCircle, HelpCircle, Image as ImageIcon } from 'lucide-react'
+import { MoreHorizontal, BookOpen, Eye, FileText, Target, Clock, Users, Loader2, File, Video, Globe, ExternalLink, Download, Layers, Plus, CheckCircle2, XCircle, AlertCircle, ShieldAlert, Timer, Check, Sparkles, PlayCircle, HelpCircle, Image as ImageIcon, Edit3, BarChart3, Info, BookMarked } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { Textarea } from '@/components/ui/textarea'
+
+function getFormattedObjectives(raw: any): string {
+  if (!raw) return ''
+  if (typeof raw === 'string') return raw
+  if (Array.isArray(raw)) return raw.join('\n\n')
+  if (typeof raw === 'object') {
+    const parts: string[] = []
+    if (raw.description) parts.push(raw.description)
+    if (raw.understand) parts.push(`What you'll understand: ${raw.understand}`)
+    if (raw.able_to_do) parts.push(`What you'll be able to do: ${raw.able_to_do}`)
+    return parts.length > 0 ? parts.join('\n\n') : JSON.stringify(raw)
+  }
+  return String(raw)
+}
 
 type Course = Database['public']['Tables']['courses']['Row'] & {
   edit_request_status?: string | null
@@ -32,6 +46,44 @@ type Course = Database['public']['Tables']['courses']['Row'] & {
 }
 type Material = Database['public']['Tables']['materials']['Row']
 type CourseSkill = Database['public']['Tables']['course_skills']['Row'] & { skills: { name: string } | null }
+
+function parseSessionFlowText(text: string): Array<{ number: string; title: string; description: string }> {
+  if (!text) return []
+  const lines = text.split(/\r?\n/).filter(l => l.trim())
+  const results: Array<{ number: string; title: string; description: string }> = []
+
+  for (const line of lines) {
+    const sessionMatch = line.match(/^[Ss]ession\s+(\d+)\s*[–\-:]\s*([^:]+?)(?::\s*(.+))?$/)
+    if (sessionMatch) {
+      results.push({
+        number: sessionMatch[1],
+        title: sessionMatch[2].trim(),
+        description: sessionMatch[3]?.trim() || '',
+      })
+      continue
+    }
+    const numMatch = line.match(/^(\d+)\.\s+([^:]+?)(?::\s*(.+))?$/)
+    if (numMatch) {
+      results.push({
+        number: numMatch[1],
+        title: numMatch[2].trim(),
+        description: numMatch[3]?.trim() || '',
+      })
+      continue
+    }
+    if (results.length > 0 && !results[results.length - 1].description) {
+      results[results.length - 1].description = line.trim()
+    } else {
+      results.push({
+        number: String(results.length + 1),
+        title: line.trim(),
+        description: '',
+      })
+    }
+  }
+
+  return results
+}
 
 function StatusBadge({ status, editStatus, windowExpiresAt }: { status: Course['status']; editStatus?: string | null; windowExpiresAt?: string | null }) {
   const isWindowActive = editStatus === 'approved' && windowExpiresAt && new Date(windowExpiresAt).getTime() > Date.now()
@@ -76,7 +128,7 @@ function formatFileSize(bytes: number | null) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function AdminCourses() {
+export function AdminCourses(): React.JSX.Element {
   const navigate = useNavigate()
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,8 +154,45 @@ export function AdminCourses() {
 
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [docLoading, setDocLoading] = useState(false)
+  const [aboutModalOpen, setAboutModalOpen] = useState(false)
+  const [aboutActiveTab, setAboutActiveTab] = useState<'about' | 'outline'>('about')
   const [editMaxTrainees, setEditMaxTrainees] = useState(false)
   const [newMaxTrainees, setNewMaxTrainees] = useState<string>('')
+
+  const handleOpenSessionDoc = async (docPath: string) => {
+    if (!docPath) return
+    setDocLoading(true)
+    try {
+      const { data, error } = await supabase.storage
+        .from('materials')
+        .createSignedUrl(docPath, 300)
+      if (error) throw error
+      if (data?.signedUrl) {
+        setPreviewMaterial({
+          id: 'syllabus-doc',
+          file_name: 'Course Syllabus Document',
+          storage_path: docPath,
+          material_type: 'document',
+          course_id: selectedCourse?.id || '',
+          created_at: new Date().toISOString(),
+          description: 'Uploaded Course Syllabus Document',
+          duration_minutes: null,
+          external_url: null,
+          order_index: 0,
+          thumbnail_url: null,
+          title: 'Course Outline & Syllabus',
+          topic_name: 'Outline',
+          uploader_id: selectedCourse?.trainer_id || ''
+        } as any)
+        setPreviewUrl(data.signedUrl)
+      }
+    } catch {
+      toast.error('Could not open syllabus document.')
+    } finally {
+      setDocLoading(false)
+    }
+  }
 
   const fetchCourses = useCallback(async () => {
     setLoading(true)
@@ -165,12 +254,18 @@ export function AdminCourses() {
         }))
       }
 
+      const rawDbModules = (modRes as any)?.data ?? []
+      const rawCourseModules = (course as any).modules
+      const combinedModules = rawDbModules.length > 0
+        ? rawDbModules
+        : (Array.isArray(rawCourseModules) ? rawCourseModules : [])
+
       setMaterials(mRes.data ?? [])
       setSkills(sRes.data as any ?? [])
       setEnrollmentCount(eRes.count ?? 0)
       setSessions(sessRes.data ?? [])
       setPendingEnrollments(mergedPending)
-      setModules((modRes as any)?.data ?? [])
+      setModules(combinedModules)
     } catch {
       toast.error('Failed to load course details')
     } finally {
@@ -384,26 +479,20 @@ export function AdminCourses() {
     }
   }
 
-  const objectives = selectedCourse?.learning_objectives as any
-
   return (
     <>
-      <Card className="bg-white border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
+      <Card className="bg-white border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
         <CardHeader className="border-b border-slate-100 space-y-4 pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2 text-slate-900 text-base font-bold">
+              <CardTitle className="flex items-center gap-2 text-slate-900 text-xl font-bold">
                 <BookOpen className="h-5 w-5 text-cyan-600" />
-                Course Management
+                All Courses
               </CardTitle>
-              <CardDescription className="text-slate-500 text-xs">Review, approve, publish or archive courses.</CardDescription>
+              <CardDescription className="text-slate-500 text-xs mt-1">
+                {courses.length} course{courses.length !== 1 ? 's' : ''} total &bull; Manage modules, sessions, assessments and trainee performance.
+              </CardDescription>
             </div>
-            <Button
-              onClick={() => navigate('/admin/courses/new')}
-              className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl px-4 py-2 h-9 text-xs shadow-md shadow-cyan-600/20 hover:scale-105 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Course
-            </Button>
           </div>
 
           <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200 w-fit gap-1">
@@ -440,7 +529,7 @@ export function AdminCourses() {
               <Loader2 className="w-5 h-5 animate-spin text-cyan-600" />
             </div>
           ) : courses.length === 0 ? (
-            <p className="text-slate-400 text-sm text-center py-12">No courses found.</p>
+            <p className="text-slate-400 text-sm text-center py-12 font-medium">No courses found.</p>
           ) : (
             <div className="space-y-3.5">
               {courses
@@ -465,135 +554,165 @@ export function AdminCourses() {
                 .map(course => {
                   const trainer = (course as any).trainer
                   return (
-                    <div key={course.id} className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl ${course.edit_request_status === 'pending' ? 'bg-amber-50/80 border-amber-300 ring-1 ring-amber-200' : course.isUrgent ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-50/70 hover:bg-slate-50 border-slate-200'} border transition-all`}>
-                      {/* Thumbnail */}
-                      <div className="w-20 h-16 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
-                        <Thumbnail path={course.thumbnail_path} alt={course.title} fallbackIcon={<BookOpen className="w-6 h-6 text-cyan-600" />} />
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h3 className="text-sm font-bold text-slate-900 truncate">{course.title}</h3>
-                          <StatusBadge status={course.status} editStatus={course.edit_request_status} windowExpiresAt={course.edit_window_expires_at} />
-                          {course.edit_request_status === 'pending' && (
-                            <Badge className="bg-amber-600 text-white text-[10px] font-bold">
-                              Needs Review
-                            </Badge>
-                          )}
-                          {course.isUrgent && course.edit_request_status !== 'pending' && <Badge className="bg-rose-100 text-rose-700 border-rose-200 text-[10px]">🚨 URGENT</Badge>}
+                    <div key={course.id} className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 shadow-xs transition-all">
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                        {/* Thumbnail */}
+                        <div className="w-full sm:w-36 h-24 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                          <Thumbnail path={course.thumbnail_path} alt={course.title} fallbackIcon={<BookOpen className="w-8 h-8 text-slate-400" />} />
                         </div>
-                        {course.edit_request_reason && course.edit_request_status === 'pending' ? (
-                          <p className="text-xs text-amber-900 font-medium line-clamp-1 mb-1.5 bg-amber-100/70 px-2 py-0.5 rounded-md border border-amber-200">
-                            Reason: "{course.edit_request_reason}"
-                          </p>
-                        ) : (
-                          <p className="text-xs text-slate-500 line-clamp-1 mb-1.5">{course.description || 'No description provided.'}</p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 font-medium">
-                          <span className="capitalize px-2 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">{course.course_type}</span>
-                          <span>{course.department || 'General'}</span>
-                          {trainer?.full_name && <span>taught by {trainer.full_name}</span>}
-                          {((course as any).course_assignments && (course as any).course_assignments.length > 0) && (
-                            <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-md text-[9px] font-bold tracking-wider uppercase">Admin Created</span>
-                          )}
-                          <span>{course.created_at ? formatDistanceToNow(new Date(course.created_at), { addSuffix: true }) : ''}</span>
-                        </div>
-                      </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                        {course.edit_request_status === 'pending' && (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setEditRequestModalCourse(course)
-                              setEditRequestHours(24)
-                              setCustomHours('')
-                              setAdminNotes('')
-                            }}
-                            className="bg-amber-600 hover:bg-amber-700 text-white h-8 rounded-xl text-xs font-bold shadow-xs"
-                          >
-                            <Timer className="w-3.5 h-3.5 mr-1" /> Review Edit Request
-                          </Button>
-                        )}
-                        {course.edit_request_status === 'submitted' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleReApproveCourse(course.id, course.trainer_id, course.title)}
-                            disabled={updating === course.id}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white h-8 rounded-xl text-xs font-bold shadow-xs"
-                          >
-                            {updating === course.id ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
-                            Approve Updates
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openCourseDetail(course)}
-                          className="border-slate-200 text-slate-700 hover:bg-slate-100 h-8 rounded-xl text-xs font-semibold"
-                        >
-                          <Eye className="w-3.5 h-3.5 mr-1" /> View
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 rounded-xl hover:bg-slate-100">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white border-slate-200 rounded-2xl shadow-lg text-slate-800">
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
+                            <button
+                              onClick={() => navigate(`/admin/courses/${course.id}`)}
+                              className="text-left hover:text-cyan-600 min-w-0 transition-colors"
+                            >
+                              <h3 className="text-base font-bold text-slate-900 truncate">{course.title}</h3>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCourse(course)
+                                setAboutActiveTab('about')
+                                setAboutModalOpen(true)
+                              }}
+                              title="About Course & Outline"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 text-[11px] font-bold transition-all shadow-xs cursor-pointer group shrink-0"
+                            >
+                              <Info className="w-3.5 h-3.5 text-cyan-600 group-hover:rotate-12 transition-transform" />
+                              <span>About</span>
+                            </button>
+                            <StatusBadge status={course.status} editStatus={course.edit_request_status} windowExpiresAt={course.edit_window_expires_at} />
                             {course.edit_request_status === 'pending' && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setEditRequestModalCourse(course)
-                                  setEditRequestHours(24)
-                                  setCustomHours('')
-                                  setAdminNotes('')
-                                }}
-                                className="text-amber-700 font-bold"
-                              >
-                                Review Edit Request
-                              </DropdownMenuItem>
+                              <Badge className="bg-amber-600 text-white text-[10px] font-bold">
+                                Needs Review
+                              </Badge>
                             )}
-                            {course.edit_request_status === 'submitted' && (
-                              <DropdownMenuItem
-                                onClick={() => handleReApproveCourse(course.id, course.trainer_id, course.title)}
-                                className="text-indigo-700 font-bold"
-                              >
-                                Re-Approve & Publish Updates
-                              </DropdownMenuItem>
+                            {course.isUrgent && course.edit_request_status !== 'pending' && <Badge className="bg-rose-100 text-rose-700 border-rose-200 text-[10px]">🚨 URGENT</Badge>}
+                          </div>
+                          
+                          {course.edit_request_reason && course.edit_request_status === 'pending' ? (
+                            <p className="text-xs text-amber-900 font-medium line-clamp-2 mb-2 bg-amber-100/70 px-2.5 py-1 rounded-md border border-amber-200">
+                              Reason: "{course.edit_request_reason}"
+                            </p>
+                          ) : (
+                            <p className="text-xs text-slate-600 line-clamp-2 mb-3 leading-relaxed">{course.description || 'No description provided.'}</p>
+                          )}
+                          
+                          <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-400">
+                            <span>{course.duration_minutes ?? 0} mins</span>
+                            <span>&bull;</span>
+                            <span className="capitalize">{course.course_type}</span>
+                            <span>&bull;</span>
+                            <span>{course.created_at ? new Date(course.created_at).toLocaleDateString() : ''}</span>
+                            {course.department && (
+                              <>
+                                <span>&bull;</span>
+                                <span>{course.department}</span>
+                              </>
                             )}
-                            {course.status === 'pending_review' && (
-                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')} className="text-emerald-700 font-medium">
-                                Approve & Publish
-                              </DropdownMenuItem>
+                            {trainer?.full_name && (
+                              <>
+                                <span>&bull;</span>
+                                <span className="text-cyan-700 font-semibold">Instructor: {trainer.full_name}</span>
+                              </>
                             )}
-                            {course.status === 'pending_review' && (
-                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'draft')}>
-                                Return to Draft
-                              </DropdownMenuItem>
-                            )}
-                            {course.status === 'published' && (
-                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'archived')} className="text-rose-600">
-                                Archive
-                              </DropdownMenuItem>
-                            )}
-                            {course.status === 'archived' && (
-                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')}>
-                                Re-publish
-                              </DropdownMenuItem>
-                            )}
-                            {course.status === 'draft' && (
-                              <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')}>
-                                Publish Directly
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => navigate(`/admin/courses/${course.id}/edit`)}>
-                              Edit Course (Admin)
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons Matching Trainer Role */}
+                        <div className="flex flex-wrap gap-2 shrink-0 sm:self-center">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+                            onClick={() => navigate(`/admin/courses/${course.id}`)}
+                          >
+                            <BookOpen className="w-3.5 h-3.5 mr-1 text-cyan-600" /> Manage
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+                            onClick={() => navigate(`/admin/courses/${course.id}/edit`)}
+                          >
+                            <Edit3 className="w-3.5 h-3.5 mr-1 text-slate-600" /> Edit
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+                            onClick={() => navigate(`/admin/courses/${course.id}/assessments`)}
+                          >
+                            <Target className="w-3.5 h-3.5 mr-1 text-emerald-600" /> Assess
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+                            onClick={() => navigate(`/admin/courses/${course.id}/performance`)}
+                          >
+                            <BarChart3 className="w-3.5 h-3.5 mr-1 text-blue-600" /> Stats
+                          </Button>
+
+                          {/* Additional Admin Status Management Dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 rounded-xl hover:bg-slate-100">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white border-slate-200 rounded-2xl shadow-lg text-slate-800">
+                              {course.edit_request_status === 'pending' && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setEditRequestModalCourse(course)
+                                    setEditRequestHours(24)
+                                    setCustomHours('')
+                                    setAdminNotes('')
+                                  }}
+                                  className="text-amber-700 font-bold"
+                                >
+                                  Review Edit Request
+                                </DropdownMenuItem>
+                              )}
+                              {course.edit_request_status === 'submitted' && (
+                                <DropdownMenuItem
+                                  onClick={() => handleReApproveCourse(course.id, course.trainer_id, course.title)}
+                                  className="text-indigo-700 font-bold"
+                                >
+                                  Re-Approve & Publish Updates
+                                </DropdownMenuItem>
+                              )}
+                              {course.status === 'pending_review' && (
+                                <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')} className="text-emerald-700 font-medium">
+                                  Approve & Publish
+                                </DropdownMenuItem>
+                              )}
+                              {course.status === 'pending_review' && (
+                                <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'draft')}>
+                                  Return to Draft
+                                </DropdownMenuItem>
+                              )}
+                              {course.status === 'published' && (
+                                <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'archived')} className="text-rose-600">
+                                  Archive
+                                </DropdownMenuItem>
+                              )}
+                              {course.status === 'archived' && (
+                                <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')}>
+                                  Re-publish
+                                </DropdownMenuItem>
+                              )}
+                              {course.status === 'draft' && (
+                                <DropdownMenuItem onClick={() => updateCourseStatus(course.id, 'published')}>
+                                  Publish Directly
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
                   )
@@ -699,8 +818,20 @@ export function AdminCourses() {
                       </div>
                     )}
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2.5 mb-2">
                         <h3 className="text-lg font-bold text-slate-900">{selectedCourse.title}</h3>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAboutActiveTab('about')
+                            setAboutModalOpen(true)
+                          }}
+                          title="About Course & Outline"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300 text-xs font-bold transition-all shadow-xs cursor-pointer group shrink-0"
+                        >
+                          <Info className="w-3.5 h-3.5 text-cyan-600 group-hover:rotate-12 transition-transform" />
+                          <span>About</span>
+                        </button>
                         <StatusBadge status={selectedCourse.status} editStatus={selectedCourse.edit_request_status} windowExpiresAt={selectedCourse.edit_window_expires_at} />
                       </div>
                       <p className="text-sm text-slate-600 mb-2">{selectedCourse.description}</p>
@@ -718,7 +849,7 @@ export function AdminCourses() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                        <Layers className="w-4 h-4 text-cyan-600" /> Course Modules & Content Sequence ({modules.length})
+                        <BookOpen className="w-4 h-4 text-cyan-600" /> Course Modules & Content Sequence ({modules.length})
                       </div>
                       <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-600 border-slate-200">
                         Sequential Progression (≥80% quiz gate)
@@ -726,27 +857,27 @@ export function AdminCourses() {
                     </div>
                     <div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-4 space-y-3">
                       {modules.length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center py-4">No modules added yet.</p>
+                        <p className="text-xs text-slate-400 text-center py-4">No structured modules added yet.</p>
                       ) : (
                         modules.map((mod: any, mIdx: number) => {
-                          const steps = (mod.content_steps && Array.isArray(mod.content_steps)) ? mod.content_steps : []
+                          const rawItems = mod.items || mod.content_items || mod.content_steps || []
                           const quizQuestions = mod.quiz_questions || []
                           return (
                             <div key={mod.id || mIdx} className="bg-white rounded-xl border border-slate-200 p-3.5 space-y-2.5 shadow-xs">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="w-6 h-6 rounded-lg bg-cyan-100 text-cyan-800 font-bold text-xs flex items-center justify-center">
+                                  <div className="w-6 h-6 rounded-lg bg-cyan-100 text-cyan-800 font-bold text-xs flex items-center justify-center shrink-0">
                                     {mIdx + 1}
                                   </div>
                                   <div>
-                                    <h5 className="text-sm font-bold text-slate-900">{mod.title}</h5>
-                                    {mod.description && <p className="text-xs text-slate-500 line-clamp-1">{mod.description}</p>}
+                                    <h5 className="text-sm font-bold text-slate-900">{mod.title || `Module ${mIdx + 1}`}</h5>
+                                    {mod.description && <p className="text-xs text-slate-500 line-clamp-2">{mod.description}</p>}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  {steps.length > 0 && (
+                                <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                  {rawItems.length > 0 && (
                                     <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-200 text-slate-600">
-                                      {steps.length} sequential steps
+                                      {rawItems.length} content item{rawItems.length !== 1 ? 's' : ''}
                                     </Badge>
                                   )}
                                   {quizQuestions.length > 0 && (
@@ -757,16 +888,17 @@ export function AdminCourses() {
                                 </div>
                               </div>
 
-                              {/* Content Steps Pills */}
-                              {steps.length > 0 && (
+                              {/* Content Items Pills */}
+                              {rawItems.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 pt-1">
-                                  {steps.map((st: any, sIdx: number) => (
+                                  {rawItems.map((st: any, sIdx: number) => (
                                     <span key={st.id || sIdx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px] text-slate-700 font-medium">
                                       <span className="text-[9px] text-slate-400 font-bold">#{sIdx + 1}</span>
-                                      {st.step_type === 'video' && <Video className="w-3 h-3 text-rose-500" />}
-                                      {st.step_type === 'photo' && <ImageIcon className="w-3 h-3 text-cyan-600" />}
-                                      {st.step_type === 'text' && <FileText className="w-3 h-3 text-emerald-600" />}
-                                      <span className="truncate max-w-[150px]">{st.title || st.step_type}</span>
+                                      {(st.type === 'video' || st.step_type === 'video') && <Video className="w-3 h-3 text-rose-500" />}
+                                      {(st.type === 'photo' || st.step_type === 'photo') && <ImageIcon className="w-3 h-3 text-cyan-600" />}
+                                      {(st.type === 'notes' || st.type === 'document' || st.step_type === 'text') && <FileText className="w-3 h-3 text-emerald-600" />}
+                                      {st.type === 'quiz' && <HelpCircle className="w-3 h-3 text-purple-600" />}
+                                      <span className="truncate max-w-[180px]">{st.title || st.type || st.step_type}</span>
                                     </span>
                                   ))}
                                 </div>
@@ -1200,6 +1332,144 @@ export function AdminCourses() {
                   </Button>
                 </div>
               </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* About Course & Course Outline Modal */}
+      <Dialog open={aboutModalOpen} onOpenChange={setAboutModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl p-6 md:p-8 bg-white border border-slate-200 shadow-2xl">
+          <DialogHeader className="pb-4 border-b border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1 pr-6">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] font-bold uppercase text-cyan-800 bg-cyan-50 border-cyan-200">
+                    {selectedCourse?.course_type || 'Standard'} Program
+                  </Badge>
+                  {selectedCourse?.department && (
+                    <Badge variant="outline" className="text-[10px] font-semibold text-slate-600 border-slate-200">
+                      {selectedCourse.department}
+                    </Badge>
+                  )}
+                </div>
+                <DialogTitle className="text-xl md:text-2xl font-black text-slate-900 leading-tight">
+                  {selectedCourse?.title}
+                </DialogTitle>
+                <p className="text-xs text-slate-500 font-medium">
+                  {selectedCourse?.duration_minutes ? `${Math.floor(selectedCourse.duration_minutes / 60)} Hours` : 'Self-Paced'} &bull; Pass Gate: {selectedCourse?.passing_score || 80}%
+                </p>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="flex items-center gap-2 pt-4">
+              <button
+                type="button"
+                onClick={() => setAboutActiveTab('about')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  aboutActiveTab === 'about'
+                    ? 'bg-cyan-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                About This Course
+              </button>
+              <button
+                type="button"
+                onClick={() => setAboutActiveTab('outline')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  aboutActiveTab === 'outline'
+                    ? 'bg-cyan-600 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Course Outline & Roadmap
+              </button>
+            </div>
+          </DialogHeader>
+
+          {/* TAB 1: ABOUT THIS COURSE */}
+          {aboutActiveTab === 'about' && (
+            <div className="space-y-6 pt-2">
+              {/* Description */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-cyan-600" /> Course Overview
+                </h4>
+                <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200/80 whitespace-pre-line">
+                  {selectedCourse?.description || 'Comprehensive competency-based training designed for operational excellence.'}
+                </p>
+              </div>
+
+              {/* Objectives */}
+              {selectedCourse?.learning_objectives && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5 text-cyan-600" /> Key Learning Objectives
+                  </h4>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2 text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line font-normal">
+                    {getFormattedObjectives(selectedCourse.learning_objectives)}
+                  </div>
+                </div>
+              )}
+
+              {/* Key Course Specifications Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-2xl bg-cyan-50/50 border border-cyan-200/60">
+                  <span className="text-[10px] font-bold text-cyan-800 uppercase tracking-wider block">Passing Threshold</span>
+                  <span className="text-sm font-extrabold text-cyan-950 mt-0.5 block">{selectedCourse?.passing_score || 80}% Overall</span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Duration</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{selectedCourse?.duration_minutes ? `${Math.floor(selectedCourse.duration_minutes / 60)} Hours` : 'Flexible'}</span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Max Trainees</span>
+                  <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{selectedCourse?.max_trainees || 'Unlimited'} Seats</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: COURSE OUTLINE & ROADMAP */}
+          {aboutActiveTab === 'outline' && (
+            <div className="space-y-6 pt-2">
+              {/* Syllabus Document Download / Preview */}
+              {selectedCourse?.session_flow_document_path && (
+                <div className="p-4 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-5 h-5 text-cyan-700 shrink-0" />
+                    <div>
+                      <h5 className="text-xs font-bold text-cyan-950">Official Syllabus Document</h5>
+                      <p className="text-[11px] text-cyan-700">Detailed curriculum plan and reading materials</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenSessionDoc(selectedCourse.session_flow_document_path!)}
+                    disabled={docLoading}
+                    className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs h-8 rounded-xl shrink-0"
+                  >
+                    {docLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+                    View Document
+                  </Button>
+                </div>
+              )}
+
+              {/* Session Schedule & Timeline */}
+              {selectedCourse?.session_flow_text && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-cyan-600" /> Session Schedule & Timeline
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
+                    {selectedCourse.session_flow_text}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

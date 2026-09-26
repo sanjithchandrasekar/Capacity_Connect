@@ -30,7 +30,9 @@ type Material = Database['public']['Tables']['materials']['Row']
 
 export function CourseSessionsPage() {
   const { courseId } = useParams<{ courseId: string }>()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const isTrainer = profile?.role === 'trainer'
+  const baseCoursePath = isTrainer ? '/trainer/courses' : '/admin/courses'
   const [course, setCourse] = useState<Course | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
@@ -78,7 +80,11 @@ export function CourseSessionsPage() {
     if (!user || !courseId) return
     setLoading(true)
     try {
-      const { data: c } = await supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single()
+      let query = supabase.from('courses').select('*').eq('id', courseId)
+      if (profile?.role === 'trainer') {
+        query = query.eq('trainer_id', user.id)
+      }
+      const { data: c } = await query.single()
       if (c) setCourse(c)
 
       const { data: s } = await supabase.from('course_sessions').select('*').eq('course_id', courseId).order('order_index')
@@ -101,7 +107,7 @@ export function CourseSessionsPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, courseId])
+  }, [user, profile?.role, courseId])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -321,7 +327,7 @@ export function CourseSessionsPage() {
           <CardContent className="p-5 bg-white">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-bold text-slate-800">Session Materials</h4>
-              <Link to={`/trainer/courses/${courseId}/materials?session=${session.id}`}>
+              <Link to={`${baseCoursePath}/${courseId}/materials?session=${session.id}`}>
                 <Button variant="outline" size="sm" className="h-8 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold rounded-xl">Manage Materials</Button>
               </Link>
             </div>
@@ -351,7 +357,7 @@ export function CourseSessionsPage() {
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-4xl mx-auto space-y-6">
         <motion.div variants={fadeUp} className="flex items-center justify-between">
           <div>
-            <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-4 font-medium">
+            <Link to={`${baseCoursePath}/${courseId}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-4 font-medium">
               <ArrowLeft className="w-4 h-4" /> Back to Course
             </Link>
             <h2 className="text-2xl font-black tracking-tight text-slate-900">Course Sessions</h2>

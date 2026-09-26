@@ -15,7 +15,7 @@ export function AnnouncementsFeed() {
       try {
         let query = supabase
           .from('announcements')
-          .select('*, author:admins!author_id(full_name)')
+          .select('*')
           .eq('is_active', true)
           
         if (profile.role !== 'admin' && profile.role !== 'super_admin') {

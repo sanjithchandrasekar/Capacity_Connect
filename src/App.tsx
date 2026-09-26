@@ -44,7 +44,7 @@ const PerformancePage = lazy(() => import('./features/trainer/PerformancePage').
 const CourseSessionsPage = lazy(() => import('./features/trainer/CourseSessionsPage').then((m) => ({ default: m.CourseSessionsPage })))
 const TrainerProfile = lazy(() => import('./features/trainer/TrainerProfile').then((m) => ({ default: m.TrainerProfile })))
 const TrainerSkills = lazy(() => import('./features/trainer/TrainerSkills').then((m) => ({ default: m.TrainerSkills })))
-const NotificationsPage = lazy(() => import('./features/trainer/NotificationsPage').then((m) => ({ default: m.NotificationsPage })))
+const NotificationsPage = lazy(() => import('./features/notifications/UniversalNotificationsPage').then((m) => ({ default: m.UniversalNotificationsPage })))
 const CourseDetailPage = lazy(() => import('./features/trainer/CourseDetailPage').then((m) => ({ default: m.CourseDetailPage })))
 
 // Public & Profile/Settings pages
@@ -171,15 +171,20 @@ function AnimatedAppRoutes() {
               <Route element={<ProtectedRoute />}>
                 <Route element={<ApprovedRoute />}>
                   
+                  {/* Shared / Permitted Preview Assessment Route for Trainees and Admins */}
+                  <Route element={<RoleRoute allowedRoles={['trainee', 'admin', 'super_admin']} />}>
+                    <Route path="/trainee/courses/:courseId/assessments/:assessmentId" element={<TraineeAssessmentTest />} />
+                  </Route>
+
                   {/* Trainee routes */}
                   <Route element={<RoleRoute allowedRoles={['trainee']} />}>
                     <Route path="/trainee" element={<TraineeDashboard />} />
                     <Route path="/trainee/courses" element={<TraineeCourseCatalog />} />
                     <Route path="/trainee/courses/:courseId" element={<TraineeCourseDetails />} />
                     <Route path="/trainee/courses/:courseId/learn" element={<TraineeCourseLearnPage />} />
-                    <Route path="/trainee/courses/:courseId/assessments/:assessmentId" element={<TraineeAssessmentTest />} />
                     <Route path="/trainee/assessments" element={<TraineeAssessmentsHub />} />
                     <Route path="/trainee/my-learning" element={<TraineeMyLearning />} />
+                    <Route path="/trainee/notifications" element={<NotificationsPage />} />
                     <Route path="/trainee/profile" element={<ProfilePage />} />
                     <Route path="/trainee/settings" element={<Navigate to="/trainee/profile" replace />} />
                   </Route>
@@ -204,8 +209,18 @@ function AnimatedAppRoutes() {
                   {/* Admin routes */}
                   <Route element={<RoleRoute allowedRoles={['admin', 'super_admin']} />}>
                     <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/courses/new" element={<AdminCourseCreatePage />} />
+                    <Route path="/admin/courses" element={<AdminDashboard />} />
+                    <Route path="/admin/courses/:courseId" element={<CourseDetailPage />} />
                     <Route path="/admin/courses/:courseId/edit" element={<AdminCourseEditPage />} />
+                    <Route path="/admin/courses/:courseId/sessions" element={<CourseSessionsPage />} />
+                    <Route path="/admin/courses/:courseId/materials" element={<CourseMaterials />} />
+                    <Route path="/admin/courses/:courseId/assessments" element={<AssessmentsPage />} />
+                    <Route path="/admin/courses/:courseId/performance" element={<PerformancePage />} />
+                    <Route path="/admin/assessments" element={<AdminDashboard />} />
+                    <Route path="/admin/notifications" element={<AdminDashboard />} />
+                    <Route path="/admin/announcements" element={<AdminDashboard />} />
+                    <Route path="/admin/messages" element={<AdminDashboard />} />
+                    <Route path="/admin/courses/new" element={<AdminCourseCreatePage />} />
                     <Route path="/admin/profile" element={<ProfilePage />} />
                     <Route path="/admin/settings" element={<Navigate to="/admin/profile" replace />} />
                   </Route>

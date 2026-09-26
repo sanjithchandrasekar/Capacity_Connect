@@ -12,7 +12,7 @@ import {
   GraduationCap, Award, PlayCircle,
   ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle, BarChart3,
   HelpCircle, Sparkles, CheckSquare, RotateCcw, Unlock, Image as ImageIcon, Check, Trophy,
-  Eye, Film, Camera, AlignLeft, Globe
+  Eye, Film, Camera, AlignLeft, Globe, Bell, Info
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
@@ -122,6 +122,8 @@ export function TraineeCourseDetails() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [docLoading, setDocLoading] = useState(false)
+  const [aboutModalOpen, setAboutModalOpen] = useState(false)
+  const [aboutActiveTab, setAboutActiveTab] = useState<'about' | 'outline'>('about')
 
   // OTP Verification States
   const [otpDialogType, setOtpDialogType] = useState<'enroll' | 'drop' | null>(null)
@@ -686,14 +688,31 @@ export function TraineeCourseDetails() {
     setOtpInput('')
   }
 
+  const gradeBreakdown = calculateCourseGradeBreakdown({
+    moduleProgressPercent: enrollment?.progress_percent ?? (completedModules.length > 0 && course?.modules?.length ? Math.round((completedModules.length / course.modules.length) * 100) : 0),
+    courseAssessments: (course?.assessments || []) as any,
+    traineeAttempts,
+    passingScore: course?.passing_score ?? 50,
+  })
+
   const [downloadingCert, setDownloadingCert] = useState(false)
 
   const handleDownloadCertificate = async () => {
     if (!profile || !course) return
+    if (!gradeBreakdown.isCompleted) {
+      if (gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted) {
+        toast.error('You must take and pass the Final Assessment before downloading the certificate.')
+      } else if (!gradeBreakdown.isPassed) {
+        toast.error(`Your total score (${gradeBreakdown.totalScore}%) is below the passing criteria (${gradeBreakdown.passingScore}%).`)
+      } else {
+        toast.error('Please complete all course requirements before downloading the certificate.')
+      }
+      return
+    }
     setDownloadingCert(true)
     try {
       const traineeName = profile.full_name || user?.email?.split('@')[0] || 'Trainee'
-      const percentage = enrollment?.progress_percent ?? 100
+      const percentage = `${gradeBreakdown.totalScore}%`
 
       const { blob, fileName } = await generateTraineeCertificate(
         (course as any).certificate_template_url,
@@ -760,13 +779,6 @@ export function TraineeCourseDetails() {
     ? course.learning_objectives
     : []
 
-  const gradeBreakdown = calculateCourseGradeBreakdown({
-    moduleProgressPercent: enrollment?.progress_percent ?? (completedModules.length > 0 && course?.modules?.length ? Math.round((completedModules.length / course.modules.length) * 100) : 0),
-    courseAssessments: (course?.assessments || []) as any,
-    traineeAttempts,
-    passingScore: course?.passing_score ?? 50,
-  })
-
   return (
     <ErrorBoundary>
       <DashboardShell
@@ -777,6 +789,7 @@ export function TraineeCourseDetails() {
           { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
           { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
           { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+          { to: '/trainee/notifications', label: 'Notifications', icon: Bell },
           { to: '/trainee/profile', label: 'Profile', icon: User },
         ]}
       >
@@ -840,9 +853,22 @@ export function TraineeCourseDetails() {
                     )}
                   </div>
 
-                  <h1 className="text-3xl md:text-4xl font-black text-white mb-4 leading-tight max-w-3xl">
-                    {course.title}
-                  </h1>
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <h1 className="text-3xl md:text-4xl font-black text-white leading-tight">
+                      {course.title}
+                    </h1>
+                    <button
+                      onClick={() => {
+                        setAboutActiveTab('about')
+                        setAboutModalOpen(true)
+                      }}
+                      title="About Course"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 border border-cyan-400/40 text-xs font-bold transition-all shadow-xs backdrop-blur-md cursor-pointer group shrink-0"
+                    >
+                      <Info className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+                      <span>About</span>
+                    </button>
+                  </div>
 
                   {/* Meta chips */}
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-300 mb-6 font-medium">
@@ -893,7 +919,7 @@ export function TraineeCourseDetails() {
 
                   {/* CTA */}
                   <div className="flex flex-wrap items-center gap-3">
-                    {enrollment && (enrollment.status === 'completed' || enrollment.progress_percent === 100) ? (
+                    {enrollment && gradeBreakdown.isCompleted ? (
                       <div className="flex flex-wrap items-center gap-3">
                         <Button
                           onClick={handleDownloadCertificate}
@@ -914,12 +940,26 @@ export function TraineeCourseDetails() {
                       </div>
                     ) : isApprovedTrainee ? (
                       <div className="flex flex-wrap items-center gap-3">
+                        {gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted && gradeBreakdown.isFinalUnlocked ? (
+                          <Button
+                            onClick={() => {
+                              if (gradeBreakdown.finalAssessmentId) {
+                                window.location.href = `/trainee/courses/${courseId}/assessments/${gradeBreakdown.finalAssessmentId}`
+                              }
+                            }}
+                            className="bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-extrabold text-sm sm:text-base rounded-2xl px-8 py-4 shadow-xl shadow-purple-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 animate-pulse"
+                          >
+                            <FileCheck className="w-5 h-5 text-amber-300" />
+                            <span>Take Final Exam (50% Grade)</span>
+                          </Button>
+                        ) : null}
+
                         <Button
                           onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
                           className="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-extrabold text-sm sm:text-base rounded-2xl px-8 py-4 shadow-xl shadow-cyan-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                         >
                           <PlayCircle className="w-5 h-5" />
-                          <span>{enrollment?.progress_percent && enrollment.progress_percent > 0 ? 'Resume Learning' : 'Start Learning'}</span>
+                          <span>{enrollment?.progress_percent && enrollment.progress_percent >= 100 ? 'Review Modules' : enrollment?.progress_percent && enrollment.progress_percent > 0 ? 'Resume Learning' : 'Start Learning'}</span>
                           <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
                         </Button>
                         
@@ -1015,228 +1055,176 @@ export function TraineeCourseDetails() {
 
                   {/* 2. Resume Learning Action Banner / Completed Banner (for Approved Trainees) */}
                   {isApprovedTrainee && (() => {
-                    const isCourseFullyCompleted = Boolean(
-                      (enrollment?.progress_percent ?? 0) >= 100 ||
-                      (course.modules?.length > 0 && completedModules.length >= course.modules.length) ||
-                      enrollment?.status === 'completed'
-                    )
+                    const isCourseFullyCompleted = Boolean(gradeBreakdown.isCompleted)
+                    const isFinalPending = Boolean(gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted && gradeBreakdown.isFinalUnlocked)
 
                     return (
                       <div className={`border rounded-3xl p-6 shadow-xl relative overflow-hidden transition-all ${
                         isCourseFullyCompleted
                           ? 'bg-gradient-to-r from-[#061c14] via-[#08281b] to-[#04120c] border-emerald-500/40 shadow-emerald-950/30'
+                          : isFinalPending
+                          ? 'bg-gradient-to-r from-[#17092c] via-[#120724] to-[#080314] border-purple-500/40 shadow-purple-950/30'
                           : 'bg-gradient-to-r from-[#0c162c] via-[#091224] to-[#040814] border-cyan-500/30'
                       }`}>
                         <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl pointer-events-none ${
-                          isCourseFullyCompleted ? 'bg-emerald-500/15' : 'bg-cyan-500/15'
+                          isCourseFullyCompleted ? 'bg-emerald-500/15' : isFinalPending ? 'bg-purple-500/20' : 'bg-cyan-500/15'
                         }`} />
                         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               {isCourseFullyCompleted ? (
                                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                              ) : isFinalPending ? (
+                                <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse" />
                               ) : (
                                 <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
                               )}
                               <span className={`text-xs font-bold uppercase tracking-wider ${
-                                isCourseFullyCompleted ? 'text-emerald-400' : 'text-cyan-400'
+                                isCourseFullyCompleted ? 'text-emerald-400' : isFinalPending ? 'text-purple-300' : 'text-cyan-400'
                               }`}>
-                                {isCourseFullyCompleted ? 'Course Completed 🎉' : 'Active Learning Session'}
+                                {isCourseFullyCompleted ? 'Course Completed 🎉' : isFinalPending ? 'Final Exam Required 📝' : 'Active Learning Session'}
                               </span>
                             </div>
                             <h3 className="text-lg font-bold text-white">
                               {isCourseFullyCompleted
-                                ? "Course Completed! You've mastered all modules"
+                                ? "Course Completed! You've mastered all modules & evaluations"
+                                : isFinalPending
+                                ? "Modules Completed! Take the Final Exam to earn your certificate"
                                 : 'Ready to learn? Resume your course modules'}
                             </h3>
                             <p className="text-xs text-slate-300">
                               {isCourseFullyCompleted
-                                ? `All ${course.modules?.length || completedModules.length} modules completed • 100% overall progress`
+                                ? `All ${course.modules?.length || completedModules.length} modules completed • Grade: ${gradeBreakdown.totalScore}% (Passed)`
+                                : isFinalPending
+                                ? `All ${course.modules?.length || completedModules.length} modules completed (25/25 pts) • Final Exam (50% weight) ready to take`
                                 : `${completedModules.length} of ${course.modules?.length || 0} modules completed • ${enrollment?.progress_percent ?? 0}% overall progress`}
                             </p>
                           </div>
-                          <Button
-                            onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
-                            className={`text-white font-extrabold text-sm rounded-2xl px-6 py-3.5 shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shrink-0 ${
-                              isCourseFullyCompleted
-                                ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 shadow-emerald-500/25'
-                                : 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-500/30'
-                            }`}
-                          >
-                            {isCourseFullyCompleted ? <BookOpen className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
-                            <span>{isCourseFullyCompleted ? 'Review Modules' : 'Resume Learning'}</span>
-                            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-                          </Button>
+                          <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            {isFinalPending && gradeBreakdown.finalAssessmentId ? (
+                              <Button
+                                onClick={() => {
+                                  window.location.href = `/trainee/courses/${courseId}/assessments/${gradeBreakdown.finalAssessmentId}`
+                                }}
+                                className="bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-extrabold text-sm rounded-2xl px-6 py-3.5 shadow-lg shadow-purple-500/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                              >
+                                <FileCheck className="w-4 h-4 text-amber-300" />
+                                <span>Take Final Exam</span>
+                              </Button>
+                            ) : null}
+                            <Button
+                              onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
+                              className={`text-white font-extrabold text-sm rounded-2xl px-6 py-3.5 shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shrink-0 ${
+                                isCourseFullyCompleted
+                                  ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 shadow-emerald-500/25'
+                                  : isFinalPending
+                                  ? 'bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md'
+                                  : 'bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-500/30'
+                              }`}
+                            >
+                              {isCourseFullyCompleted || isFinalPending ? <BookOpen className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+                              <span>{isCourseFullyCompleted || isFinalPending ? 'Review Modules' : 'Resume Learning'}</span>
+                              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )
                   })()}
 
-                  {/* About */}
-                  {course.description && (
-                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
-                      <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-cyan-600" /> About This Course
-                      </h2>
-                      <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{course.description}</p>
-                    </div>
-                  )}
-
-                  {/* 1. Course Outline & Learning Roadmap Overview */}
-                  <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                      <div>
-                        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                          <ListOrdered className="w-4 h-4 text-cyan-600" /> Course Outline & Roadmap
-                        </h2>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Comprehensive sequence of modules, topics, practicals, and gated evaluations.
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {course.session_flow_document_path && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={docLoading}
-                            className="h-8 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold gap-1.5"
-                            onClick={handleOpenSessionDoc}
-                          >
-                            {docLoading
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <FileText className="w-3.5 h-3.5" />}
-                            View Syllabus Doc
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Syllabus Flow Steps (if defined) */}
-                    {course.session_flow_text && (
-                      <div className="bg-slate-50/70 border border-slate-200/70 rounded-2xl p-5">
-                        <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                          <Layers className="w-3.5 h-3.5 text-cyan-600" /> Session Schedule & Timeline
+                  {/* Curriculum Modules Sequence */}
+                  {course.modules && Array.isArray(course.modules) && course.modules.length > 0 && (
+                    <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                          <BookMarked className="w-4 h-4 text-cyan-600" /> Curriculum Modules ({course.modules.length})
                         </h3>
-                        {sessionFlowSteps.length > 0 ? (
-                          <div className="relative">
-                            <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-gradient-to-b from-cyan-300 via-sky-300 to-blue-300 rounded-full" />
-                            <ol className="space-y-4 pl-12">
-                              {sessionFlowSteps.map((step, i) => (
-                                <li key={i} className="relative">
-                                  <div className="absolute -left-8 top-0.5 w-5 h-5 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-[10px] font-black shadow-xs">
-                                    {step.number || i + 1}
-                                  </div>
-                                  <div className="group">
-                                    <p className="text-sm font-bold text-slate-900 leading-snug">{step.title}</p>
-                                    {step.description && (
-                                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{step.description}</p>
-                                    )}
-                                  </div>
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{course.session_flow_text}</p>
-                        )}
+                        <span className="text-[11px] font-semibold text-cyan-700 bg-cyan-50 px-2.5 py-1 rounded-full border border-cyan-200">
+                          Passing Gate: ≥80% on Module Quizzes
+                        </span>
                       </div>
-                    )}
 
-                    {/* Modules Overview Cards */}
-                    {course.modules && Array.isArray(course.modules) && course.modules.length > 0 && (
-                      <div className="space-y-3 pt-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                            <BookMarked className="w-3.5 h-3.5 text-cyan-600" /> Curriculum Modules ({course.modules.length})
-                          </h3>
-                          <span className="text-[11px] font-semibold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
-                            Passing Gate: ≥80% on Module Quizzes
-                          </span>
-                        </div>
+                      <div className="space-y-2.5">
+                        {course.modules.map((mod: any, mIdx: number) => {
+                          const isCompleted = completedModules.includes(mod.id)
+                          const isUnlocked = isApprovedTrainee && (mIdx === 0 || completedModules.includes(course.modules[mIdx - 1]?.id))
+                          const rawItems = mod.items || mod.content_items || []
+                          const quizCount = rawItems.filter((i: any) => i.type === 'quiz').length + (mod.quiz_questions?.length || 0)
 
-                        <div className="space-y-2.5">
-                          {course.modules.map((mod: any, mIdx: number) => {
-                            const isCompleted = completedModules.includes(mod.id)
-                            const isUnlocked = isApprovedTrainee && (mIdx === 0 || completedModules.includes(course.modules[mIdx - 1]?.id))
-                            const rawItems = mod.items || mod.content_items || []
-                            const quizCount = rawItems.filter((i: any) => i.type === 'quiz').length + (mod.quiz_questions?.length || 0)
-
-                            return (
-                              <div
-                                key={mod.id || mIdx}
-                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                          return (
+                            <div
+                              key={mod.id || mIdx}
+                              className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                isCompleted
+                                  ? 'bg-emerald-50/40 border-emerald-200 shadow-xs'
+                                  : isUnlocked
+                                    ? 'bg-cyan-50/20 border-cyan-200/80 shadow-xs'
+                                    : 'bg-slate-50/50 border-slate-200/80 opacity-85'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3.5 min-w-0">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
                                   isCompleted
-                                    ? 'bg-emerald-50/40 border-emerald-200 shadow-xs'
+                                    ? 'bg-emerald-500 text-white'
                                     : isUnlocked
-                                      ? 'bg-cyan-50/20 border-cyan-200/80 shadow-xs'
-                                      : 'bg-slate-50/50 border-slate-200/80 opacity-85'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3.5 min-w-0">
-                                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                                    isCompleted
-                                      ? 'bg-emerald-500 text-white'
-                                      : isUnlocked
-                                        ? 'bg-cyan-600 text-white'
-                                        : 'bg-slate-200 text-slate-500'
-                                  }`}>
-                                    {isCompleted ? <Check className="w-4 h-4 stroke-[3]" /> : mIdx + 1}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm font-bold text-slate-900 truncate">
-                                        {mod.title || `Module ${mIdx + 1}`}
-                                      </p>
-                                      {isCompleted ? (
-                                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] font-bold">
-                                          Completed
-                                        </Badge>
-                                      ) : isUnlocked ? (
-                                        <Badge className="bg-cyan-100 text-cyan-800 border-cyan-200 text-[10px] font-bold">
-                                          Unlocked
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="outline" className="text-slate-400 border-slate-200 text-[10px] flex items-center gap-1">
-                                          <Lock className="w-2.5 h-2.5" /> Locked
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    {mod.description && (
-                                      <p className="text-xs text-slate-500 truncate max-w-xl mt-0.5">{mod.description}</p>
+                                      ? 'bg-cyan-600 text-white'
+                                      : 'bg-slate-200 text-slate-500'
+                                }`}>
+                                  {isCompleted ? <Check className="w-4 h-4 stroke-[3]" /> : mIdx + 1}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-bold text-slate-900 truncate">
+                                      {mod.title || `Module ${mIdx + 1}`}
+                                    </p>
+                                    {isCompleted ? (
+                                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] font-bold">
+                                        Completed
+                                      </Badge>
+                                    ) : isUnlocked ? (
+                                      <Badge className="bg-cyan-100 text-cyan-800 border-cyan-200 text-[10px] font-bold">
+                                        Unlocked
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-slate-400 border-slate-200 text-[10px] flex items-center gap-1">
+                                        <Lock className="w-2.5 h-2.5" /> Locked
+                                      </Badge>
                                     )}
                                   </div>
-                                </div>
-
-                                <div className="flex items-center gap-3 shrink-0 ml-4">
-                                  <div className="text-right hidden sm:block">
-                                    <span className="text-[11px] text-slate-500 font-medium">
-                                      {rawItems.length} item{rawItems.length !== 1 ? 's' : ''}
-                                      {quizCount > 0 ? ` • ${quizCount} Quiz` : ''}
-                                    </span>
-                                  </div>
-                                  {isApprovedTrainee ? (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
-                                      className="h-7 px-2.5 rounded-lg text-xs font-semibold text-cyan-700 hover:text-cyan-800 hover:bg-cyan-100/60"
-                                    >
-                                      Launch Player <ExternalLink className="w-3 h-3 ml-1" />
-                                    </Button>
-                                  ) : (
-                                    <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                                      <Lock className="w-3 h-3" /> Locked
-                                    </span>
+                                  {mod.description && (
+                                    <p className="text-xs text-slate-500 truncate max-w-xl mt-0.5">{mod.description}</p>
                                   )}
                                 </div>
                               </div>
-                            )
-                          })}
-                        </div>
+
+                              <div className="flex items-center gap-3 shrink-0 ml-4">
+                                <div className="text-right hidden sm:block">
+                                  <span className="text-[11px] text-slate-500 font-medium">
+                                    {rawItems.length} item{rawItems.length !== 1 ? 's' : ''}
+                                    {quizCount > 0 ? ` • ${quizCount} Quiz` : ''}
+                                  </span>
+                                </div>
+                                {isApprovedTrainee ? (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => window.open(`/trainee/courses/${courseId}/learn`, '_blank')}
+                                    className="h-7 px-2.5 rounded-lg text-xs font-semibold text-cyan-700 hover:text-cyan-800 hover:bg-cyan-100/60"
+                                  >
+                                    Launch Player <ExternalLink className="w-3 h-3 ml-1" />
+                                  </Button>
+                                ) : (
+                                  <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                                    <Lock className="w-3 h-3" /> Locked
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* 2. Outcomes of Learning & Skills Developed */}
                   {(objectives.length > 0 || (courseSkills && courseSkills.length > 0)) && (
@@ -1932,6 +1920,213 @@ export function TraineeCourseDetails() {
           onClose={() => setPreviewMaterial(null)}
           onDownload={() => previewMaterial && handleDownload(previewMaterial)}
         />
+
+        {/* About Course & Course Outline Modal */}
+        <Dialog open={aboutModalOpen} onOpenChange={setAboutModalOpen}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl p-6 md:p-8 bg-white border border-slate-200 shadow-2xl">
+            <DialogHeader className="pb-4 border-b border-slate-100">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-1 pr-6">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase text-cyan-800 bg-cyan-50 border-cyan-200">
+                      {course?.course_type || 'Standard'} Program
+                    </Badge>
+                    {course?.department && (
+                      <Badge variant="outline" className="text-[10px] font-semibold text-slate-600 border-slate-200">
+                        {course.department}
+                      </Badge>
+                    )}
+                  </div>
+                  <DialogTitle className="text-xl md:text-2xl font-black text-slate-900 leading-tight">
+                    {course?.title}
+                  </DialogTitle>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Instructor: {course?.trainer?.full_name || 'Assigned Instructor'} &bull; {course?.duration_minutes ? `${Math.floor(course.duration_minutes / 60)}h` : 'Self-Paced'} &bull; Pass Gate: {course?.passing_score || 80}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Navigation Tabs */}
+              <div className="flex items-center gap-2 pt-4">
+                <button
+                  onClick={() => setAboutActiveTab('about')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    aboutActiveTab === 'about'
+                      ? 'bg-cyan-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  About This Course
+                </button>
+                <button
+                  onClick={() => setAboutActiveTab('outline')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    aboutActiveTab === 'outline'
+                      ? 'bg-cyan-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  Course Outline & Roadmap
+                </button>
+              </div>
+            </DialogHeader>
+
+            {/* TAB 1: ABOUT THIS COURSE */}
+            {aboutActiveTab === 'about' && (
+              <div className="space-y-6 pt-2">
+                {/* Description */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-cyan-600" /> Course Overview
+                  </h4>
+                  <p className="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200/80 whitespace-pre-line">
+                    {course?.description || 'Comprehensive competency-based training designed for operational excellence across MoES divisions.'}
+                  </p>
+                </div>
+
+                {/* Objectives */}
+                {(objectives.length > 0 || course?.learning_objectives) && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-cyan-600" /> Key Learning Objectives
+                    </h4>
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
+                      {objectives.length > 0 ? (
+                        <ul className="space-y-2">
+                          {objectives.map((obj, i) => (
+                            <li key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700">
+                              <CheckCircle2 className="w-4 h-4 text-cyan-600 shrink-0 mt-0.5" />
+                              <span>{obj}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs sm:text-sm text-slate-700 whitespace-pre-line">
+                          {typeof course?.learning_objectives === 'string'
+                            ? course.learning_objectives
+                            : JSON.stringify(course?.learning_objectives)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Course Specifications Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-cyan-50/50 border border-cyan-200/60">
+                    <span className="text-[10px] font-bold text-cyan-800 uppercase tracking-wider block">Passing Threshold</span>
+                    <span className="text-sm font-extrabold text-cyan-950 mt-0.5 block">{course?.passing_score || 80}% Overall</span>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Duration</span>
+                    <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">{course?.duration_minutes ? `${Math.floor(course.duration_minutes / 60)} Hours` : 'Flexible'}</span>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Curriculum Gate</span>
+                    <span className="text-sm font-extrabold text-slate-900 mt-0.5 block">≥80% Module Quiz</span>
+                  </div>
+                </div>
+
+                {/* Instructor Information */}
+                {course?.trainer && (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 text-white font-extrabold text-base flex items-center justify-center shrink-0 shadow-xs">
+                      {course.trainer.full_name?.charAt(0) || 'T'}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider block">Assigned Instructor</span>
+                      <h5 className="text-sm font-bold text-slate-900 truncate">{course.trainer.full_name}</h5>
+                      <p className="text-xs text-slate-500 truncate">{course.trainer.email || 'MoES Certified Trainer'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: COURSE OUTLINE & ROADMAP */}
+            {aboutActiveTab === 'outline' && (
+              <div className="space-y-6 pt-2">
+                {/* Syllabus Document Download / Preview */}
+                {course?.session_flow_document_path && (
+                  <div className="p-4 rounded-2xl bg-cyan-50/70 border border-cyan-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText className="w-5 h-5 text-cyan-700 shrink-0" />
+                      <div>
+                        <h5 className="text-xs font-bold text-cyan-950">Official Syllabus Document</h5>
+                        <p className="text-[11px] text-cyan-700">Detailed curriculum plan and reading materials</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleOpenSessionDoc}
+                      disabled={docLoading}
+                      className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs h-8 rounded-xl shrink-0"
+                    >
+                      {docLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+                      View Document
+                    </Button>
+                  </div>
+                )}
+
+                {/* Session Schedule & Timeline */}
+                {course?.session_flow_text && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-cyan-600" /> Session Schedule & Timeline
+                    </h4>
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
+                      {course.session_flow_text}
+                    </div>
+                  </div>
+                )}
+
+                {/* Structured Modules Preview */}
+                {course?.modules && Array.isArray(course.modules) && course.modules.length > 0 && (
+                  <div className="space-y-3 pt-1">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <BookMarked className="w-3.5 h-3.5 text-cyan-600" /> Learning Modules Breakdown ({course.modules.length})
+                    </h4>
+                    <div className="space-y-2.5">
+                      {course.modules.map((mod: any, mIdx: number) => {
+                        const rawItems = mod.items || mod.content_items || []
+                        const quizQuestions = mod.quiz_questions || []
+                        const videoCount = rawItems.filter((i: any) => i.type === 'video').length
+                        const notesCount = rawItems.filter((i: any) => i.type === 'notes' || i.type === 'pdf' || i.type === 'doc').length
+                        const quizCount = quizQuestions.length + rawItems.filter((i: any) => i.type === 'quiz').length
+
+                        return (
+                          <div key={mod.id || mIdx} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-6 h-6 rounded-lg bg-cyan-100 text-cyan-800 font-bold text-xs flex items-center justify-center shrink-0">
+                                  {mIdx + 1}
+                                </span>
+                                <h5 className="text-xs sm:text-sm font-bold text-slate-900">{mod.title || `Module ${mIdx + 1}`}</h5>
+                              </div>
+                              <Badge variant="outline" className="text-[10px] font-semibold bg-white border-slate-200 text-slate-600 shrink-0">
+                                {rawItems.length} activities
+                              </Badge>
+                            </div>
+                            {mod.description && (
+                              <p className="text-xs text-slate-500 pl-8 line-clamp-2">{mod.description}</p>
+                            )}
+                            <div className="flex items-center gap-3 pl-8 pt-1 text-[10px] text-slate-500 font-medium">
+                              {videoCount > 0 && <span className="text-blue-600 font-semibold">{videoCount} Video{videoCount > 1 ? 's' : ''}</span>}
+                              {notesCount > 0 && <span className="text-emerald-600 font-semibold">{notesCount} Note{notesCount > 1 ? 's' : ''}</span>}
+                              {quizCount > 0 && <span className="text-purple-600 font-semibold">{quizCount} Quiz Qs (≥80% gate)</span>}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={otpDialogType !== null} onOpenChange={(open) => !open && handleCloseOtpDialog()}>
           <DialogContent className="max-w-sm rounded-3xl p-6 bg-white border border-slate-200 shadow-2xl">

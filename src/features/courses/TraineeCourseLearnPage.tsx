@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
+import { calculateCourseGradeBreakdown } from '@/lib/courseGrading'
 
 function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null
@@ -276,7 +277,7 @@ export function TraineeCourseLearnPage() {
   })
 
   // Fetch course assessments to know if a Final Assessment exists
-  const { data: courseAssessments } = useQuery({
+  const { data: courseAssessments = [] } = useQuery({
     queryKey: ['learn-course-assessments', courseId],
     queryFn: async () => {
       if (!courseId) return []
@@ -291,7 +292,30 @@ export function TraineeCourseLearnPage() {
     enabled: !!courseId,
   })
 
+  // Fetch Trainee assessment attempts for grade breakdown
+  const { data: traineeAttempts = [] } = useQuery({
+    queryKey: ['trainee-attempts-learn', courseId, profile?.id],
+    queryFn: async () => {
+      if (!profile?.id || !courseId) return []
+      const { data, error } = await supabase
+        .from('assessment_attempts')
+        .select('*, assessment:assessments!inner(course_id, assessment_type, title, passing_score)')
+        .eq('user_id', profile.id)
+        .eq('assessment.course_id', courseId)
+      if (error) return []
+      return data || []
+    },
+    enabled: !!courseId && !!profile?.id,
+  })
+
   const finalAssessment = courseAssessments?.find((a: any) => a.assessment_type === 'final')
+
+  const gradeBreakdown = calculateCourseGradeBreakdown({
+    moduleProgressPercent: enrollment?.progress_percent ?? (course?.modules?.length && completedModules.length >= course.modules.length ? 100 : 0),
+    courseAssessments: (courseAssessments || []) as any,
+    traineeAttempts: traineeAttempts as any,
+    passingScore: course?.passing_score ?? 50,
+  })
 
   const isApproved = Boolean(enrollment && (['enrolled', 'in_progress', 'completed'] as string[]).includes((enrollment as any).status))
 
@@ -666,6 +690,16 @@ export function TraineeCourseLearnPage() {
 
   const handleDownloadCertificate = async () => {
     if (!course || !profile) return
+    if (!gradeBreakdown.isCompleted) {
+      if (gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted) {
+        toast.error('You must take and pass the Final Assessment before downloading the certificate.')
+      } else if (!gradeBreakdown.isPassed) {
+        toast.error(`Your overall grade (${gradeBreakdown.totalScore}%) is below the passing requirement (${gradeBreakdown.passingScore}%).`)
+      } else {
+        toast.error('Please complete all course requirements before downloading the certificate.')
+      }
+      return
+    }
     setDownloadingCert(true)
     try {
       const result = await generateTraineeCertificate((course as any).certificate_template_url || null, {
@@ -675,7 +709,7 @@ export function TraineeCourseLearnPage() {
         courseId: course.id,
         courseTitle: course.title,
         trainerName: (course as any).trainer?.full_name || 'Assigned Instructor',
-        percentage: '100%',
+        percentage: `${gradeBreakdown.totalScore}%`,
         completedAt: new Date().toISOString(),
         certificateId: 'CC-' + course.id.slice(0, 6).toUpperCase() + '-' + profile.id.slice(0, 4).toUpperCase(),
       })
@@ -1652,23 +1686,31 @@ export function TraineeCourseLearnPage() {
               {isLastModule ? (
                 isCurrentCompleted || quizResult?.passed ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    {finalAssessment ? (
+                    {gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted ? (
                       <Button
-                        onClick={() => navigate(`/trainee/courses/${courseId}/assessments/${finalAssessment.id}`)}
-                        className="bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-6 py-3 shadow-xl shadow-purple-500/25 gap-2 hover:scale-105 active:scale-95 transition-all"
+                        onClick={() => navigate(`/trainee/courses/${courseId}/assessments/${gradeBreakdown.finalAssessmentId}`)}
+                        className="bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-6 py-3 shadow-xl shadow-purple-500/25 gap-2 hover:scale-105 active:scale-95 transition-all animate-pulse"
                       >
                         <Award className="w-4 h-4 text-amber-300" />
                         <span>Take Final Assessment (50% Grade) →</span>
                       </Button>
-                    ) : null}
-                    <Button
-                      onClick={handleDownloadCertificate}
-                      disabled={downloadingCert}
-                      className="bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-600 hover:from-amber-600 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-5 py-3 shadow-xl shadow-cyan-500/25 gap-2"
-                    >
-                      {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
-                      {downloadingCert ? 'Generating...' : 'Download Certificate 🎓'}
-                    </Button>
+                    ) : gradeBreakdown.isCompleted ? (
+                      <Button
+                        onClick={handleDownloadCertificate}
+                        disabled={downloadingCert}
+                        className="bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-600 hover:from-amber-600 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-5 py-3 shadow-xl shadow-cyan-500/25 gap-2 hover:scale-105 active:scale-95 transition-all"
+                      >
+                        {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                        {downloadingCert ? 'Generating...' : 'Download Certificate 🎓'}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => navigate(`/trainee/courses/${courseId}`)}
+                        className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl px-5 py-3 shadow-md gap-2"
+                      >
+                        <span>View Course Assessments & Progress →</span>
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <Button
