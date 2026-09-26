@@ -5,25 +5,43 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
+import { useConfirm } from '@/hooks/useConfirm'
 
-export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: any, enrollments: any[] }) {
+export function LiveAttendanceTrainerPanel({ session, enrollments, isCompleted }: { session: any, enrollments: any[], isCompleted?: boolean }) {
   const [activeOtp, setActiveOtp] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(0)
   const [totalGenerated, setTotalGenerated] = useState(0)
   const [roster, setRoster] = useState<Record<string, { entered: number, override?: 'P' | 'F' }>>({})
   const [channel, setChannel] = useState<any>(null)
+  const [ConfirmDialog, confirm] = useConfirm()
+
+  const [isManualMapping, setIsManualMapping] = useState(false)
 
   // Initialize total generated and real-time channel
   useEffect(() => {
     if (!session?.id) return
-    const key = `attendance_meta_${session.id}`
-    const meta = JSON.parse(localStorage.getItem(key) || '{"generated":0}')
-    setTotalGenerated(meta.generated || 0)
+
+    const loadMeta = async () => {
+      const { data } = await (supabase as any).from('session_attendance_meta').select('*').eq('session_id', session.id).maybeSingle()
+      if (data) {
+        setTotalGenerated(data.total_generated || 0)
+        setIsManualMapping(data.is_manual_mapping || false)
+      }
+    }
+    loadMeta()
     
-    // Load persisted roster
-    const rKey = `trainer_roster_${session.id}`
-    const rData = JSON.parse(localStorage.getItem(rKey) || '{}')
-    setRoster(rData)
+    // Load persisted roster from DB
+    const loadRoster = async () => {
+      const { data } = await (supabase as any).from('session_attendance').select('user_id, entered_count, status_override').eq('session_id', session.id)
+      if (data) {
+        const rData: Record<string, { entered: number, override?: 'P' | 'F' }> = {}
+        data.forEach(row => {
+          rData[row.user_id] = { entered: row.entered_count, override: row.status_override as any }
+        })
+        setRoster(rData)
+      }
+    }
+    loadRoster()
     
     const active = JSON.parse(localStorage.getItem(`active_otp_${session.id}`) || 'null')
     if (active && active.expiresAt > Date.now()) {
@@ -49,36 +67,53 @@ export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: 
       config: { presence: { key: 'trainer' } }
     })
     
-    ch.on('broadcast', { event: 'trainee_otp_entered' }, (payload) => {
+    ch.on('broadcast', { event: 'trainee_otp_entered' }, async (payload) => {
       const { userId } = payload.payload
       setRoster(prev => {
         const curr = prev[userId] || { entered: 0 }
         const next = { ...prev, [userId]: { ...curr, entered: curr.entered + 1 } }
-        localStorage.setItem(`trainer_roster_${session.id}`, JSON.stringify(next))
         return next
       })
+      // Sync DB
+      await (supabase as any).from('session_attendance').upsert({
+        session_id: session.id,
+        user_id: userId,
+        entered_count: (roster[userId]?.entered || 0) + 1
+      }, { onConflict: 'session_id,user_id' })
       toast.success('A trainee verified their attendance!')
     })
 
-    ch.on('broadcast', { event: 'trainee_sync' }, (payload) => {
+    ch.on('broadcast', { event: 'trainee_sync' }, async (payload) => {
       const { userId, entered } = payload.payload
       setRoster(prev => {
         const curr = prev[userId] || { entered: 0 }
         if (curr.entered >= entered) return prev
         const next = { ...prev, [userId]: { ...curr, entered } }
-        localStorage.setItem(`trainer_roster_${session.id}`, JSON.stringify(next))
         return next
       })
+      
+      const curr = roster[userId] || { entered: 0 }
+      if (curr.entered < entered) {
+        await (supabase as any).from('session_attendance').upsert({
+          session_id: session.id,
+          user_id: userId,
+          entered_count: entered
+        }, { onConflict: 'session_id,user_id' })
+      }
     })
     
     ch.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         const active = JSON.parse(localStorage.getItem(`active_otp_${session.id}`) || 'null')
-        const meta = JSON.parse(localStorage.getItem(`attendance_meta_${session.id}`) || '{"generated":0}')
+        // Get meta from DB
+        const { data } = await (supabase as any).from('session_attendance_meta').select('*').eq('session_id', session.id).maybeSingle()
+        const meta = data || { total_generated: 0, is_manual_mapping: false }
+        
         await ch.track({ 
           activeOtp: active && active.expiresAt > Date.now() ? active.code : null, 
           expiresAt: active && active.expiresAt > Date.now() ? active.expiresAt : 0,
-          generated: meta.generated || 0 
+          generated: meta.total_generated || 0,
+          isManualMapping: meta.is_manual_mapping || false
         })
         
         // Ask all online trainees to report their current score
@@ -108,50 +143,108 @@ export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: 
     
     // Increment total generated
     const newTotal = totalGenerated + 1
-    localStorage.setItem(`attendance_meta_${session.id}`, JSON.stringify({ generated: newTotal }))
+    ;(supabase as any).from('session_attendance_meta').upsert({
+      session_id: session.id,
+      total_generated: newTotal,
+      is_manual_mapping: isManualMapping
+    }).then()
     setTotalGenerated(newTotal)
     
     setActiveOtp(code)
     setTimeLeft(30)
     
     if (channel) {
-      channel.track({ activeOtp: code, expiresAt, generated: newTotal })
+      channel.track({ activeOtp: code, expiresAt, generated: newTotal, isManualMapping })
     }
     
     toast.success("Attendance check triggered!")
   }
 
-  const adjustScore = (userId: string, newScoreVal: number, traineeName: string) => {
-    setRoster(prev => {
-      const curr = prev[userId] || { entered: 0 }
-      const newScore = Math.max(0, Math.min(totalGenerated, newScoreVal))
-      
-      const next = { ...prev, [userId]: { ...curr, entered: newScore } }
-      delete next[userId].override // Clear override since we are adjusting score manually
-      
-      localStorage.setItem(`trainer_roster_${session.id}`, JSON.stringify(next))
-      
-      const tKey = `trainee_attendance_${session.id}_${userId}`
-      const existing = JSON.parse(localStorage.getItem(tKey) || '{"entered":0}')
-      existing.entered = newScore
-      delete existing.override // Clear override
-      localStorage.setItem(tKey, JSON.stringify(existing))
+  const enableManualMapping = async () => {
+    await (supabase as any).from('session_attendance_meta').upsert({
+      session_id: session.id,
+      total_generated: totalGenerated,
+      is_manual_mapping: true
+    })
+    setIsManualMapping(true)
+    if (channel) {
+      channel.track({ activeOtp: null, expiresAt: 0, generated: totalGenerated, isManualMapping: true })
+    }
+    toast.success("Manual mapping enabled!")
+  }
+
+  const disableManualMapping = async () => {
+    await (supabase as any).from('session_attendance_meta').upsert({
+      session_id: session.id,
+      total_generated: totalGenerated,
+      is_manual_mapping: false
+    })
+    setIsManualMapping(false)
+    
+    // Reset roster checks to 0
+    const nextRoster = { ...roster }
+    const updates = []
+    Object.keys(nextRoster).forEach(userId => {
+      nextRoster[userId].entered = 0
+      updates.push({
+        session_id: session.id,
+        user_id: userId,
+        entered_count: 0
+      })
       
       if (channel) {
         channel.send({
           type: 'broadcast',
           event: 'score_adjusted',
-          payload: { userId, entered: newScore }
+          payload: { userId, entered: 0 }
         })
       }
+    })
+    setRoster(nextRoster)
+    if (updates.length > 0) {
+      await (supabase as any).from('session_attendance').upsert(updates as any, { onConflict: 'session_id,user_id' })
+    }
+
+    if (channel) {
+      channel.track({ activeOtp: null, expiresAt: 0, generated: totalGenerated, isManualMapping: false })
+    }
+    toast.success("Manual mapping disabled")
+  }
+
+  const adjustScore = async (userId: string, newScoreVal: number, traineeName: string) => {
+    let finalScore = newScoreVal;
+    setRoster(prev => {
+      const curr = prev[userId] || { entered: 0 }
+      const maxPossible = (totalGenerated === 0 && isManualMapping) ? 1 : totalGenerated
+      const newScore = Math.max(0, Math.min(maxPossible, newScoreVal))
+      finalScore = newScore;
+      
+      const next = { ...prev, [userId]: { ...curr, entered: newScore } }
+      delete next[userId].override // Clear override since we are adjusting score manually
       
       return next
     })
+
+    await (supabase as any).from('session_attendance').upsert({
+      session_id: session.id,
+      user_id: userId,
+      entered_count: finalScore,
+      status_override: null
+    }, { onConflict: 'session_id,user_id' })
+
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'score_adjusted',
+        payload: { userId, entered: finalScore }
+      })
+    }
     toast.success(`Score adjusted for ${traineeName}`)
   }
 
   return (
     <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+      <ConfirmDialog />
       {/* Header Section */}
       <div className="p-6 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -162,15 +255,43 @@ export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: 
           <p className="text-sm text-slate-500 mt-1">
             Trigger a random 6-digit PIN. Trainees have 30 seconds to enter it.
           </p>
-          <div className="mt-3">
-             <Badge variant="outline" className="bg-white">
-                {totalGenerated} checks generated so far
+          <div className="mt-3 flex gap-2">
+             <Badge variant="outline" className="bg-white text-slate-600 border-slate-200 shadow-sm">
+                {totalGenerated} check{totalGenerated === 1 ? '' : 's'} generated so far
              </Badge>
+             {isManualMapping && (
+               <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 shadow-sm">
+                 Manual Mode Active
+               </Badge>
+             )}
           </div>
         </div>
         
-        <div className="shrink-0 flex flex-col items-end">
-          {activeOtp ? (
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          {isCompleted ? (
+            <div className="flex flex-col items-end gap-2">
+              <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 font-bold px-3 py-1.5 rounded-lg shadow-none">
+                <Check className="w-3.5 h-3.5 mr-1" /> Session Completed
+              </Badge>
+              {!isManualMapping ? (
+                <Button 
+                  onClick={enableManualMapping}
+                  variant="outline"
+                  className="border-cyan-600 text-cyan-700 hover:bg-cyan-50 font-bold h-10 px-4 rounded-xl"
+                >
+                  Enable Manual Mapping
+                </Button>
+              ) : (
+                <Button 
+                  onClick={disableManualMapping}
+                  variant="outline"
+                  className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold h-10 px-4 rounded-xl"
+                >
+                  Disable Manual Mapping
+                </Button>
+              )}
+            </div>
+          ) : activeOtp ? (
             <div className="text-center">
               <div className="text-4xl font-black tracking-widest text-cyan-600 bg-cyan-50 px-6 py-2 rounded-lg border border-cyan-200">
                 {activeOtp}
@@ -202,9 +323,12 @@ export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: 
             const trainee = e.trainee || { full_name: 'Unknown', email: '' }
             const rData = roster[e.user_id] || { entered: 0 }
             
-            const pct = totalGenerated > 0 ? Math.round((rData.entered / totalGenerated) * 100) : 0
             let autoStatus = 'Absent'
             let autoColor = 'text-rose-600 bg-rose-50'
+            
+            const effectiveTotal = (totalGenerated === 0 && isManualMapping) ? 1 : totalGenerated
+            const pct = effectiveTotal > 0 ? Math.round((rData.entered / effectiveTotal) * 100) : 0
+            
             if (pct >= 75) {
               autoStatus = 'Present'
               autoColor = 'text-emerald-600 bg-emerald-50'
@@ -212,7 +336,7 @@ export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: 
               autoStatus = 'Partial'
               autoColor = 'text-amber-600 bg-amber-50'
             }
-            if (totalGenerated === 0) {
+            if (effectiveTotal === 0) {
               autoStatus = 'Pending'
               autoColor = 'text-slate-600 bg-slate-100'
             }
@@ -237,7 +361,15 @@ export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: 
                 <div className="flex items-center gap-6 shrink-0">
                   <div className="text-right">
                     <p className="text-xs font-medium text-slate-500">Auto Score</p>
-                    <p className="font-bold text-slate-800 text-sm">{rData.entered} / {totalGenerated || 0}</p>
+                    <p className="font-bold text-slate-800 text-sm">
+                      {isManualMapping && totalGenerated === 0 ? (
+                         <span className={rData.entered === 1 ? 'text-emerald-600' : 'text-rose-600'}>
+                           {rData.entered === 1 ? 'Present' : 'Absent'}
+                         </span>
+                      ) : (
+                        `${rData.entered} / ${totalGenerated || 0}`
+                      )}
+                    </p>
                   </div>
                   
                   <div className="w-32">
@@ -247,7 +379,7 @@ export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: 
                   </div>
 
                   <div className="flex items-center gap-1.5 border-l border-slate-200 pl-4 w-32 flex-wrap justify-end">
-                    {Array.from({ length: totalGenerated }, (_, i) => {
+                    {Array.from({ length: effectiveTotal }, (_, i) => {
                       const isChecked = i < rData.entered
                       return (
                         <button
@@ -264,7 +396,7 @@ export function LiveAttendanceTrainerPanel({ session, enrollments }: { session: 
                         </button>
                       )
                     })}
-                    {totalGenerated === 0 && (
+                    {effectiveTotal === 0 && (
                       <span className="text-xs text-slate-400 italic">No checks</span>
                     )}
                   </div>

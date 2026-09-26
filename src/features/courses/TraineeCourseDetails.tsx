@@ -133,23 +133,9 @@ export function TraineeCourseDetails() {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
   const [showAttendanceDetails, setShowAttendanceDetails] = useState(false)
+  const [sessionAttendance, setSessionAttendance] = useState<Record<string, { entered: number, generated: number, override: string | null }>>({})
 
-  // Calculate attendance aggregates
-  const attendanceAggregates = React.useMemo(() => {
-    let totalTracked = 0
-    let presentCount = 0
-    let partialCount = 0
-    let absentCount = 0
-    
-    // We need course.sessions to be available
-    if (!profile?.id) return { totalTracked, presentCount, partialCount, absentCount }
-    
-    const userId = profile.id // Use profile id
-    
-    // Wait until course is loaded
-    // Note: since this is run in useMemo, course might be undefined initially
-    return { totalTracked, presentCount, partialCount, absentCount, userId }
-  }, [profile?.id])
+
 
   // Load completed modules from storage
   useEffect(() => {
@@ -323,7 +309,7 @@ export function TraineeCourseDetails() {
     queryFn: async () => {
       const { data: courseData, error } = await supabase
         .from('courses')
-        .select(`*, trainer:trainers!courses_trainer_id_fkey(full_name, bio, years_of_experience, qualifications, email, study_details, work_experience, expertise_areas, linkedin_url, website_url, github_url)`)
+        .select(`*, trainer:trainers!courses_trainer_id_fkey(full_name, bio, years_of_experience, qualifications, email, study_details, work_experience, expertise_areas, linkedin_url, website_url, github_url, avatar_path)`)
         .eq('id', courseId!)
         .single() as any
       if (error) throw error
@@ -435,6 +421,85 @@ export function TraineeCourseDetails() {
     },
     enabled: !!courseId,
   })
+
+  // Fetch session attendance data from DB
+  useEffect(() => {
+    if (!course?.sessions || !profile?.id) return
+    const fetchAttendance = async () => {
+      const sessionIds = course.sessions.map((s: any) => s.id)
+      if (sessionIds.length === 0) return
+
+      const [{ data: metaData }, { data: attendanceData }] = await Promise.all([
+        (supabase as any).from('session_attendance_meta').select('*').in('session_id', sessionIds),
+        (supabase as any).from('session_attendance').select('*').in('session_id', sessionIds).eq('user_id', profile.id)
+      ])
+
+      const newAttendance: Record<string, { entered: number, generated: number, override: string | null }> = {}
+      
+      course.sessions.forEach((s: any) => {
+        const meta = metaData?.find((m: any) => m.session_id === s.id)
+        const att = attendanceData?.find((a: any) => a.session_id === s.id)
+        
+        newAttendance[s.id] = {
+          generated: meta?.total_generated || 0,
+          entered: att?.entered_count || 0,
+          override: att?.status_override || null
+        }
+      })
+      
+      setSessionAttendance(newAttendance)
+    }
+    fetchAttendance()
+  }, [course?.sessions, profile?.id])
+
+  // Calculate attendance aggregates
+  const attendanceAggregates = React.useMemo(() => {
+    let totalTracked = 0
+    let presentCount = 0
+    let partialCount = 0
+    let absentCount = 0
+    let percentage = 0
+    
+    if (!profile?.id || !course?.sessions) return { totalTracked, presentCount, partialCount, absentCount, percentage, userId: profile?.id }
+    
+    course.sessions.forEach((s: any) => {
+      let att = sessionAttendance[s.id]
+      
+      // Fallback to localStorage for legacy local testing data if DB has no data
+      if (!att || att.generated === 0) {
+        try {
+          const localStr = localStorage.getItem(`trainee_attendance_${s.id}_${profile.id}`)
+          if (localStr) {
+            const localData = JSON.parse(localStr)
+            if (localData.generated > 0 || localData.override) {
+              att = localData
+            }
+          }
+        } catch(e) {}
+      }
+
+      if (att && (att.generated > 0 || att.override)) {
+        totalTracked++
+        if (att.override === 'present' || att.override === 'P') {
+          presentCount++
+        } else if (att.override === 'late') {
+          partialCount++
+        } else if (att.override === 'absent' || att.override === 'F') {
+          absentCount++
+        } else if (att.entered >= att.generated * 0.5) {
+          presentCount++
+        } else if (att.entered > 0) {
+          partialCount++
+        } else {
+          absentCount++
+        }
+      }
+    })
+    
+    percentage = totalTracked > 0 ? Math.round((presentCount / totalTracked) * 100) : 0
+    const userId = profile.id
+    return { totalTracked, presentCount, partialCount, absentCount, percentage, userId }
+  }, [profile?.id, sessionAttendance, course?.sessions])
 
   useEffect(() => {
     if (!profile?.id || !courseId) return
@@ -913,26 +978,50 @@ export function TraineeCourseDetails() {
 
                   {/* Progress bar for enrolled users */}
                   {enrollment && (
-                    <div className="mb-6 max-w-md">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-300 mb-2">
-                        <span>Your Progress</span>
-                        <span className="text-white font-bold">{enrollment.progress_percent ?? 0}%</span>
+                    <div className="mb-6 max-w-md space-y-4">
+                      <div>
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-300 mb-2">
+                          <span>Your Progress</span>
+                          <span className="text-white font-bold">{enrollment.progress_percent ?? 0}%</span>
+                        </div>
+                        <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden border border-white/20">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${enrollment.progress_percent ?? 0}%` }}
+                            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.3 }}
+                            className={`h-full rounded-full ${
+                              enrollment.progress_percent === 100
+                                ? 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                                : 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500'
+                            }`}
+                          />
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1.5 capitalize">
+                          Status: <span className="text-slate-200 font-semibold">{enrollment?.status?.replace('_', ' ') || 'Unknown'}</span>
+                        </p>
                       </div>
-                      <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden border border-white/20">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${enrollment.progress_percent ?? 0}%` }}
-                          transition={{ duration: 0.9, ease: 'easeOut', delay: 0.3 }}
-                          className={`h-full rounded-full ${
-                            enrollment.progress_percent === 100
-                              ? 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                              : 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500'
-                          }`}
-                        />
+
+                      {/* Top Overall Attendance Bar */}
+                      <div>
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-300 mb-2">
+                          <span className="flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5 text-emerald-400" /> Overall Attendance</span>
+                          <span className="text-white font-bold">{attendanceAggregates.percentage}%</span>
+                        </div>
+                        <div className="h-2.5 w-full bg-white/10 rounded-full overflow-hidden border border-white/20">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${attendanceAggregates.percentage}%` }}
+                            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.5 }}
+                            className={`h-full rounded-full ${
+                              attendanceAggregates.percentage >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' :
+                              attendanceAggregates.percentage >= 50 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-rose-400 to-rose-500'
+                            }`}
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1.5">
+                          <span className="text-emerald-300 font-semibold">{attendanceAggregates.presentCount} Present</span> • <span className="text-rose-300 font-semibold">{attendanceAggregates.absentCount} Absent</span>
+                        </p>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1.5 capitalize">
-                        Status: <span className="text-slate-200 font-semibold">{enrollment?.status?.replace('_', ' ') || 'Unknown'}</span>
-                      </p>
                     </div>
                   )}
 
@@ -1689,7 +1778,7 @@ export function TraineeCourseDetails() {
                                       )}
 
                                       {/* LIVE ATTENDANCE OTP PANEL */}
-                                      {!isFinished && enrollment && (
+                                      {enrollment && (
                                         <div className="mb-4">
                                           <LiveAttendanceTraineePanel session={session} userId={profile!.id} />
                                         </div>
@@ -1794,8 +1883,12 @@ export function TraineeCourseDetails() {
                   <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-sm">
                     <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-4">Instructor</h3>
                     <div className="flex items-start gap-3.5 mb-3.5">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-cyan-600/20 shrink-0">
-                        {course.trainer?.full_name?.charAt(0) || 'T'}
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-cyan-600/20 shrink-0 overflow-hidden border border-cyan-100">
+                        {course.trainer?.avatar_path ? (
+                          <img src={course.trainer.avatar_path} alt={course.trainer.full_name || 'Trainer'} className="w-full h-full object-cover" />
+                        ) : (
+                          course.trainer?.full_name?.charAt(0) || 'T'
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-slate-900 leading-tight">{course.trainer?.full_name || 'Assigned Instructor'}</p>
@@ -1972,53 +2065,69 @@ export function TraineeCourseDetails() {
                     course.sessions.forEach((session: any) => {
                       if (session.session_type !== 'live' && session.session_type !== 'hybrid') return
                       
-                      const tKey = `trainee_attendance_${session.id}_${userId}`
-                      try {
-                        const tData = JSON.parse(localStorage.getItem(tKey) || '{"entered":0, "generated":0}')
-                        let isTracked = false
-                        let sStatus = ''
-                        let sColor = ''
-                        
-                        if (tData.override === 'P') {
-                          presentCount++
-                          isTracked = true
-                          sStatus = 'Present (Override)'
-                          sColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                        } else if (tData.override === 'F') {
-                          absentCount++
-                          isTracked = true
-                          sStatus = 'Absent (Override)'
-                          sColor = 'text-rose-700 bg-rose-50 border-rose-200'
-                        } else if (tData.generated > 0) {
-                          isTracked = true
-                          if (tData.entered === tData.generated) {
-                            presentCount++
-                            sStatus = 'Present'
-                            sColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                          } else if (tData.entered > 0) {
-                            partialCount++
-                            sStatus = 'Partial'
-                            sColor = 'text-amber-700 bg-amber-50 border-amber-200'
-                          } else {
-                            absentCount++
-                            sStatus = 'Absent'
-                            sColor = 'text-rose-700 bg-rose-50 border-rose-200'
+                      let tData = sessionAttendance[session.id]
+                      
+                      // Fallback to localStorage for legacy local testing data if DB has no data
+                      if (!tData || tData.generated === 0) {
+                        try {
+                          const localStr = localStorage.getItem(`trainee_attendance_${session.id}_${profile.id}`)
+                          if (localStr) {
+                            const localData = JSON.parse(localStr)
+                            if (localData.generated > 0 || localData.override) {
+                              tData = localData
+                            }
                           }
-                        }
-                        
-                        if (isTracked) {
-                          totalTracked++
-                          trackedSessions.push({
-                            session,
-                            status: sStatus,
-                            color: sColor,
-                            score: tData.override ? null : `${tData.entered}/${tData.generated}`
-                          })
-                        }
-                      } catch (e) {}
-                    })
+                        } catch(e) {}
+                      }
 
-                    if (totalTracked === 0) return null
+                      if (!tData) return
+                      
+                      let isTracked = false
+                      let sStatus = ''
+                      let sColor = ''
+                      
+                      if (tData.override === 'P' || tData.override === 'present') {
+                        presentCount++
+                        isTracked = true
+                        sStatus = 'Present (Override)'
+                        sColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      } else if (tData.override === 'F' || tData.override === 'absent') {
+                        absentCount++
+                        isTracked = true
+                        sStatus = 'Absent (Override)'
+                        sColor = 'text-rose-700 bg-rose-50 border-rose-200'
+                      } else if (tData.override === 'late') {
+                        partialCount++
+                        isTracked = true
+                        sStatus = 'Partial (Override)'
+                        sColor = 'text-amber-700 bg-amber-50 border-amber-200'
+                      } else if (tData.generated > 0) {
+                        isTracked = true
+                        if (tData.entered >= tData.generated * 0.5) {
+                          presentCount++
+                          sStatus = 'Present'
+                          sColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                        } else if (tData.entered > 0) {
+                          partialCount++
+                          sStatus = 'Partial'
+                          sColor = 'text-amber-700 bg-amber-50 border-amber-200'
+                        } else {
+                          absentCount++
+                          sStatus = 'Absent'
+                          sColor = 'text-rose-700 bg-rose-50 border-rose-200'
+                        }
+                      }
+                      
+                      if (isTracked) {
+                        totalTracked++
+                        trackedSessions.push({
+                          session,
+                          status: sStatus,
+                          color: sColor,
+                          score: tData.override ? null : `${tData.entered}/${tData.generated}`
+                        })
+                      }
+                    })
 
                     return (
                       <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">

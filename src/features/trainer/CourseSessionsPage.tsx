@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useConfirm } from '@/hooks/useConfirm'
 import { LiveAttendanceTrainerPanel } from '../courses/LiveAttendanceTrainerPanel'
+import { OverallAttendanceDialog } from './OverallAttendanceDialog'
 type Course = Database['public']['Tables']['courses']['Row']
 type Session = Database['public']['Tables']['course_sessions']['Row']
 type Material = Database['public']['Tables']['materials']['Row']
@@ -48,6 +49,7 @@ export function CourseSessionsPage() {
   // Attendance Modal state
   const [allEnrollments, setAllEnrollments] = useState<any[]>([])
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false)
+  const [overallAttendanceOpen, setOverallAttendanceOpen] = useState(false)
   const [attendanceSession, setAttendanceSession] = useState<Session | null>(null)
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'present' | 'absent' | 'late'>>({})
 
@@ -354,6 +356,13 @@ export function CourseSessionsPage() {
   return (
     <TrainerLayout>
       <ConfirmDialog />
+      <OverallAttendanceDialog
+        open={overallAttendanceOpen}
+        onOpenChange={setOverallAttendanceOpen}
+        courseId={courseId!}
+        sessions={sessions}
+        enrollments={allEnrollments}
+      />
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-4xl mx-auto space-y-6">
         <motion.div variants={fadeUp} className="flex items-center justify-between">
           <div>
@@ -363,9 +372,14 @@ export function CourseSessionsPage() {
             <h2 className="text-2xl font-black tracking-tight text-slate-900">Course Sessions</h2>
             <p className="text-slate-500 text-sm mt-1 font-medium">{course?.title}</p>
           </div>
-          <Button onClick={openNew} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">
-            <Plus className="w-4 h-4 mr-2" /> Add Session
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => setOverallAttendanceOpen(true)} variant="outline" className="border-cyan-200 text-cyan-700 hover:bg-cyan-50 font-bold rounded-xl shadow-sm">
+              Overall Attendance
+            </Button>
+            <Button onClick={openNew} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">
+              <Plus className="w-4 h-4 mr-2" /> Add Session
+            </Button>
+          </div>
         </motion.div>
 
         {sessions.length === 0 ? (
@@ -420,7 +434,7 @@ export function CourseSessionsPage() {
       {/* Attendance Modal Dialog */}
       <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
         <DialogContent className="sm:max-w-[700px] bg-transparent border-0 shadow-none p-0 overflow-hidden">
-          <LiveAttendanceTrainerPanel session={attendanceSession} enrollments={activeEnrollments} />
+          <LiveAttendanceTrainerPanel session={attendanceSession} enrollments={activeEnrollments} isCompleted={attendanceSession ? isSessionFinished(attendanceSession) : false} />
         </DialogContent>
       </Dialog>
 

@@ -31,7 +31,7 @@ type AuthContextType = {
   profile: Profile | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, metadata: { full_name: string; department?: string; designation?: string; proof_path?: string }) => Promise<void>
+  signUp: (email: string, password: string, metadata: { full_name: string; department?: string; designation?: string; proof_path?: string; signup_role: string; is_email_verified: boolean; mobile_number: string; study_details?: string }) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   refreshProfile: () => Promise<void>
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error
   }
 
-  const signUp = async (email: string, password: string, metadata: { full_name: string; department?: string; designation?: string; proof_path?: string }) => {
+  const signUp = async (email: string, password: string, metadata: { full_name: string; department?: string; designation?: string; proof_path?: string; signup_role: string; is_email_verified: boolean; mobile_number: string; study_details?: string }) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -139,7 +139,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           department: metadata.department,
           designation: metadata.designation,
           proof_path: metadata.proof_path,
-          // We don't send role or approval_status; backend defaults them.
+          signup_role: metadata.signup_role,
+          is_email_verified: metadata.is_email_verified,
+          mobile_number: metadata.mobile_number,
+          study_details: metadata.study_details,
         }
       }
     })

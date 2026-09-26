@@ -73,7 +73,8 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
       return location.pathname === '/admin' && currentTab === targetTab
     }
     if (item.to === '/trainer/courses' || item.to === '/admin/courses') {
-      return location.pathname.startsWith('/trainer/courses') || location.pathname.startsWith('/admin/courses')
+      if (location.pathname === item.to + '/new') return false
+      return location.pathname === item.to || location.pathname.startsWith(item.to + '/')
     }
     return location.pathname.startsWith(item.to) && item.to !== '/trainer' && item.to !== '/admin'
   }

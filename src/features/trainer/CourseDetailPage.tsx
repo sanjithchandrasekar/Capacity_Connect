@@ -1231,7 +1231,7 @@ export function CourseDetailPage() {
       {/* Attendance Modal */}
       <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
         <DialogContent className="sm:max-w-[700px] bg-transparent border-0 shadow-none p-0">
-          <LiveAttendanceTrainerPanel session={attendanceSession} enrollments={activeEnrollments} />
+          <LiveAttendanceTrainerPanel session={attendanceSession} enrollments={activeEnrollments} isCompleted={attendanceSession ? isSessionFinished(attendanceSession) : false} />
         </DialogContent>
       </Dialog>
 

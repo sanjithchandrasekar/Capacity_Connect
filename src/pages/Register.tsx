@@ -36,6 +36,7 @@ const baseSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   mobileNumber: z.string().min(8, 'Please enter a valid mobile number'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
 const traineeSchema = baseSchema.extend({
@@ -53,7 +54,7 @@ type TraineeFormValues = z.infer<typeof traineeSchema>
 type TrainerFormValues = z.infer<typeof trainerSchema>
 
 export function Register() {
-  const { user } = useAuth()
+  const { user, signUp } = useAuth()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [role, setRole] = useState<'trainee' | 'trainer'>('trainee')
@@ -122,11 +123,14 @@ export function Register() {
     
     setIsSendingEmailOtp(true)
     try {
-      const { data, error } = await supabase.functions.invoke('verify-otp', {
-        body: { identifier: email, otp: emailOtpInput, type: 'email' }
+      const { data, error } = await supabase.rpc('verify_otp', {
+        p_identifier: email,
+        p_otp: emailOtpInput,
+        p_user_id: null,
+        p_type: 'email'
       })
       if (error) throw error
-      if (data?.error) throw new Error(data.error)
+      if (!data) throw new Error("Invalid or expired OTP.")
       
       setIsEmailVerified(true)
       toast.success('Email successfully verified!')
@@ -166,21 +170,16 @@ export function Register() {
 
       const fullMobile = `${countryCode} ${data.mobileNumber}`
 
-      const { data: result, error } = await supabase.functions.invoke('register-user', {
-        body: {
-          email: data.email,
-          fullName: data.fullName,
-          role,
-          department: role === 'trainee' ? (data as TraineeFormValues).department : undefined,
-          designation: role === 'trainee' ? (data as TraineeFormValues).designation : undefined,
-          studyDetails: role === 'trainer' ? (data as TrainerFormValues).studyDetails : undefined,
-          proofPath: uploadedFilePath,
-          phone: fullMobile,
-        },
+      await signUp(data.email, data.password, {
+        full_name: data.fullName,
+        department: role === 'trainee' ? (data as TraineeFormValues).department : undefined,
+        designation: role === 'trainee' ? (data as TraineeFormValues).designation : undefined,
+        study_details: role === 'trainer' ? (data as TrainerFormValues).studyDetails : undefined,
+        proof_path: uploadedFilePath,
+        signup_role: role,
+        is_email_verified: true,
+        mobile_number: fullMobile
       })
-
-      if (error) throw error
-      if (result?.error) throw new Error(result.error)
 
       setRegistrationSuccess(true)
       toast.success('Account registered successfully!')
@@ -197,6 +196,7 @@ export function Register() {
     `bg-slate-950/60 border-slate-800 text-slate-100 placeholder:text-slate-500 focus:bg-slate-950 focus:border-cyan-500 h-11 rounded-xl ${hasError ? 'border-rose-500/80' : ''}`
 
   const renderEmailField = (formObj: any) => (
+    <>
     <div className="space-y-1.5">
       <Label htmlFor="email" className="text-slate-200 text-sm font-semibold">Email Address</Label>
       <div className="flex gap-2">
@@ -236,6 +236,20 @@ export function Register() {
         </motion.div>
       )}
     </div>
+    
+    <div className="space-y-1.5 mt-4">
+      <Label htmlFor="password" className="text-slate-200 text-sm font-semibold">Password</Label>
+      <Input 
+        id="password" 
+        type="password" 
+        placeholder="Create a strong password" 
+        {...formObj.register('password')} 
+        className={inputClass(!!formObj.formState.errors.password)} 
+        disabled={isLoading} 
+      />
+      {formObj.formState.errors.password && <p className="text-xs text-rose-400 font-medium">{formObj.formState.errors.password.message}</p>}
+    </div>
+    </>
   )
 
   const renderMobileField = (formObj: any) => (

@@ -11,7 +11,7 @@ export function LiveAttendanceTraineePanel({ session, userId }: { session: any, 
   const [activeOtp, setActiveOtp] = useState<any>(null)
   const [timeLeft, setTimeLeft] = useState(0)
   const [inputValue, setInputValue] = useState('')
-  const [tally, setTally] = useState({ entered: 0, generated: 0 })
+  const [tally, setTally] = useState({ entered: 0, generated: 0, isManualMapping: false })
   const [override, setOverride] = useState<'P' | 'F' | null>(null)
   const [channel, setChannel] = useState<any>(null)
 
@@ -19,11 +19,33 @@ export function LiveAttendanceTraineePanel({ session, userId }: { session: any, 
   useEffect(() => {
     if (!session?.id) return
     
-    // Load local history
-    const tKey = `trainee_attendance_${session.id}_${userId}`
-    const tData = JSON.parse(localStorage.getItem(tKey) || '{"entered":0, "generated":0}')
-    setTally(prev => ({ ...prev, entered: tData.entered, generated: tData.generated || 0 }))
-    setOverride(tData.override || null)
+    // Load from DB
+    const loadTraineeData = async () => {
+      const [{ data: metaData }, { data: attendanceData }] = await Promise.all([
+        (supabase as any).from('session_attendance_meta').select('*').eq('session_id', session.id).maybeSingle(),
+        (supabase as any).from('session_attendance').select('*').eq('session_id', session.id).eq('user_id', userId).maybeSingle()
+      ])
+      
+      let generated = 0
+      let isManualMapping = false
+      if (metaData) {
+        generated = metaData.total_generated || 0
+        isManualMapping = metaData.is_manual_mapping || false
+      }
+      
+      let entered = 0
+      let overrideVal = null
+      if (attendanceData) {
+        entered = attendanceData.entered_count || 0
+        overrideVal = attendanceData.status_override || null
+      }
+      
+      setTally(prev => ({ ...prev, entered, generated, isManualMapping }))
+      if (overrideVal) {
+        setOverride(overrideVal as any)
+      }
+    }
+    loadTraineeData()
 
     const ch = supabase.channel(`attendance_${session.id}`)
     
@@ -32,10 +54,9 @@ export function LiveAttendanceTraineePanel({ session, userId }: { session: any, 
       if (state['trainer'] && state['trainer'].length > 0) {
         const ts: any = state['trainer'][0]
         setTally(prev => {
-          const newGen = Math.max(prev.generated, ts.generated || 0)
-          const currentTData = JSON.parse(localStorage.getItem(tKey) || '{"entered":0}')
-          localStorage.setItem(tKey, JSON.stringify({ ...currentTData, generated: newGen }))
-          return { ...prev, generated: newGen }
+          const newGen = ts.generated !== undefined ? ts.generated : prev.generated
+          const isManualMapping = ts.isManualMapping !== undefined ? ts.isManualMapping : prev.isManualMapping
+          return { ...prev, generated: newGen, isManualMapping }
         })
         
         if (ts.activeOtp && ts.expiresAt > Date.now()) {
@@ -55,14 +76,16 @@ export function LiveAttendanceTraineePanel({ session, userId }: { session: any, 
     })
 
     ch.on('broadcast', { event: 'request_sync' }, () => {
-      const currentTData = JSON.parse(localStorage.getItem(tKey) || '{"entered":0}')
-      if (currentTData.entered > 0) {
-        ch.send({
-          type: 'broadcast',
-          event: 'trainee_sync',
-          payload: { userId, entered: currentTData.entered }
-        })
-      }
+      setTally(current => {
+        if (current.entered > 0) {
+          ch.send({
+            type: 'broadcast',
+            event: 'trainee_sync',
+            payload: { userId, entered: current.entered }
+          })
+        }
+        return current
+      })
     })
 
     ch.subscribe()
@@ -96,29 +119,35 @@ export function LiveAttendanceTraineePanel({ session, userId }: { session: any, 
     }
   }, [channel, tally.entered, userId])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!activeOtp || timeLeft <= 0) {
       toast.error("The code has expired!")
       return
     }
     
     if (inputValue.trim() === activeOtp.code) {
-      const tKey = `trainee_attendance_${session.id}_${userId}`
-      const tData = JSON.parse(localStorage.getItem(tKey) || '{"entered":0}')
-      
-      // Prevent double counting the same OTP code
-      const history = tData.history || []
+      // Prevent double counting the same OTP code using local storage (history only)
+      const hKey = `trainee_otp_history_${session.id}_${userId}`
+      const history = JSON.parse(localStorage.getItem(hKey) || '[]')
       if (history.includes(activeOtp.code)) {
         toast.error("You already entered this code!")
         setInputValue('')
         return
       }
       
-      tData.entered = (tData.entered || 0) + 1
-      tData.history = [...history, activeOtp.code]
-      localStorage.setItem(tKey, JSON.stringify(tData))
+      const newEntered = tally.entered + 1
+      setTally(prev => ({ ...prev, entered: newEntered }))
       
-      setTally(prev => ({ ...prev, entered: tData.entered }))
+      history.push(activeOtp.code)
+      localStorage.setItem(hKey, JSON.stringify(history))
+      
+      await (supabase as any).from('session_attendance').upsert({
+        session_id: session.id,
+        user_id: userId,
+        entered_count: newEntered,
+        status_override: null
+      }, { onConflict: 'session_id,user_id' })
+      
       setInputValue('')
       toast.success("Attendance code accepted!")
       
@@ -137,7 +166,10 @@ export function LiveAttendanceTraineePanel({ session, userId }: { session: any, 
   // Auto-status logic
   let autoStatus = 'Absent'
   let autoColor = 'text-rose-600 bg-rose-50'
-  const pct = tally.generated > 0 ? Math.round((tally.entered / tally.generated) * 100) : 0
+  
+  const effectiveTotal = (tally.generated === 0 && tally.isManualMapping) ? 1 : tally.generated
+  const pct = effectiveTotal > 0 ? Math.round((tally.entered / effectiveTotal) * 100) : 0
+  
   if (pct >= 75) {
     autoStatus = 'Present'
     autoColor = 'text-emerald-600 bg-emerald-50'
@@ -145,7 +177,7 @@ export function LiveAttendanceTraineePanel({ session, userId }: { session: any, 
     autoStatus = 'Partial'
     autoColor = 'text-amber-600 bg-amber-50'
   }
-  if (tally.generated === 0) {
+  if (effectiveTotal === 0) {
     autoStatus = 'Pending Checks'
     autoColor = 'text-slate-600 bg-slate-100'
   }
@@ -169,8 +201,14 @@ export function LiveAttendanceTraineePanel({ session, userId }: { session: any, 
         <div className="flex-1">
           <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Your Checks</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-800">{tally.entered}</span>
-            <span className="text-sm font-semibold text-slate-400">/ {tally.generated}</span>
+            {tally.isManualMapping && tally.generated === 0 ? (
+               <span className="text-lg font-black text-slate-800">Manual Mode</span>
+            ) : (
+               <>
+                 <span className="text-2xl font-black text-slate-800">{tally.entered}</span>
+                 <span className="text-sm font-semibold text-slate-400">/ {tally.generated}</span>
+               </>
+            )}
           </div>
         </div>
         <div className="flex-1">
