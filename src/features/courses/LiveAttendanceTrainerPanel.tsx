@@ -35,7 +35,7 @@ export function LiveAttendanceTrainerPanel({ session, enrollments, isCompleted }
       const { data } = await (supabase as any).from('session_attendance').select('user_id, entered_count, status_override').eq('session_id', session.id)
       if (data) {
         const rData: Record<string, { entered: number, override?: 'P' | 'F' }> = {}
-        data.forEach(row => {
+        data.forEach((row: any) => {
           rData[row.user_id] = { entered: row.entered_count, override: row.status_override as any }
         })
         setRoster(rData)
@@ -183,7 +183,7 @@ export function LiveAttendanceTrainerPanel({ session, enrollments, isCompleted }
     
     // Reset roster checks to 0
     const nextRoster = { ...roster }
-    const updates = []
+    const updates: any[] = []
     Object.keys(nextRoster).forEach(userId => {
       nextRoster[userId].entered = 0
       updates.push({

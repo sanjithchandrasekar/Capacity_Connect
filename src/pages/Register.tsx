@@ -126,9 +126,9 @@ export function Register() {
       const { data, error } = await supabase.rpc('verify_otp', {
         p_identifier: email,
         p_otp: emailOtpInput,
-        p_user_id: null,
+        p_user_id: undefined,
         p_type: 'email'
-      })
+      } as any)
       if (error) throw error
       if (!data) throw new Error("Invalid or expired OTP.")
       
@@ -175,7 +175,7 @@ export function Register() {
         department: role === 'trainee' ? (data as TraineeFormValues).department : undefined,
         designation: role === 'trainee' ? (data as TraineeFormValues).designation : undefined,
         study_details: role === 'trainer' ? (data as TrainerFormValues).studyDetails : undefined,
-        proof_path: uploadedFilePath,
+        proof_path: uploadedFilePath || undefined,
         signup_role: role,
         is_email_verified: true,
         mobile_number: fullMobile
