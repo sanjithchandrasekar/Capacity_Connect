@@ -36,7 +36,6 @@ const baseSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   mobileNumber: z.string().min(8, 'Please enter a valid mobile number'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
 const traineeSchema = baseSchema.extend({
@@ -187,8 +186,12 @@ export function Register() {
       }
 
       const fullMobile = `${countryCode} ${data.mobileNumber}`
+      
+      // Generate a secure random password since they will set it later via email link
+      const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map(b => b.toString(16).padStart(2, '0')).join('') + 'Aa1!'
 
-      await signUp(data.email, data.password, {
+      await signUp(data.email, randomPassword, {
         full_name: data.fullName,
         department: role === 'trainee' ? (data as TraineeFormValues).department : undefined,
         designation: role === 'trainee' ? (data as TraineeFormValues).designation : undefined,
@@ -253,19 +256,6 @@ export function Register() {
           </Button>
         </motion.div>
       )}
-    </div>
-    
-    <div className="space-y-1.5 mt-4">
-      <Label htmlFor="password" className="text-slate-200 text-sm font-semibold">Password</Label>
-      <Input 
-        id="password" 
-        type="password" 
-        placeholder="Create a strong password" 
-        {...formObj.register('password')} 
-        className={inputClass(!!formObj.formState.errors.password)} 
-        disabled={isLoading} 
-      />
-      {formObj.formState.errors.password && <p className="text-xs text-rose-400 font-medium">{formObj.formState.errors.password.message}</p>}
     </div>
     </>
   )
