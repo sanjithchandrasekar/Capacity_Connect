@@ -684,7 +684,7 @@ export function ProfilePage() {
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Completed
                             </span>
                             <Link
-                              to={`/trainee/learn/${course.id}`}
+                              to={`/trainee/courses/${course.id}/learn`}
                               className="text-[11px] font-bold text-slate-600 hover:text-cyan-600 flex items-center gap-0.5"
                             >
                               Review <ChevronRight className="w-3 h-3" />
