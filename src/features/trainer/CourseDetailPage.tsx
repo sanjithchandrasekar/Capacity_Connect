@@ -27,6 +27,7 @@ import { CourseAnnouncements } from '../courses/CourseAnnouncements'
 import { CourseChat } from '../courses/CourseChat'
 import { CourseFeedback } from '../courses/CourseFeedback'
 import { CourseMaterials } from '../courses/CourseMaterials'
+import { LiveAttendanceTrainerPanel } from '../courses/LiveAttendanceTrainerPanel'
 
 type Course = Database['public']['Tables']['courses']['Row'] & {
   modules?: any[] | null
@@ -1112,59 +1113,8 @@ export function CourseDetailPage() {
 
       {/* Attendance Modal */}
       <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-white border-slate-200 text-slate-900 rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-cyan-600" />
-              Monitor Attendance: {attendanceSession?.title}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Track real-time trainee presence and live session participation.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2 max-h-[50vh] overflow-y-auto pr-1">
-            {activeEnrollments.map((enr: any) => (
-              <div key={enr.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <div>
-                  <p className="text-xs font-bold text-slate-900">{enr.trainee?.full_name || 'Trainee'}</p>
-                  <p className="text-[10px] text-slate-500">{enr.trainee?.email}</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  {(['present', 'absent', 'late'] as const).map(status => (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => setAttendanceRecords(prev => ({ ...prev, [enr.user_id]: status }))}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold capitalize transition-all ${
-                        attendanceRecords[enr.user_id] === status
-                          ? status === 'present'
-                            ? 'bg-emerald-600 text-white'
-                            : status === 'absent'
-                              ? 'bg-rose-600 text-white'
-                              : 'bg-amber-600 text-white'
-                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <DialogFooter className="pt-2 border-t border-slate-100">
-            <Button
-              onClick={() => {
-                toast.success('Attendance saved successfully!')
-                setAttendanceDialogOpen(false)
-              }}
-              className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-xl"
-            >
-              Save Attendance Record
-            </Button>
-          </DialogFooter>
+        <DialogContent className="sm:max-w-[700px] bg-transparent border-0 shadow-none p-0">
+          <LiveAttendanceTrainerPanel session={attendanceSession} enrollments={activeEnrollments} />
         </DialogContent>
       </Dialog>
     </TrainerLayout>

@@ -8,7 +8,7 @@ import { DashboardShell } from '@/pages/Dashboards'
 import {
   Compass, BookOpen, Clock, User, ArrowLeft, CheckCircle2, Loader2,
   BookMarked, Layers, ChevronDown, ChevronUp, Play, FileText, Link2,
-  Lock, Target, Calendar, Video, Download, ExternalLink, Users,
+  Lock, Target, Calendar, Video, Download, ExternalLink, Users, UserCheck,
   GraduationCap, Award, PlayCircle,
   ListOrdered, BookCheck, Mail, Send, XCircle, FileCheck, AlertCircle, BarChart3,
   HelpCircle, Sparkles, CheckSquare, RotateCcw, Unlock, Image as ImageIcon, Check, Trophy,
@@ -25,6 +25,7 @@ import { MaterialPreviewDialog } from '@/components/ui/MaterialPreviewDialog'
 import { CourseFeedback } from './CourseFeedback'
 import { CourseAnnouncements } from './CourseAnnouncements'
 import { CourseChat } from './CourseChat'
+import { LiveAttendanceTraineePanel } from './LiveAttendanceTraineePanel'
 import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
 import {
   calculateCourseGradeBreakdown,
@@ -129,6 +130,24 @@ export function TraineeCourseDetails() {
   const [isSendingOtp, setIsSendingOtp] = useState(false)
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
+  const [showAttendanceDetails, setShowAttendanceDetails] = useState(false)
+
+  // Calculate attendance aggregates
+  const attendanceAggregates = React.useMemo(() => {
+    let totalTracked = 0
+    let presentCount = 0
+    let partialCount = 0
+    let absentCount = 0
+    
+    // We need course.sessions to be available
+    if (!profile?.id) return { totalTracked, presentCount, partialCount, absentCount }
+    
+    const userId = profile.id // Use profile id
+    
+    // Wait until course is loaded
+    // Note: since this is run in useMemo, course might be undefined initially
+    return { totalTracked, presentCount, partialCount, absentCount, userId }
+  }, [profile?.id])
 
   // Load completed modules from storage
   useEffect(() => {
@@ -1566,11 +1585,48 @@ export function TraineeCourseDetails() {
                                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-rose-50 text-rose-700 border-rose-200 flex items-center gap-1 shadow-xs animate-pulse">
                                         <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping" /> Live Now
                                       </span>
-                                    ) : isFinished ? (
-                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3 text-slate-400" /> Completed
-                                      </span>
-                                    ) : session.session_type ? (
+                                    ) : isFinished ? (() => {
+                                      const userId = user?.id || profile?.id
+                                      const tKey = `trainee_attendance_${session.id}_${userId}`
+                                      let attStatus = ''
+                                      let attColor = ''
+                                      if (enrollment && (session.session_type === 'live' || session.session_type === 'hybrid')) {
+                                        try {
+                                          const tData = JSON.parse(localStorage.getItem(tKey) || '{"entered":0, "generated":0}')
+                                          if (tData.override === 'P') {
+                                            attStatus = 'Present'
+                                            attColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                          } else if (tData.override === 'F') {
+                                            attStatus = 'Absent'
+                                            attColor = 'text-rose-700 bg-rose-50 border-rose-200'
+                                          } else if (tData.generated > 0) {
+                                            if (tData.entered === tData.generated) {
+                                              attStatus = 'Present'
+                                              attColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                            } else if (tData.entered > 0) {
+                                              attStatus = 'Partial'
+                                              attColor = 'text-amber-700 bg-amber-50 border-amber-200'
+                                            } else {
+                                              attStatus = 'Absent'
+                                              attColor = 'text-rose-700 bg-rose-50 border-rose-200'
+                                            }
+                                          }
+                                        } catch(e) {}
+                                      }
+
+                                      return (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200 flex items-center gap-1">
+                                            <CheckCircle2 className="w-3 h-3 text-slate-400" /> Completed
+                                          </span>
+                                          {attStatus && (
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${attColor}`}>
+                                              {attStatus}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )
+                                    })() : session.session_type ? (
                                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${sessionTypeColors[session.session_type] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
                                         {session.session_type === 'recorded' ? 'Video' : session.session_type === 'live' ? 'Live Online' : session.session_type.replace('_', ' ')}
                                       </span>
@@ -1587,7 +1643,7 @@ export function TraineeCourseDetails() {
                                   )}
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0">
+                                  <div className="flex items-center gap-2 shrink-0">
                                   {sessionMaterials.length > 0 && (
                                     <span className="text-[11px] text-slate-600 font-semibold bg-white border border-slate-200 px-2 py-0.5 rounded-full">
                                       {sessionMaterials.length} file{sessionMaterials.length !== 1 ? 's' : ''}
@@ -1642,6 +1698,13 @@ export function TraineeCourseDetails() {
                                     <div className="px-4 pb-4 pt-3 bg-white border-t border-slate-200">
                                       {session.description && (
                                         <p className="text-xs text-slate-600 mb-3 leading-relaxed">{session.description}</p>
+                                      )}
+
+                                      {/* LIVE ATTENDANCE OTP PANEL */}
+                                      {!isFinished && enrollment && (
+                                        <div className="mb-4">
+                                          <LiveAttendanceTraineePanel session={session} userId={profile!.id} />
+                                        </div>
                                       )}
 
                                       {sessionMaterials.length === 0 ? (
@@ -1905,6 +1968,141 @@ export function TraineeCourseDetails() {
                       </div>
                     </div>
                   )}
+
+                  {/* Overall Live Attendance */}
+                  {(() => {
+                    if (!enrollment || !course?.sessions || !profile?.id) return null
+                    
+                    let totalTracked = 0
+                    let presentCount = 0
+                    let partialCount = 0
+                    let absentCount = 0
+                    const trackedSessions: any[] = []
+                    
+                    const userId = profile.id
+                    
+                    course.sessions.forEach((session: any) => {
+                      if (session.session_type !== 'live' && session.session_type !== 'hybrid') return
+                      
+                      const tKey = `trainee_attendance_${session.id}_${userId}`
+                      try {
+                        const tData = JSON.parse(localStorage.getItem(tKey) || '{"entered":0, "generated":0}')
+                        let isTracked = false
+                        let sStatus = ''
+                        let sColor = ''
+                        
+                        if (tData.override === 'P') {
+                          presentCount++
+                          isTracked = true
+                          sStatus = 'Present (Override)'
+                          sColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                        } else if (tData.override === 'F') {
+                          absentCount++
+                          isTracked = true
+                          sStatus = 'Absent (Override)'
+                          sColor = 'text-rose-700 bg-rose-50 border-rose-200'
+                        } else if (tData.generated > 0) {
+                          isTracked = true
+                          if (tData.entered === tData.generated) {
+                            presentCount++
+                            sStatus = 'Present'
+                            sColor = 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                          } else if (tData.entered > 0) {
+                            partialCount++
+                            sStatus = 'Partial'
+                            sColor = 'text-amber-700 bg-amber-50 border-amber-200'
+                          } else {
+                            absentCount++
+                            sStatus = 'Absent'
+                            sColor = 'text-rose-700 bg-rose-50 border-rose-200'
+                          }
+                        }
+                        
+                        if (isTracked) {
+                          totalTracked++
+                          trackedSessions.push({
+                            session,
+                            status: sStatus,
+                            color: sColor,
+                            score: tData.override ? null : `${tData.entered}/${tData.generated}`
+                          })
+                        }
+                      } catch (e) {}
+                    })
+
+                    if (totalTracked === 0) return null
+
+                    return (
+                      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm">
+                        <h2 className="text-sm font-bold text-slate-900 flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="w-4 h-4 text-cyan-600" /> Overall Attendance
+                          </div>
+                          <button
+                            onClick={() => setShowAttendanceDetails(!showAttendanceDetails)}
+                            className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+                          >
+                            {showAttendanceDetails ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                          </button>
+                        </h2>
+                        
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-500">Live Sessions Tracked</span>
+                            <span className="text-sm font-black text-slate-900">{totalTracked}</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-center">
+                              <p className="text-[10px] font-bold text-emerald-700 uppercase mb-1">Present</p>
+                              <p className="text-base font-black text-emerald-600">{presentCount}</p>
+                            </div>
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center">
+                              <p className="text-[10px] font-bold text-amber-700 uppercase mb-1">Partial</p>
+                              <p className="text-base font-black text-amber-600">{partialCount}</p>
+                            </div>
+                            <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-center">
+                              <p className="text-[10px] font-bold text-rose-700 uppercase mb-1">Absent</p>
+                              <p className="text-base font-black text-rose-600">{absentCount}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 flex overflow-hidden">
+                            <div className="bg-emerald-500 h-full" style={{ width: `${(presentCount / totalTracked) * 100}%` }} />
+                            <div className="bg-amber-500 h-full" style={{ width: `${(partialCount / totalTracked) * 100}%` }} />
+                            <div className="bg-rose-500 h-full" style={{ width: `${(absentCount / totalTracked) * 100}%` }} />
+                          </div>
+
+                          <AnimatePresence>
+                            {showAttendanceDetails && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                                  {trackedSessions.map((ts, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-bold text-slate-800 truncate">{ts.session.title}</p>
+                                        {ts.score && (
+                                          <p className="text-[10px] font-medium text-slate-500 mt-0.5">Score: {ts.score}</p>
+                                        )}
+                                      </div>
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${ts.color} whitespace-nowrap ml-2`}>
+                                        {ts.status}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+                    )
+                  })()}
 
                   {/* Feedback Card in Sidebar */}
                   {enrollment && (enrollment.status === 'enrolled' || enrollment.status === 'completed' || enrollment.status === 'in_progress') && (
