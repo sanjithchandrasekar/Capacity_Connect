@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
-import { BookOpen, Compass, BookMarked, PlayCircle, CheckCircle2, Clock, Sparkles, FileCheck, User, BarChart3, Award, Loader2 } from 'lucide-react'
+import { BookOpen, Compass, BookMarked, PlayCircle, CheckCircle2, Clock, Sparkles, FileCheck, User, BarChart3, Award, Loader2, Bell } from 'lucide-react'
 import { Thumbnail } from '@/components/ui/Thumbnail'
 import { toast } from 'sonner'
 import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
@@ -35,6 +35,7 @@ export function TraineeMyLearning() {
           course:courses!enrollments_course_id_fkey(
             id,
             title,
+            status,
             course_type,
             thumbnail_path,
             duration_minutes,
@@ -48,7 +49,7 @@ export function TraineeMyLearning() {
         .order('enrolled_at', { ascending: false })
 
       if (error) throw error
-      return (data || []) as any[]
+      return ((data || []) as any[]).filter((e: any) => e.course && e.course.status !== 'archived')
     },
     enabled: !!profile?.id
   })
@@ -88,10 +89,28 @@ export function TraineeMyLearning() {
 
   const handleDownloadCertificate = async (enrollment: any, totalPercentage?: number) => {
     if (!profile || !enrollment.course) return
+    const courseAssessments = allAssessments.filter((a: any) => a.course_id === enrollment.course?.id)
+    const gradeBreakdown = calculateCourseGradeBreakdown({
+      moduleProgressPercent: enrollment.progress_percent ?? 0,
+      courseAssessments: courseAssessments as any,
+      traineeAttempts: allAttempts as any,
+      passingScore: enrollment.course?.passing_score ?? 50,
+    })
+    if (!gradeBreakdown.isCompleted) {
+      if (gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted) {
+        toast.error('You must take and pass the Final Assessment before downloading the certificate.')
+      } else if (!gradeBreakdown.isPassed) {
+        toast.error(`Your total score (${gradeBreakdown.totalScore}%) is below the passing criteria (${gradeBreakdown.passingScore}%).`)
+      } else {
+        toast.error('Please complete all course requirements before downloading the certificate.')
+      }
+      return
+    }
+
     setDownloadingId(enrollment.id)
     try {
       const traineeName = profile.full_name || user?.email?.split('@')[0] || 'Trainee'
-      const percentage = totalPercentage ? `${totalPercentage}%` : (enrollment.progress_percent ?? 100)
+      const percentage = totalPercentage ? `${totalPercentage}%` : `${gradeBreakdown.totalScore}%`
 
       const { blob, fileName } = await generateTraineeCertificate(
         enrollment.course.certificate_template_url,
@@ -129,6 +148,7 @@ export function TraineeMyLearning() {
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
         { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+        { to: '/trainee/notifications', label: 'Notifications', icon: Bell },
         { to: '/trainee/profile', label: 'Profile', icon: User },
       ]}
     >
@@ -188,7 +208,8 @@ export function TraineeMyLearning() {
                 passingScore: enrollment.course?.passing_score ?? 50,
               })
 
-              const isCourseDone = enrollment.status === 'completed' || gradeBreakdown.isCompleted || enrollment.progress_percent === 100
+              const isCourseDone = Boolean(gradeBreakdown.isCompleted)
+              const isFinalPending = Boolean(gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted && gradeBreakdown.isFinalUnlocked)
 
               return (
                 <motion.div 
@@ -207,9 +228,11 @@ export function TraineeMyLearning() {
                       <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                         isCourseDone
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : isFinalPending
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
                           : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
                       }`}>
-                        {isCourseDone ? 'Completed' : enrollment.status.replace('_', ' ')}
+                        {isCourseDone ? 'Completed' : isFinalPending ? 'Final Exam Pending' : enrollment.status.replace('_', ' ')}
                       </span>
                       <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{enrollment.course?.course_type || 'Standard'}</span>
                       {enrollment.course?.duration_minutes && (
@@ -233,6 +256,8 @@ export function TraineeMyLearning() {
                           className={`h-full rounded-full transition-all duration-700 ${
                             isCourseDone
                               ? 'bg-gradient-to-r from-emerald-500 to-teal-600'
+                              : isFinalPending
+                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600'
                               : 'bg-gradient-to-r from-cyan-600 to-blue-600'
                           }`}
                           style={{ width: `${enrollment.progress_percent}%` }}
@@ -260,6 +285,19 @@ export function TraineeMyLearning() {
                         <Link to={`/trainee/courses/${enrollment.course?.id}`}>
                           <button className="px-4 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Review
+                          </button>
+                        </Link>
+                      </>
+                    ) : isFinalPending && gradeBreakdown.finalAssessmentId ? (
+                      <>
+                        <Link to={`/trainee/courses/${enrollment.course?.id}/assessments/${gradeBreakdown.finalAssessmentId}`}>
+                          <button className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-bold text-xs shadow-md shadow-purple-600/20 hover:scale-105 transition-all flex items-center gap-1.5 animate-pulse">
+                            <FileCheck className="w-4 h-4 text-amber-300" /> Take Final Exam
+                          </button>
+                        </Link>
+                        <Link to={`/trainee/courses/${enrollment.course?.id}`}>
+                          <button className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5">
+                            <BookOpen className="w-3.5 h-3.5 text-cyan-600" /> Details
                           </button>
                         </Link>
                       </>

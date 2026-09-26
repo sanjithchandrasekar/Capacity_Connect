@@ -49,7 +49,9 @@ const emptyQuestion: QuestionForm = {
 
 export function AssessmentsPage() {
   const { courseId } = useParams<{ courseId: string }>()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const isTrainer = profile?.role === 'trainer'
+  const baseCoursePath = isTrainer ? '/trainer/courses' : '/admin/courses'
   const [course, setCourse] = useState<Course | null>(null)
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string | null>(null)
@@ -166,10 +168,18 @@ export function AssessmentsPage() {
     if (!user || !courseId) return
     setLoading(true)
     try {
-      const { data: c } = await supabase.from('courses').select('*').eq('id', courseId).eq('trainer_id', user.id).single()
+      let courseQuery = supabase.from('courses').select('*').eq('id', courseId)
+      if (profile?.role === 'trainer') {
+        courseQuery = courseQuery.eq('trainer_id', user.id)
+      }
+      const { data: c } = await courseQuery.single()
       if (c) setCourse(c)
 
-      const { data: aList } = await supabase.from('assessments').select('*').eq('course_id', courseId).eq('created_by', user.id).order('created_at', { ascending: false })
+      let assessQuery = supabase.from('assessments').select('*').eq('course_id', courseId).order('created_at', { ascending: false })
+      if (profile?.role === 'trainer') {
+        assessQuery = assessQuery.eq('created_by', user.id)
+      }
+      const { data: aList } = await assessQuery
       if (aList) setAssessments(aList)
       
       if (selectedAssessmentId) {
@@ -1002,7 +1012,7 @@ export function AssessmentsPage() {
           <>
             <motion.div variants={fadeUp} className="flex items-center justify-between">
               <div>
-                <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-4 font-medium">
+                <Link to={`${baseCoursePath}/${courseId}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600 transition-colors mb-4 font-medium">
                   <ArrowLeft className="w-4 h-4" /> Back to Course
                 </Link>
                 <h2 className="text-2xl font-black tracking-tight text-slate-900">Tests & Assessments</h2>

@@ -52,6 +52,7 @@ export function TrainerCourses() {
         .from('courses')
         .select('*')
         .eq('trainer_id', user.id)
+        .neq('status', 'archived')
         .order('created_at', { ascending: false })
       if (error) throw error
       setCourses(data ?? [])

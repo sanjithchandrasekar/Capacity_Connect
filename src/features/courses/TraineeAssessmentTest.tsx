@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
-import { Loader2, ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, Target, Brain, LayoutDashboard, BookOpen, Compass, TrendingUp, Settings, Award } from 'lucide-react'
+import { Loader2, ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, Target, Brain, LayoutDashboard, BookOpen, Compass, TrendingUp, Settings, Award, Bell, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -695,10 +695,11 @@ export function TraineeAssessmentTest() {
 
   const traineeNavLinks = [
     { label: 'Dashboard', to: '/trainee/dashboard', icon: LayoutDashboard },
-    { label: 'My Learning', to: '/trainee/my-learning', icon: BookOpen },
     { label: 'Course Catalog', to: '/trainee/courses', icon: Compass },
+    { label: 'My Learning', to: '/trainee/my-learning', icon: BookOpen },
     { label: 'Assessments', to: '/trainee/assessments', icon: Target },
-    { label: 'Settings', to: '/trainee/settings', icon: Settings }
+    { label: 'Notifications', to: '/trainee/notifications', icon: Bell },
+    { label: 'Profile', to: '/trainee/profile', icon: User }
   ]
 
   if (isAssessmentLoading || isQuestionsLoading || isAttemptLoading || (previousAttempt && !areResultsHidden && isAnswersLoading)) {
@@ -757,7 +758,8 @@ export function TraineeAssessmentTest() {
     const isPractice = assessment.assessment_type === 'mock' || assessment.assessment_type === 'daily'
     const isRegularAssessment = assessment.assessment_type === 'assessment'
     const isCourseModuleCompleted = (enrollment?.progress_percent ?? 0) >= 100 || enrollment?.status === 'completed'
-    const isFinalBlockedByModules = isFinal && !isCourseModuleCompleted
+    const isAdminUser = profile?.role === 'admin' || profile?.role === 'super_admin'
+    const isFinalBlockedByModules = !isAdminUser && isFinal && !isCourseModuleCompleted
 
     let gating = { allowed: true, message: '' };
 
@@ -766,7 +768,7 @@ export function TraineeAssessmentTest() {
         allowed: false,
         message: `Final Assessment is locked. You must complete 100% of all course learning modules before taking the Final Assessment (Current Progress: ${enrollment?.progress_percent ?? 0}%).`
       };
-    } else if (assessment.scheduled_date) {
+    } else if (assessment.scheduled_date && !isAdminUser) {
       const now = currentTime;
       const startStr = `${assessment.scheduled_date}T${assessment.start_time || '00:00:00'}`;
       const endStr = `${assessment.scheduled_date}T${assessment.end_time || '23:59:59'}`;

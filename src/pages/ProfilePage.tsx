@@ -20,7 +20,7 @@ import {
   CheckCircle2, Compass, BookOpen, BarChart3, Award, Calendar,
   Building, Layers, Lock, FileText, Check, Code, ExternalLink,
   Trophy, Medal, Star, ChevronRight, ArrowRight, Eye, EyeOff,
-  Camera, Upload, Trash2, Image as ImageIcon
+  Camera, Upload, Trash2, Image as ImageIcon, Bell
 } from 'lucide-react'
 
 function LinkedinIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -1476,6 +1476,7 @@ export function ProfilePage() {
     { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
     { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
     { to: '/trainee/assessments', label: 'Assessments', icon: Award },
+    { to: '/trainee/notifications', label: 'Notifications', icon: Bell },
     { to: '/trainee/profile', label: 'Profile', icon: User, isActive: true },
   ]
 

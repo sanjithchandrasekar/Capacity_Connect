@@ -5,15 +5,32 @@ import { supabase } from '@/lib/supabase'
 import {
   LogOut, BookOpen, BarChart3,
   Settings, Bell, Menu, X,
-  User, ChevronRight, GraduationCap, PlusCircle
+  User, ChevronRight, GraduationCap, PlusCircle, Shield, Target, Megaphone, LayoutDashboard,
+  Users, FileCheck, Mail, Globe
 } from 'lucide-react'
+import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 
-const navItems = [
+const trainerNavItems = [
   { to: '/trainer', label: 'Dashboard', icon: BarChart3, exact: true },
   { to: '/trainer/courses', label: 'My Courses', icon: BookOpen },
   { to: '/trainer/courses/new', label: 'Create Course', icon: PlusCircle },
   { to: '/trainer/notifications', label: 'Notifications', icon: Bell },
   { to: '/trainer/profile', label: 'Profile', icon: User },
+]
+
+const getAdminNavItems = (isSuperAdmin: boolean) => [
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { to: '/admin?tab=trainees', label: 'Trainees', icon: Users },
+  { to: '/admin?tab=trainers', label: 'Trainers', icon: Users },
+  ...(isSuperAdmin ? [{ to: '/admin?tab=admins', label: 'Admins', icon: Shield }] : []),
+  { to: '/admin/courses', label: 'Courses', icon: BookOpen },
+  { to: '/admin/assessments', label: 'Assessments', icon: FileCheck },
+  { to: '/admin/announcements', label: 'Announcements', icon: Megaphone },
+  { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+  { to: '/admin?tab=messages', label: 'Messages', icon: Mail },
+  { to: '/admin?tab=home_page', label: 'Home Page', icon: Globe },
+  ...(isSuperAdmin ? [{ to: '/admin?tab=logs', label: 'Audit Logs', icon: BarChart3 }] : []),
+  { to: isSuperAdmin ? '/super-admin/profile' : '/admin/profile', label: 'Profile', icon: User },
 ]
 
 export const fadeUp = {
@@ -28,6 +45,10 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState<number | null>(null)
+
+  const isSuperAdmin = profile?.role === 'super_admin'
+  const isAdmin = profile?.role === 'admin' || isSuperAdmin
+  const navItems = isAdmin ? getAdminNavItems(isSuperAdmin) : trainerNavItems
 
   React.useEffect(() => {
     if (!profile?.id) return
@@ -44,10 +65,17 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
     navigate('/login')
   }
 
-  const isActive = (item: typeof navItems[0]) => {
-    if (item.exact) return location.pathname === item.to
-    if (item.to === '/trainer/courses') return location.pathname === '/trainer/courses'
-    return location.pathname.startsWith(item.to) && item.to !== '/trainer'
+  const isActive = (item: any) => {
+    if (item.exact) return location.pathname === item.to && !location.search
+    if (item.to.includes('?tab=')) {
+      const targetTab = item.to.split('?tab=')[1]
+      const currentTab = new URLSearchParams(location.search).get('tab')
+      return location.pathname === '/admin' && currentTab === targetTab
+    }
+    if (item.to === '/trainer/courses' || item.to === '/admin/courses') {
+      return location.pathname.startsWith('/trainer/courses') || location.pathname.startsWith('/admin/courses')
+    }
+    return location.pathname.startsWith(item.to) && item.to !== '/trainer' && item.to !== '/admin'
   }
 
   const sidebarContent = (
@@ -103,7 +131,11 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="flex items-center gap-2 px-3">
-          <span className="text-xs px-2 py-0.5 rounded-full border bg-orange-500/10 text-orange-400 border-orange-500/30 capitalize font-semibold">Trainer</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full border capitalize font-semibold ${
+            isAdmin ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+          }`}>
+            {profile?.role?.replace('_', ' ') || 'User'}
+          </span>
         </div>
         <button onClick={handleSignOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all text-sm font-medium">
           <LogOut className="w-4 h-4" />
@@ -139,19 +171,16 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 shadow-xs">
-              <GraduationCap className="w-4 h-4 md:w-5 md:h-5" />
+              {isAdmin ? <Shield className="w-4 h-4 md:w-5 md:h-5" /> : <GraduationCap className="w-4 h-4 md:w-5 md:h-5" />}
             </div>
-            <span className="text-sm md:text-base font-bold text-slate-900">Trainer Dashboard</span>
+            <span className="text-sm md:text-base font-bold text-slate-900">
+              {isAdmin ? 'Admin Portal' : 'Trainer Dashboard'}
+            </span>
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-1.5 md:gap-2">
-            <Link to="/trainer/notifications" className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all">
-              <Bell className="w-4 h-4" />
-              {unreadCount !== null && unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-              )}
-            </Link>
-            <Link to="/trainer/profile" className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all" title="Profile">
+            <NotificationPanel />
+            <Link to={isAdmin ? '/admin/profile' : '/trainer/profile'} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all" title="Profile">
               <User className="w-4 h-4" />
             </Link>
           </div>

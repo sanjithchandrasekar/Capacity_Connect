@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { DashboardShell } from '@/pages/Dashboards'
 import {
   BookOpen, Compass, FileCheck, CheckCircle2, Clock,
-  Calendar, Search, Filter, PlayCircle, BarChart3, User, ChevronLeft, ChevronRight
+  Calendar, Search, Filter, PlayCircle, BarChart3, User, ChevronLeft, ChevronRight, Bell
 } from 'lucide-react'
 import {
   format, isSameDay, addMonths, subMonths,
@@ -106,10 +106,13 @@ export function TraineeAssessmentsHub() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('enrollments')
-        .select('course_id, progress_percent, status')
+        .select(`
+          course_id, progress_percent, status,
+          course:courses!enrollments_course_id_fkey(status)
+        `)
         .eq('user_id', profile!.id)
       if (error) throw error
-      return data || []
+      return (data || []).filter((e: any) => e.course?.status !== 'archived')
     },
     enabled: !!profile?.id,
   })
@@ -145,12 +148,12 @@ export function TraineeAssessmentsHub() {
         .from('assessments')
         .select(`id, title, scheduled_date, start_time, end_time, duration_minutes,
                  passing_score, course_id, status, assessment_type,
-                 results_publish_date, course:courses(title)`)
+                 results_publish_date, course:courses(title, status)`)
         .in('course_id', courseIds)
         .eq('status', 'published')
         .order('scheduled_date', { ascending: true })
       if (error) throw error
-      return data || []
+      return (data || []).filter((a: any) => a.course?.status !== 'archived')
     },
     enabled: courseIds.length > 0,
   })
@@ -266,6 +269,7 @@ export function TraineeAssessmentsHub() {
         { to: '/trainee/courses', label: 'Course Catalog', icon: Compass },
         { to: '/trainee/my-learning', label: 'My Learning', icon: BookOpen },
         { to: '/trainee/assessments', label: 'Assessments', icon: FileCheck },
+        { to: '/trainee/notifications', label: 'Notifications', icon: Bell },
         { to: '/trainee/profile', label: 'Profile', icon: User },
       ]}
     >
