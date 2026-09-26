@@ -151,8 +151,12 @@ export function AdminUserDetailsModal({
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 pr-8">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 via-sky-600 to-blue-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-cyan-500/30 shrink-0 border border-white/20">
-                  {user.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 via-sky-600 to-blue-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-cyan-500/30 shrink-0 border border-white/20 overflow-hidden">
+                  {user.avatar_path ? (
+                    <img src={user.avatar_path} alt={user.full_name} className="w-full h-full object-cover" />
+                  ) : (
+                    user.full_name?.charAt(0)?.toUpperCase() ?? '?'
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">

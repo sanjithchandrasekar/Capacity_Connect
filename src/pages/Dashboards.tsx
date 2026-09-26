@@ -148,8 +148,12 @@ export function DashboardShell({
       {/* Profile summary & logout */}
       <div className="p-3 border-t border-slate-800 space-y-2">
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-800/50 transition-all cursor-pointer group">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 ring-2 ring-cyan-500/20">
-            {profile?.full_name?.[0]?.toUpperCase() ?? 'U'}
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 ring-2 ring-cyan-500/20 overflow-hidden">
+            {profile?.avatar_path ? (
+              <img src={profile.avatar_path} alt={profile.full_name} className="w-full h-full object-cover" />
+            ) : (
+              profile?.full_name?.[0]?.toUpperCase() ?? 'U'
+            )}
           </div>
           {(!sidebarCollapsed || mobileOpen) && (
             <div className="flex-1 min-w-0">
@@ -1781,8 +1785,12 @@ export function AdminDashboard() {
                                     className="flex items-center gap-2.5 cursor-pointer group"
                                     title="Click to view full profile details"
                                   >
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                                      {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs overflow-hidden">
+                                      {u.avatar_path ? (
+                                        <img src={u.avatar_path} alt={u.full_name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        u.full_name?.charAt(0)?.toUpperCase() ?? '?'
+                                      )}
                                     </div>
                                     <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition-colors truncate max-w-[130px]">{u.full_name}</span>
                                   </div>
@@ -1922,8 +1930,12 @@ export function AdminDashboard() {
                                     className="flex items-center gap-2.5 cursor-pointer group"
                                     title="Click to view full profile details"
                                   >
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                                      {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs overflow-hidden">
+                                      {u.avatar_path ? (
+                                        <img src={u.avatar_path} alt={u.full_name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        u.full_name?.charAt(0)?.toUpperCase() ?? '?'
+                                      )}
                                     </div>
                                     <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition-colors truncate max-w-[130px]">{u.full_name}</span>
                                   </div>
@@ -2047,8 +2059,12 @@ export function AdminDashboard() {
                                     className="flex items-center gap-2.5 cursor-pointer group"
                                     title="Click to view full profile details"
                                   >
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs">
-                                      {u.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 group-hover:scale-105 transition-transform shadow-xs overflow-hidden">
+                                      {u.avatar_path ? (
+                                        <img src={u.avatar_path} alt={u.full_name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        u.full_name?.charAt(0)?.toUpperCase() ?? '?'
+                                      )}
                                     </div>
                                     <span className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-cyan-700 transition-colors truncate max-w-[130px]">{u.full_name}</span>
                                   </div>

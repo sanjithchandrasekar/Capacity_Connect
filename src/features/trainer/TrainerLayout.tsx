@@ -90,8 +90,12 @@ export function TrainerLayout({ children }: { children: React.ReactNode }) {
 
       <div className="p-3 border-t border-slate-800 space-y-2">
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-800/50 transition-all cursor-pointer group">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 ring-2 ring-cyan-500/20">
-            {profile?.full_name?.charAt(0)?.toUpperCase() ?? '?'}
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 ring-2 ring-cyan-500/20 overflow-hidden">
+            {profile?.avatar_path ? (
+              <img src={profile.avatar_path} alt={profile.full_name} className="w-full h-full object-cover" />
+            ) : (
+              profile?.full_name?.charAt(0)?.toUpperCase() ?? '?'
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-slate-200 truncate group-hover:text-cyan-400 transition-colors">{profile?.full_name}</p>

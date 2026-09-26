@@ -19,7 +19,8 @@ import {
   Shield, Key, Globe, Save, Loader2, Plus, X,
   CheckCircle2, Compass, BookOpen, BarChart3, Award, Calendar,
   Building, Layers, Lock, FileText, Check, Code, ExternalLink,
-  Trophy, Medal, Star, ChevronRight, ArrowRight, Eye, EyeOff
+  Trophy, Medal, Star, ChevronRight, ArrowRight, Eye, EyeOff,
+  Camera, Upload, Trash2, Image as ImageIcon
 } from 'lucide-react'
 
 function LinkedinIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -58,11 +59,13 @@ const SUGGESTED_INTERESTS = [
 ]
 
 export function ProfilePage() {
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const [activeTab, setActiveTab] = useState<'general' | 'qualifications' | 'experience' | 'skills' | 'links' | 'security'>('general')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [passwordLoading, setPasswordLoading] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   // Fetch completed course enrollments for Badges section
   const { data: completedEnrollments = [], isLoading: badgesLoading } = useQuery({
@@ -157,6 +160,7 @@ export function ProfilePage() {
   const [form, setForm] = useState({
     full_name: '',
     email: '',
+    avatar_path: '',
     phone: '',
     alternate_phone: '',
     department: '',
@@ -208,6 +212,7 @@ export function ProfilePage() {
       setForm({
         full_name: data.full_name || profile?.full_name || '',
         email: data.email || user.email || '',
+        avatar_path: data.avatar_path || profile?.avatar_path || '',
         phone: data.phone || '',
         alternate_phone: data.alternate_phone || '',
         department: data.department || '',
@@ -235,7 +240,7 @@ export function ProfilePage() {
     } finally {
       setLoading(false)
     }
-  }, [user, profile?.full_name])
+  }, [user, profile?.full_name, profile?.avatar_path])
 
   useEffect(() => {
     loadProfile()
@@ -243,6 +248,102 @@ export function ProfilePage() {
 
   const updateField = (field: string, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Handle Avatar Photo Upload
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file (PNG, JPG, JPEG, WEBP)')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size cannot exceed 10MB limit')
+      return
+    }
+
+    setUploadingAvatar(true)
+    const fileExt = file.name.split('.').pop() || 'png'
+    const fileName = `avatar_${user.id}_${Date.now()}.${fileExt}`
+    const filePath = `avatars/${fileName}`
+    const table = profile?.role === 'trainer' ? 'trainers' : profile?.role === 'trainee' ? 'trainees' : 'admins'
+
+    try {
+      let finalAvatarUrl: string | null = null
+
+      // Attempt upload to Supabase storage bucket
+      const { error: uploadError } = await supabase.storage
+        .from('Homepage')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        // Fallback: Try materials bucket or DataURL
+        const { error: matError } = await supabase.storage
+          .from('materials')
+          .upload(filePath, file, { upsert: true })
+
+        if (!matError) {
+          const { data: urlData } = supabase.storage.from('materials').getPublicUrl(filePath)
+          finalAvatarUrl = urlData.publicUrl
+        } else {
+          // Robust DataURL fallback for instant resilience
+          await new Promise<void>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (event) => {
+              finalAvatarUrl = event.target?.result as string
+              resolve()
+            }
+            reader.readAsDataURL(file)
+          })
+        }
+      } else {
+        const { data: urlData } = supabase.storage.from('Homepage').getPublicUrl(filePath)
+        finalAvatarUrl = urlData.publicUrl
+      }
+
+      if (finalAvatarUrl) {
+        setForm(prev => ({ ...prev, avatar_path: finalAvatarUrl! }))
+
+        // Update database table for user's role
+        await supabase
+          .from(table as any)
+          .update({ avatar_path: finalAvatarUrl })
+          .eq('id', user.id)
+
+        await refreshProfile()
+        toast.success('Profile photo updated successfully!')
+      }
+    } catch (err: any) {
+      console.error('Error uploading avatar:', err)
+      toast.error('Failed to upload profile photo')
+    } finally {
+      setUploadingAvatar(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  // Handle Avatar Photo Removal
+  const handleRemoveAvatar = async () => {
+    if (!user) return
+    setUploadingAvatar(true)
+    const table = profile?.role === 'trainer' ? 'trainers' : profile?.role === 'trainee' ? 'trainees' : 'admins'
+    try {
+      setForm(prev => ({ ...prev, avatar_path: '' }))
+      await supabase
+        .from(table as any)
+        .update({ avatar_path: null })
+        .eq('id', user.id)
+
+      await refreshProfile()
+      toast.success('Profile photo removed')
+    } catch (err: any) {
+      toast.error('Failed to remove profile photo')
+    } finally {
+      setUploadingAvatar(false)
+    }
   }
 
   // Handle Tag Addition
@@ -281,6 +382,7 @@ export function ProfilePage() {
       const table = profile?.role === 'trainer' ? 'trainers' : profile?.role === 'trainee' ? 'trainees' : 'admins'
       const payload: Record<string, any> = {
         full_name: form.full_name,
+        avatar_path: form.avatar_path || null,
         phone: form.phone || null,
         alternate_phone: form.alternate_phone || null,
         department: form.department || null,
@@ -316,6 +418,7 @@ export function ProfilePage() {
 
       if (error) throw error
 
+      await refreshProfile()
       toast.success('Profile details saved successfully!')
     } catch (err: any) {
       console.error('Error saving profile:', err)
@@ -415,8 +518,22 @@ export function ProfilePage() {
           
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 via-sky-500 to-blue-600 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-cyan-500/30 ring-4 ring-white/10 shrink-0">
-                {form.full_name?.charAt(0)?.toUpperCase() || <User className="w-10 h-10" />}
+              <div className="relative group/avatar w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 via-sky-500 to-blue-600 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-cyan-500/30 ring-4 ring-white/10 shrink-0 overflow-hidden">
+                {form.avatar_path ? (
+                  <img src={form.avatar_path} alt={form.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  form.full_name?.charAt(0)?.toUpperCase() || <User className="w-10 h-10" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold transition-opacity cursor-pointer backdrop-blur-2xs"
+                  title="Change profile photo"
+                >
+                  {uploadingAvatar ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5 mb-0.5" />}
+                  <span>Edit</span>
+                </button>
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -643,6 +760,67 @@ export function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
+                {/* Profile Photo Uploader Section */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white text-2xl font-black shadow-md shrink-0 ring-2 ring-cyan-500/30 overflow-hidden">
+                      {form.avatar_path ? (
+                        <img src={form.avatar_path} alt={form.full_name} className="w-full h-full object-cover" />
+                      ) : (
+                        form.full_name?.charAt(0)?.toUpperCase() || <User className="w-8 h-8" />
+                      )}
+                      {uploadingAvatar && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">Profile Photo</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        PNG, JPG, or WEBP (Max 10MB). High-resolution square image recommended.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      className="border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold rounded-xl h-9 flex-1 sm:flex-initial cursor-pointer"
+                    >
+                      {uploadingAvatar ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5 mr-1.5 text-cyan-600" />
+                      )}
+                      {form.avatar_path ? 'Change Photo' : 'Upload Photo'}
+                    </Button>
+                    {form.avatar_path && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveAvatar}
+                        disabled={uploadingAvatar}
+                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-xs font-semibold rounded-xl h-9 px-3 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700">Full Name *</Label>

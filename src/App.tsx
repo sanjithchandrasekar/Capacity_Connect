@@ -7,6 +7,7 @@ import { queryClient } from './lib/query-client'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { ProtectedRoute, ApprovedRoute, RoleRoute } from './components/ProtectedRoute'
 import { LandingPage } from './pages/LandingPage'
+import { FirstTimeProfileSetupModal } from './components/profile/FirstTimeProfileSetupModal'
 
 // Lazy loaded page components to drastically reduce initial bundle size and TBT
 const Login = lazy(() => import('./pages/Login').then((m) => ({ default: m.Login })))
@@ -234,6 +235,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <AnimatedAppRoutes />
+          <FirstTimeProfileSetupModal />
           <Suspense fallback={null}>
             <ChatBot />
           </Suspense>
