@@ -126,7 +126,7 @@ export function Register() {
       const { data, error } = await supabase.rpc('verify_otp', {
         p_identifier: email,
         p_otp: emailOtpInput,
-        p_user_id: undefined,
+        p_user_id: null,
         p_type: 'email'
       } as any)
       if (error) throw error
