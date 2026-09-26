@@ -92,8 +92,26 @@ export function Register() {
       toast.error('Please enter a valid email first.')
       return
     }
-    
+
     setIsSendingEmailOtp(true)
+    
+    // First check if the email is already registered
+    try {
+      const { data: emailExists, error: checkError } = await (supabase.rpc as any)('check_email_exists', { 
+        p_email: email 
+      })
+      
+      if (checkError) {
+        console.error("Error checking email:", checkError)
+      } else if (emailExists) {
+        toast.error('This email is already registered. Please log in instead.')
+        setIsSendingEmailOtp(false)
+        return
+      }
+    } catch (err) {
+      console.error("Email check failed:", err)
+    }
+    
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { identifier: email, type: 'email' }
@@ -126,7 +144,7 @@ export function Register() {
       const { data, error } = await supabase.rpc('verify_otp', {
         p_identifier: email,
         p_otp: emailOtpInput,
-        p_user_id: null,
+        p_user_id: '00000000-0000-0000-0000-000000000000',
         p_type: 'email'
       } as any)
       if (error) throw error
