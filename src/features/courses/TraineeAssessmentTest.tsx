@@ -101,6 +101,22 @@ export function TraineeAssessmentTest() {
     enabled: !!courseId,
   })
 
+  const { data: enrollment, isLoading: isEnrollmentLoading } = useQuery({
+    queryKey: ['trainee-enrollment-test', courseId, profile?.id],
+    queryFn: async () => {
+      if (!courseId || !profile?.id) return null
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('user_id', profile.id)
+        .maybeSingle()
+      if (error) return null
+      return data
+    },
+    enabled: !!courseId && !!profile?.id,
+  })
+
   const { data: previousAttempt, isLoading: isAttemptLoading }: { data: any, isLoading: boolean } = useQuery({
     queryKey: ['assessment-attempt', assessmentId, profile?.id],
     queryFn: async () => {
@@ -678,8 +694,20 @@ export function TraineeAssessmentTest() {
 
   // Pre-Start State
   if (!hasStarted) {
+    const isFinal = assessment.assessment_type === 'final'
+    const isPractice = assessment.assessment_type === 'mock' || assessment.assessment_type === 'daily'
+    const isRegularAssessment = assessment.assessment_type === 'assessment'
+    const isCourseModuleCompleted = (enrollment?.progress_percent ?? 0) >= 100 || enrollment?.status === 'completed'
+    const isFinalBlockedByModules = isFinal && !isCourseModuleCompleted
+
     let gating = { allowed: true, message: '' };
-    if (assessment.scheduled_date) {
+
+    if (isFinalBlockedByModules) {
+      gating = {
+        allowed: false,
+        message: `Final Assessment is locked. You must complete 100% of all course learning modules before taking the Final Assessment (Current Progress: ${enrollment?.progress_percent ?? 0}%).`
+      };
+    } else if (assessment.scheduled_date) {
       const now = currentTime;
       const startStr = `${assessment.scheduled_date}T${assessment.start_time || '00:00:00'}`;
       const endStr = `${assessment.scheduled_date}T${assessment.end_time || '23:59:59'}`;
@@ -705,6 +733,7 @@ export function TraineeAssessmentTest() {
         gating = { allowed: false, message: 'This assessment has expired and is now closed.' };
       }
     }
+
     return (
       <DashboardShell title={displayTitle} icon={Target} navLinks={traineeNavLinks}>
         <div className="max-w-4xl mx-auto">
@@ -715,10 +744,31 @@ export function TraineeAssessmentTest() {
             <div className="w-16 h-16 bg-cyan-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-cyan-200 text-cyan-600 shadow-sm">
               <Target className="w-8 h-8" />
             </div>
+
+            {/* Test Type & Grade Weight Banner */}
+            <div className="flex justify-center mb-3">
+              {isPractice ? (
+                <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5">
+                  <Brain className="w-3.5 h-3.5 text-slate-500" />
+                  {assessment.assessment_type === 'mock' ? 'Mock Test' : 'Daily Test'} • Practice Only (0% Final Grade Weight)
+                </span>
+              ) : isFinal ? (
+                <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-purple-600" />
+                  Final Assessment • 50% Final Grade Weight
+                </span>
+              ) : (
+                <span className="px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-amber-600" />
+                  Regular Assessment • 25% Grade Weight (Averaged)
+                </span>
+              )}
+            </div>
+
             <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">{displayTitle}</h1>
             <p className="text-slate-600 mb-8 max-w-lg mx-auto leading-relaxed font-medium">{assessment.instructions || 'Please read each question carefully before answering. Good luck!'}</p>
             
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10 max-w-xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 max-w-xl mx-auto">
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
                 <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Duration</p>
                 <p className="font-bold text-slate-900 flex items-center gap-1.5"><Clock className="w-4 h-4 text-amber-600" /> {assessment.duration_minutes || 30} mins</p>
@@ -732,8 +782,29 @@ export function TraineeAssessmentTest() {
                 <p className="font-bold text-slate-900 flex items-center gap-1.5"><Award className="w-4 h-4 text-emerald-600" /> {(questions?.length || 0) * 10}</p>
               </div>
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
-                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Pattern</p>
-                <p className="font-bold text-slate-900 flex items-center gap-1.5 capitalize text-sm"><BookOpen className="w-4 h-4 text-indigo-600" /> {assessment.assessment_type || 'Standard'}</p>
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-wider">Weight</p>
+                <p className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
+                  {isPractice ? 'Practice (0%)' : isFinal ? 'Final (50%)' : 'Avg (25%)'}
+                </p>
+              </div>
+            </div>
+
+            {/* Grading Breakdown Note */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 mb-8 text-left text-xs text-slate-600">
+              <span className="font-bold text-slate-800 block mb-1">Course Grading Breakdown:</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] mt-2">
+                <div className="p-2 rounded-xl bg-white border border-slate-200">
+                  <span className="text-slate-400 block font-semibold">1. Course Modules</span>
+                  <span className="font-bold text-cyan-700">25% of Final Grade</span>
+                </div>
+                <div className="p-2 rounded-xl bg-white border border-slate-200">
+                  <span className="text-slate-400 block font-semibold">2. Assessments Avg</span>
+                  <span className="font-bold text-amber-700">25% of Final Grade</span>
+                </div>
+                <div className="p-2 rounded-xl bg-white border border-slate-200">
+                  <span className="text-slate-400 block font-semibold">3. Final Assessment</span>
+                  <span className="font-bold text-purple-700">50% of Final Grade</span>
+                </div>
               </div>
             </div>
 
@@ -756,11 +827,20 @@ export function TraineeAssessmentTest() {
               <div className="flex flex-col items-center space-y-4">
                 <div className="bg-amber-50 border border-amber-200 text-amber-800 p-6 rounded-2xl flex flex-col items-center gap-3 w-full">
                   <AlertCircle className="w-8 h-8 text-amber-600" />
-                  <p className="font-bold">{gating.message}</p>
+                  <p className="font-bold text-sm leading-relaxed">{gating.message}</p>
                 </div>
-                <Button onClick={() => navigate(`/trainee/assessments`)} variant="outline" className="text-slate-600 font-bold rounded-xl border-slate-200">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to Assessments
-                </Button>
+                {isFinalBlockedByModules ? (
+                  <Button
+                    onClick={() => navigate(`/trainee/courses/${courseId}/learn`)}
+                    className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl px-6 py-3 text-sm shadow-md"
+                  >
+                    Go to Course Modules ({enrollment?.progress_percent ?? 0}%)
+                  </Button>
+                ) : (
+                  <Button onClick={() => navigate(`/trainee/assessments`)} variant="outline" className="text-slate-600 font-bold rounded-xl border-slate-200">
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Assessments
+                  </Button>
+                )}
               </div>
             ) : (
               <Button onClick={startTest} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-2xl px-10 py-6 text-lg w-full sm:w-auto shadow-lg shadow-cyan-600/20 transition-all hover:scale-105 active:scale-95">

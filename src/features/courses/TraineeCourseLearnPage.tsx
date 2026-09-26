@@ -275,6 +275,24 @@ export function TraineeCourseLearnPage() {
     enabled: !!courseId && !!profile?.id,
   })
 
+  // Fetch course assessments to know if a Final Assessment exists
+  const { data: courseAssessments } = useQuery({
+    queryKey: ['learn-course-assessments', courseId],
+    queryFn: async () => {
+      if (!courseId) return []
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('course_id', courseId)
+        .eq('status', 'published')
+      if (error) return []
+      return data || []
+    },
+    enabled: !!courseId,
+  })
+
+  const finalAssessment = courseAssessments?.find((a: any) => a.assessment_type === 'final')
+
   const isApproved = Boolean(enrollment && (['enrolled', 'in_progress', 'completed'] as string[]).includes((enrollment as any).status))
 
   const hasInitializedActiveModule = useRef(false)
@@ -1633,20 +1651,31 @@ export function TraineeCourseLearnPage() {
 
               {isLastModule ? (
                 isCurrentCompleted || quizResult?.passed ? (
-                  <Button
-                    onClick={handleDownloadCertificate}
-                    disabled={downloadingCert}
-                    className="bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-600 hover:from-amber-600 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-6 py-3 shadow-xl shadow-cyan-500/25 gap-2"
-                  >
-                    {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
-                    {downloadingCert ? 'Generating...' : 'Course Completed! Download Certificate 🎓'}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {finalAssessment ? (
+                      <Button
+                        onClick={() => navigate(`/trainee/courses/${courseId}/assessments/${finalAssessment.id}`)}
+                        className="bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-6 py-3 shadow-xl shadow-purple-500/25 gap-2 hover:scale-105 active:scale-95 transition-all"
+                      >
+                        <Award className="w-4 h-4 text-amber-300" />
+                        <span>Take Final Assessment (50% Grade) →</span>
+                      </Button>
+                    ) : null}
+                    <Button
+                      onClick={handleDownloadCertificate}
+                      disabled={downloadingCert}
+                      className="bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-600 hover:from-amber-600 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-5 py-3 shadow-xl shadow-cyan-500/25 gap-2"
+                    >
+                      {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                      {downloadingCert ? 'Generating...' : 'Download Certificate 🎓'}
+                    </Button>
+                  </div>
                 ) : (
                   <Button
                     disabled
                     className="bg-slate-300 dark:bg-slate-800 text-slate-500 rounded-xl px-6 py-2.5 text-xs font-bold"
                   >
-                    Complete Final Module to Finish Course
+                    Complete Final Module to Unlock Final Assessment
                   </Button>
                 )
               ) : (

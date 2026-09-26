@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Users, BarChart3, Target, BookOpen, Loader2, TrendingUp, AlertTriangle } from 'lucide-react'
 
+import { calculateCourseGradeBreakdown, type CourseGradeBreakdown } from '@/lib/courseGrading'
+
 type Course = Database['public']['Tables']['courses']['Row']
 type Enrollment = Database['public']['Tables']['enrollments']['Row']
 type Trainee = Database['public']['Tables']['trainees']['Row']
@@ -21,6 +23,7 @@ interface TraineeRow {
   attempts: AssessmentAttempt[]
   bestScore: number | null
   attemptCount: number
+  gradeBreakdown: CourseGradeBreakdown
 }
 
 export function PerformancePage() {
@@ -43,7 +46,7 @@ export function PerformancePage() {
 
       const { data: assessmentsList } = await supabase
         .from('assessments')
-        .select('id')
+        .select('id, title, assessment_type, passing_score')
         .eq('course_id', courseId)
         .eq('created_by', user.id)
 
@@ -58,12 +61,21 @@ export function PerformancePage() {
       const rows: TraineeRow[] = enrollments.map(en => {
         const userAttempts = allAttempts.filter(at => at.user_id === en.user_id)
         const scores = userAttempts.filter(at => at.score !== null).map(at => at.score ?? 0)
+
+        const breakdown = calculateCourseGradeBreakdown({
+          moduleProgressPercent: en.progress_percent,
+          courseAssessments: (assessmentsList || []) as any,
+          traineeAttempts: userAttempts as any,
+          passingScore: c?.passing_score ?? 50,
+        })
+
         return {
           enrollment: en,
           trainee: en.trainees,
           attempts: userAttempts,
           bestScore: scores.length > 0 ? Math.max(...scores) : null,
           attemptCount: userAttempts.length,
+          gradeBreakdown: breakdown,
         }
       })
       setTraineeRows(rows)
@@ -167,49 +179,78 @@ export function PerformancePage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/70">
-                    {['Trainee', 'Enrolled', 'Progress', 'Attempts', 'Best Score', 'Status'].map(h => (
+                    {['Trainee', 'Enrolled', 'Modules (25%)', 'Assessments (25%)', 'Final Exam (50%)', 'Total Grade (100%)', 'Status'].map(h => (
                       <th key={h} className="text-left text-xs text-slate-500 font-semibold px-6 py-3">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {activeTraineeRows.map(r => (
-                    <tr key={r.enrollment.user_id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                            {r.trainee?.full_name?.charAt(0) ?? '?'}
+                  {activeTraineeRows.map(r => {
+                    const gb = r.gradeBreakdown
+                    return (
+                      <tr key={r.enrollment.user_id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                              {r.trainee?.full_name?.charAt(0) ?? '?'}
+                            </div>
+                            <div>
+                              <p className="text-sm text-slate-900 font-bold">{r.trainee?.full_name ?? 'Unknown'}</p>
+                              <p className="text-xs text-slate-400">{r.trainee?.email}</p>
+                            </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-3.5 text-xs text-slate-600 font-medium">{new Date(r.enrollment.enrolled_at).toLocaleDateString()}</td>
+                        <td className="px-6 py-3.5">
                           <div>
-                            <p className="text-sm text-slate-900 font-bold">{r.trainee?.full_name ?? 'Unknown'}</p>
-                            <p className="text-xs text-slate-400">{r.trainee?.email}</p>
+                            <span className="text-xs font-bold text-cyan-700">{gb.moduleScore} / 25 pts</span>
+                            <span className="text-[10px] text-slate-400 block">({gb.moduleProgressPercent}% complete)</span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5 text-xs text-slate-600 font-medium">{new Date(r.enrollment.enrolled_at).toLocaleDateString()}</td>
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                            <div className="h-full bg-gradient-to-r from-cyan-600 to-blue-600 rounded-full" style={{ width: `${r.enrollment.progress_percent}%` }} />
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <div>
+                            <span className="text-xs font-bold text-amber-700">{gb.regularAssessmentScore} / 25 pts</span>
+                            <span className="text-[10px] text-slate-400 block">
+                              {gb.regularAssessmentsTotal > 0
+                                ? `Avg: ${gb.regularAssessmentAveragePercent}% (${gb.regularAssessmentsCompleted}/${gb.regularAssessmentsTotal})`
+                                : 'Module-aligned'}
+                            </span>
                           </div>
-                          <span className="text-xs font-bold text-slate-700">{r.enrollment.progress_percent}%</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5 text-xs text-slate-600 font-medium">{r.attemptCount}</td>
-                      <td className="px-6 py-3.5 text-xs font-bold text-slate-900">
-                        {r.bestScore !== null ? `${r.bestScore}%` : '—'}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <Badge className={`text-xs font-semibold capitalize ${
-                          r.enrollment.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          r.enrollment.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}>
-                          {r.enrollment.status.replace('_', ' ')}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <div>
+                            <span className="text-xs font-bold text-purple-700">{gb.finalAssessmentWeightedScore} / 50 pts</span>
+                            <span className="text-[10px] text-slate-400 block">
+                              {gb.finalAssessmentCompleted
+                                ? `Score: ${gb.finalAssessmentScorePercent}%`
+                                : gb.isFinalUnlocked
+                                  ? 'Unlocked'
+                                  : 'Locked'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-sm font-black text-slate-900">{gb.totalScore}%</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              gb.isPassed ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                            }`}>
+                              {gb.isPassed ? 'Passed' : 'Pending'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <Badge className={`text-xs font-semibold capitalize ${
+                            r.enrollment.status === 'completed' || gb.isCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            r.enrollment.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            {(r.enrollment.status === 'completed' || gb.isCompleted) ? 'Completed' : r.enrollment.status.replace('_', ' ')}
+                          </Badge>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

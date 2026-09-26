@@ -104,7 +104,10 @@ export function TraineeAssessmentsHub() {
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
     queryKey: ['trainee_enrollments_for_assessments', profile?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('enrollments').select('course_id').eq('user_id', profile!.id)
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('course_id, progress_percent, status')
+        .eq('user_id', profile!.id)
       if (error) throw error
       return data || []
     },
@@ -112,6 +115,27 @@ export function TraineeAssessmentsHub() {
   })
 
   const courseIds = enrollments?.map(e => e.course_id) || []
+  const enrollmentMap = new Map<string, any>()
+  enrollments?.forEach(e => enrollmentMap.set(e.course_id, e))
+
+  const isFinalUnlockedForCourse = (courseId: string) => {
+    const en = enrollmentMap.get(courseId)
+    if (!en) return false
+    if ((en.progress_percent ?? 0) >= 100 || en.status === 'completed') return true
+    if (profile?.id) {
+      const stored = localStorage.getItem(`cc_mod_progress_${courseId}_${profile.id}`)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (parsed.completed && parsed.completed.length > 0) {
+            // If local storage has marked modules completed
+            return (en.progress_percent ?? 0) >= 100
+          }
+        } catch {}
+      }
+    }
+    return false
+  }
 
   const { data: assessments, isLoading: assessmentsLoading } = useQuery({
     queryKey: ['trainee_assessments_v2', courseIds],
@@ -194,7 +218,7 @@ export function TraineeAssessmentsHub() {
   const headingRange = `${format(twoMonthsAgo, 'd MMM')} - ${format(now, 'd MMM')}`
 
   const formatType = (t: string) =>
-    t === 'daily' ? 'Daily Test' : t === 'mock' ? 'Mock Test' : t === 'assessment' ? 'Assessment Test' : t === 'final' ? 'Final Test' : 'Test'
+    t === 'daily' ? 'Daily Test (Practice)' : t === 'mock' ? 'Mock Test (Practice)' : t === 'assessment' ? 'Assessment Test (25% Weight)' : t === 'final' ? 'Final Assessment (50% Weight)' : 'Test'
 
   const matchesFilter = (a: any) => {
     const ms = a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -341,33 +365,74 @@ export function TraineeAssessmentsHub() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {filteredOngoing.map(a => (
-                        <div key={a.id} className="p-6 rounded-3xl bg-white border border-slate-200 hover:border-cyan-300 hover:shadow-md transition-all flex flex-col justify-between">
-                          <div>
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              <span className="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-cyan-100">{(a.course as any)?.title || 'Course'}</span>
-                              {a.assessment_type && <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-amber-200">{formatType(a.assessment_type)}</span>}
-                            </div>
-                            <h3 className="text-base font-bold text-slate-900 mb-3">{a.title}</h3>
-                            <div className="space-y-2 mb-6">
-                              <div className="flex items-center gap-2 text-xs text-slate-600 font-medium"><Clock className="w-3.5 h-3.5 text-cyan-600" /><span>{a.duration_minutes ? `${a.duration_minutes} mins` : 'Untimed'}</span></div>
-                              {a.scheduled_date && (
-                                <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                                  <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                                  <span>{format(new Date(a.scheduled_date), 'MMM do, yyyy')}{a.start_time && ` at ${format(new Date(`2000-01-01T${a.start_time}`), 'h:mm a')}`}{a.end_time && ` to ${format(new Date(`2000-01-01T${a.end_time}`), 'h:mm a')}`}</span>
+                      {filteredOngoing.map(a => {
+                        const isFinal = a.assessment_type === 'final'
+                        const isPractice = a.assessment_type === 'mock' || a.assessment_type === 'daily'
+                        const isUnlocked = !isFinal || isFinalUnlockedForCourse(a.course_id)
+                        const courseEnrollment = enrollmentMap.get(a.course_id)
+                        const courseProgress = courseEnrollment?.progress_percent ?? 0
+
+                        return (
+                          <div key={a.id} className={`p-6 rounded-3xl bg-white border transition-all flex flex-col justify-between ${
+                            !isUnlocked
+                              ? 'border-amber-200/90 bg-amber-50/20 shadow-xs'
+                              : 'border-slate-200 hover:border-cyan-300 hover:shadow-md'
+                          }`}>
+                            <div>
+                              <div className="flex flex-wrap gap-2 mb-3">
+                                <span className="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-cyan-100">{(a.course as any)?.title || 'Course'}</span>
+                                {isPractice ? (
+                                  <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-slate-200">
+                                    {a.assessment_type === 'mock' ? 'Mock Test' : 'Daily Test'} • Practice Only
+                                  </span>
+                                ) : isFinal ? (
+                                  <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-purple-200">
+                                    Final Exam • 50% Weight
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-amber-200">
+                                    Assessment • 25% Weight
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="text-base font-bold text-slate-900 mb-3">{a.title}</h3>
+                              <div className="space-y-2 mb-4">
+                                <div className="flex items-center gap-2 text-xs text-slate-600 font-medium"><Clock className="w-3.5 h-3.5 text-cyan-600" /><span>{a.duration_minutes ? `${a.duration_minutes} mins` : 'Untimed'}</span></div>
+                                {a.scheduled_date && (
+                                  <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                                    <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>{format(new Date(a.scheduled_date), 'MMM do, yyyy')}{a.start_time && ` at ${format(new Date(`2000-01-01T${a.start_time}`), 'h:mm a')}`}{a.end_time && ` to ${format(new Date(`2000-01-01T${a.end_time}`), 'h:mm a')}`}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {!isUnlocked && (
+                                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-xs text-amber-800">
+                                  <span className="font-bold shrink-0">🔒 Locked:</span>
+                                  <span>Complete all course modules (currently {courseProgress}%) to unlock this Final Assessment.</span>
                                 </div>
                               )}
                             </div>
+
+                            {isUnlocked ? (
+                              <Link to={`/trainee/courses/${a.course_id}/assessments/${a.id}`}>
+                                {(() => {
+                                  let upcoming = false
+                                  if (a.scheduled_date) { const s = new Date(a.scheduled_date); s.setHours(0,0,0,0); const t = new Date(); t.setHours(0,0,0,0); if (s > t) upcoming = true }
+                                  return (<button className={`w-full py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${upcoming ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:opacity-95 shadow-md'}`}>{upcoming ? (<>Upcoming <Calendar className="w-4 h-4" /></>) : (<>Start Test <PlayCircle className="w-4 h-4" /></>)}</button>)
+                                })()}
+                              </Link>
+                            ) : (
+                              <Link to={`/trainee/courses/${a.course_id}/learn`}>
+                                <button className="w-full py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300 transition-all">
+                                  <span>Complete Modules to Unlock ({courseProgress}%)</span>
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                </button>
+                              </Link>
+                            )}
                           </div>
-                          <Link to={`/trainee/courses/${a.course_id}/assessments/${a.id}`}>
-                            {(() => {
-                              let upcoming = false
-                              if (a.scheduled_date) { const s = new Date(a.scheduled_date); s.setHours(0,0,0,0); const t = new Date(); t.setHours(0,0,0,0); if (s > t) upcoming = true }
-                              return (<button className={`w-full py-2.5 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${upcoming ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:opacity-95 shadow-md'}`}>{upcoming ? (<>Upcoming <Calendar className="w-4 h-4" /></>) : (<>Start Test <PlayCircle className="w-4 h-4" /></>)}</button>)
-                            })()}
-                          </Link>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </motion.div>

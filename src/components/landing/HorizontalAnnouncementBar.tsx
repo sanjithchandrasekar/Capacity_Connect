@@ -142,9 +142,6 @@ export function HorizontalAnnouncementBar() {
 
   return (
     <div className="group/bar relative w-full bg-[#020612] border-y border-cyan-500/20 py-3 overflow-hidden select-none z-20 shadow-xl shadow-black/60">
-      {/* Subtle background glow */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/5 to-amber-500/10 opacity-70" />
-
       <div className="w-full flex items-center relative">
         {/* Left side fixed pill label */}
         <div className="flex items-center gap-2 pl-5 pr-5 py-1 border-r border-cyan-500/30 z-30 shrink-0 bg-[#020612] shadow-md shadow-black/80">

@@ -26,6 +26,14 @@ import { CourseFeedback } from './CourseFeedback'
 import { CourseAnnouncements } from './CourseAnnouncements'
 import { CourseChat } from './CourseChat'
 import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
+import {
+  calculateCourseGradeBreakdown,
+  getAssessmentTypeLabel,
+  isPracticeAssessment,
+  isFinalAssessment,
+  isRegularAssessment,
+  type CourseGradeBreakdown
+} from '@/lib/courseGrading'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -339,7 +347,7 @@ export function TraineeCourseDetails() {
 
       const { data: assessmentsData } = await supabase
         .from('assessments')
-        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, instructions, created_at')
+        .select('id, title, passing_score, status, requires_sea, sea_link, scheduled_date, start_time, end_time, duration_minutes, instructions, created_at, assessment_type')
         .eq('course_id', courseId!)
         .eq('status', 'published')
         .order('created_at')
@@ -365,6 +373,20 @@ export function TraineeCourseDetails() {
       return data
     },
     enabled: !!courseId && !!profile?.id,
+  })
+
+  const { data: traineeAttempts = [] } = useQuery({
+    queryKey: ['trainee-course-attempts', courseId, profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return []
+      const { data, error } = await supabase
+        .from('assessment_attempts' as any)
+        .select('*')
+        .eq('user_id', profile.id)
+      if (error) return []
+      return (data || []) as any[]
+    },
+    enabled: !!profile?.id,
   })
 
   const { data: enrollmentCounts } = useQuery({
@@ -737,6 +759,13 @@ export function TraineeCourseDetails() {
   const objectives: string[] = Array.isArray(course?.learning_objectives)
     ? course.learning_objectives
     : []
+
+  const gradeBreakdown = calculateCourseGradeBreakdown({
+    moduleProgressPercent: enrollment?.progress_percent ?? (completedModules.length > 0 && course?.modules?.length ? Math.round((completedModules.length / course.modules.length) * 100) : 0),
+    courseAssessments: (course?.assessments || []) as any,
+    traineeAttempts,
+    passingScore: course?.passing_score ?? 50,
+  })
 
   return (
     <ErrorBoundary>
@@ -1253,6 +1282,228 @@ export function TraineeCourseDetails() {
                       )}
                     </div>
                   )}
+
+                  {/* 3. Course Assessments & Grading Breakdown (25% Modules + 25% Assessments Avg + 50% Final Exam) */}
+                  <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-cyan-600" /> Course Grading &amp; Assessments
+                          </h2>
+                          <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200">
+                            100% Total Grade
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Evaluated via: 25% Course Modules + 25% Assessments Average + 50% Final Exam.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-right">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Your Total Score</span>
+                          <span className="text-sm font-black text-cyan-700">
+                            {gradeBreakdown.totalScore}% <span className="text-[10px] text-slate-400 font-semibold">(Pass: {gradeBreakdown.passingScore}%)</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3 Pillars Scorecards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                      {/* Pillar 1: Modules Completion (25%) */}
+                      <div className="p-4 rounded-2xl bg-cyan-50/40 border border-cyan-200/80 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-700">1. Course Modules</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800">25% Weight</span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium">All video lessons and module checkpoints</p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-cyan-200/60">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <span className="text-xs font-semibold text-slate-500">Earned:</span>
+                            <span className="text-base font-black text-cyan-700">{gradeBreakdown.moduleScore} <span className="text-xs text-slate-400">/ 25 pts</span></span>
+                          </div>
+                          <div className="w-full bg-white rounded-full h-1.5 overflow-hidden border border-cyan-200">
+                            <div className="bg-cyan-600 h-full rounded-full transition-all" style={{ width: `${gradeBreakdown.moduleProgressPercent}%` }} />
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-1 text-right font-medium">{gradeBreakdown.moduleProgressPercent}% completed</p>
+                        </div>
+                      </div>
+
+                      {/* Pillar 2: Regular Assessments Average (25%) */}
+                      <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-200/80 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">2. Assessments Avg</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">25% Weight</span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium">Average score of all regular course tests</p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-amber-200/60">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <span className="text-xs font-semibold text-slate-500">Earned:</span>
+                            <span className="text-base font-black text-amber-700">{gradeBreakdown.regularAssessmentScore} <span className="text-xs text-slate-400">/ 25 pts</span></span>
+                          </div>
+                          <div className="w-full bg-white rounded-full h-1.5 overflow-hidden border border-amber-200">
+                            <div className="bg-amber-500 h-full rounded-full transition-all" style={{ width: `${gradeBreakdown.regularAssessmentAveragePercent}%` }} />
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-1 text-right font-medium">
+                            {gradeBreakdown.regularAssessmentsTotal > 0
+                              ? `${gradeBreakdown.regularAssessmentAveragePercent}% avg (${gradeBreakdown.regularAssessmentsCompleted}/${gradeBreakdown.regularAssessmentsTotal} completed)`
+                              : `${gradeBreakdown.moduleProgressPercent}% module aligned`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Pillar 3: Final Assessment (50%) */}
+                      <div className={`p-4 rounded-2xl border flex flex-col justify-between ${
+                        gradeBreakdown.finalAssessmentCompleted
+                          ? 'bg-purple-50/40 border-purple-200/80'
+                          : gradeBreakdown.isFinalUnlocked
+                            ? 'bg-emerald-50/40 border-emerald-200/80'
+                            : 'bg-slate-50/60 border-slate-200'
+                      }`}>
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-800">3. Final Exam</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900">50% Weight</span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium">
+                            {gradeBreakdown.isFinalUnlocked ? 'Unlocked after 100% modules complete' : 'Locked until modules 100%'}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-purple-200/60">
+                          <div className="flex items-baseline justify-between mb-1">
+                            <span className="text-xs font-semibold text-slate-500">Earned:</span>
+                            <span className="text-base font-black text-purple-700">
+                              {gradeBreakdown.finalAssessmentWeightedScore} <span className="text-xs text-slate-400">/ 50 pts</span>
+                            </span>
+                          </div>
+                          <div className="w-full bg-white rounded-full h-1.5 overflow-hidden border border-purple-200">
+                            <div
+                              className="bg-purple-600 h-full rounded-full transition-all"
+                              style={{ width: `${gradeBreakdown.finalAssessmentScorePercent ?? (gradeBreakdown.isFinalUnlocked ? 100 : 0)}%` }}
+                            />
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-1 text-right font-medium">
+                            {gradeBreakdown.finalAssessmentCompleted
+                              ? `${gradeBreakdown.finalAssessmentScorePercent}% score`
+                              : gradeBreakdown.isFinalUnlocked
+                                ? 'Ready to take!'
+                                : 'Locked (Modules Pending)'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Published Course Assessments List */}
+                    <div className="space-y-3 pt-2">
+                      <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileCheck className="w-3.5 h-3.5 text-cyan-600" /> Course Assessments ({course.assessments?.length || 0})
+                      </h3>
+
+                      {(!course.assessments || course.assessments.length === 0) ? (
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500 font-medium">
+                          No scheduled assessments configured for this course yet.
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {course.assessments.map((a: any) => {
+                            const isFinal = a.assessment_type === 'final'
+                            const isPractice = a.assessment_type === 'mock' || a.assessment_type === 'daily'
+                            const isUnlocked = !isFinal || gradeBreakdown.isFinalUnlocked
+                            const attempt = traineeAttempts.find((at: any) => at.assessment_id === a.id)
+                            const hasAttempt = Boolean(attempt)
+
+                            return (
+                              <div
+                                key={a.id}
+                                className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border gap-3 transition-all ${
+                                  hasAttempt
+                                    ? 'bg-emerald-50/30 border-emerald-200'
+                                    : !isUnlocked
+                                      ? 'bg-slate-50/70 border-slate-200 opacity-90'
+                                      : 'bg-white border-slate-200 hover:border-cyan-300 shadow-xs'
+                                }`}
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                                    <h4 className="text-sm font-bold text-slate-900">{a.title}</h4>
+                                    {isPractice ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                        {a.assessment_type === 'mock' ? 'Mock Test' : 'Daily Test'} • Practice Only (0% Weight)
+                                      </span>
+                                    ) : isFinal ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                                        Final Exam • 50% Grade Weight
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                                        Assessment Test • 25% Grade Weight (Averaged)
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-medium">
+                                    {a.duration_minutes && <span>⏱ {a.duration_minutes} mins</span>}
+                                    {a.scheduled_date && (
+                                      <span>📅 {new Date(a.scheduled_date).toLocaleDateString()}</span>
+                                    )}
+                                    {hasAttempt && (
+                                      <span className="text-emerald-700 font-bold">
+                                        ✓ Scored: {attempt.score ?? 0}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="shrink-0 flex items-center gap-2">
+                                  {hasAttempt ? (
+                                    <Link to={`/trainee/courses/${courseId}/assessments/${a.id}`}>
+                                      <Button size="sm" variant="outline" className="rounded-xl text-xs font-bold border-emerald-300 text-emerald-800 hover:bg-emerald-50">
+                                        View Result ({attempt.score ?? 0}%)
+                                      </Button>
+                                    </Link>
+                                  ) : isUnlocked ? (
+                                    <Link to={`/trainee/courses/${courseId}/assessments/${a.id}`}>
+                                      <Button
+                                        size="sm"
+                                        className={`rounded-xl text-xs font-bold text-white shadow-sm ${
+                                          isFinal
+                                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
+                                            : isPractice
+                                              ? 'bg-slate-700 hover:bg-slate-800'
+                                              : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700'
+                                        }`}
+                                      >
+                                        <PlayCircle className="w-3.5 h-3.5 mr-1" />
+                                        {isPractice ? 'Start Practice' : isFinal ? 'Take Final Exam' : 'Start Assessment'}
+                                      </Button>
+                                    </Link>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      disabled
+                                      className="rounded-xl text-xs font-semibold text-slate-400 bg-slate-100 border border-slate-200 cursor-not-allowed gap-1.5"
+                                    >
+                                      <Lock className="w-3 h-3" /> Locked (100% Modules Required)
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   {/* Course Sessions — Accordion */}
                   {course.sessions?.length > 0 && (

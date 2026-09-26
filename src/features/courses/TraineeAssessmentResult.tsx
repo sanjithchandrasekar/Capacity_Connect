@@ -163,6 +163,43 @@ export function TraineeAssessmentResult({
                       </div>
                   </div>
 
+                  {/* Assessment Type & Grade Impact Notice */}
+                  {(() => {
+                    const isFinal = assessment?.assessment_type === 'final'
+                    const isPractice = assessment?.assessment_type === 'mock' || assessment?.assessment_type === 'daily'
+                    if (isPractice) {
+                      return (
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-slate-400" />
+                            {assessment?.assessment_type === 'mock' ? 'Mock Test' : 'Daily Test'} (Practice Only)
+                          </span>
+                          <span className="text-slate-500 font-medium">This practice test does not affect your official final course grade.</span>
+                        </div>
+                      )
+                    }
+                    if (isFinal) {
+                      return (
+                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3.5 flex items-center justify-between text-xs">
+                          <span className="font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-purple-600" />
+                            Final Assessment (50% Course Grade Weight)
+                          </span>
+                          <span className="text-purple-700 font-semibold">Contributes 50% towards your final certificate score.</span>
+                        </div>
+                      )
+                    }
+                    return (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between text-xs">
+                        <span className="font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-600" />
+                          Regular Assessment (25% Course Grade Weight - Averaged)
+                        </span>
+                        <span className="text-amber-700 font-semibold">This score is averaged with other regular assessments (25% total weight).</span>
+                      </div>
+                    )
+                  })()}
+
                   {/* Header stats (similar to screenshot) */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="bg-white border border-slate-200 rounded-md overflow-hidden text-center">

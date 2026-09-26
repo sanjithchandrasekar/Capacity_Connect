@@ -37,6 +37,28 @@ export interface UpcomingTrackItem {
   link: string;
 }
 
+export interface AchieverItem {
+  id?: string;
+  name: string;
+  initials: string;
+  role: string;
+  institute: string;
+  achievementBadge: string;
+  score: string;
+  avatar_url?: string | null;
+}
+
+export interface AchievementStoryItem {
+  id: string;
+  bannerTitle: string;
+  bannerSubtitle: string;
+  highlightStatTitle: string;
+  highlightStatNumber: string;
+  highlightStatDescription: string;
+  image_url?: string | null;
+  achievers: AchieverItem[];
+}
+
 export interface HomePageSettings {
   id: string;
   // Section 1: Featured Programs
@@ -61,6 +83,15 @@ export interface HomePageSettings {
   upcoming_tracks_subtitle: string;
   upcoming_tracks_btn_text: string;
   upcoming_tracks_items: UpcomingTrackItem[];
+
+  // Section 4: Achievements / Proven Results
+  achievements_enabled: boolean;
+  achievements_tag: string;
+  achievements_title: string;
+  achievements_subtitle: string;
+  achievements_moes_badge: string;
+  achievements_moes_desc: string;
+  achievements_stories: AchievementStoryItem[];
 
   updated_at?: string;
 }
@@ -184,6 +215,173 @@ export const defaultUpcomingTracks: UpcomingTrackItem[] = [
   },
 ];
 
+export const defaultAchievementStories: AchievementStoryItem[] = [
+  {
+    id: 'imd-2025',
+    bannerTitle: 'Capacity Connect Trainees Shine Bright in',
+    bannerSubtitle: 'NATIONAL WEATHER FORECASTER BENCHMARK 2025',
+    highlightStatTitle: 'OVER',
+    highlightStatNumber: '94%',
+    highlightStatDescription: 'Trainees Secured Top Tier-1 Operational Deployment in IMD & RSMC Desks',
+    image_url: null,
+    achievers: [
+      {
+        id: 'ach-1',
+        name: 'Dr. Aarav Sharma',
+        initials: 'AS',
+        role: 'Radar Meteorologist',
+        institute: 'IMD New Delhi',
+        achievementBadge: 'AIR 1 (99.8%)',
+        score: 'Top Forecaster',
+        avatar_url: null,
+      },
+      {
+        id: 'ach-2',
+        name: 'Priya Venkatesh',
+        initials: 'PV',
+        role: 'Severe Weather Analyst',
+        institute: 'RMC Chennai',
+        achievementBadge: 'AIR 3 (98.9%)',
+        score: 'Nowcast Specialist',
+        avatar_url: null,
+      },
+      {
+        id: 'ach-3',
+        name: 'Rahul Sengupta',
+        initials: 'RS',
+        role: 'Cyclone Warning Desk',
+        institute: 'IMD Kolkata',
+        achievementBadge: 'AIR 7 (97.6%)',
+        score: 'Early Warning Star',
+        avatar_url: null,
+      },
+    ],
+  },
+  {
+    id: 'ocean-2025',
+    bannerTitle: 'Ocean Science Cohorts Excel in',
+    bannerSubtitle: 'COASTAL & TSUNAMI EARLY WARNING CERTIFICATION',
+    highlightStatTitle: 'EVERY',
+    highlightStatNumber: '9 IN 10',
+    highlightStatDescription: 'Fellows Successfully Deployed Real-Time Coastal Telemetry Systems',
+    image_url: null,
+    achievers: [
+      {
+        id: 'ach-4',
+        name: 'Ananya Deshmukh',
+        initials: 'AD',
+        role: 'Ocean Dynamics Fellow',
+        institute: 'INCOIS Hyderabad',
+        achievementBadge: 'Top Rank (99.4%)',
+        score: 'Tsunami Warning Lead',
+        avatar_url: null,
+      },
+      {
+        id: 'ach-5',
+        name: 'Karthik Pillai',
+        initials: 'KP',
+        role: 'Marine Data Specialist',
+        institute: 'NIOT Chennai',
+        achievementBadge: 'Excellence (98.2%)',
+        score: 'Deep Ocean Mission',
+        avatar_url: null,
+      },
+      {
+        id: 'ach-6',
+        name: 'Sneha Roy',
+        initials: 'SR',
+        role: 'Wave Modeling Officer',
+        institute: 'INCOIS Coastal Hub',
+        achievementBadge: 'Distinction (97.8%)',
+        score: 'Wave Climate Expert',
+        avatar_url: null,
+      },
+    ],
+  },
+  {
+    id: 'modelling-2025',
+    bannerTitle: 'Atmospheric Modellers Lead in',
+    bannerSubtitle: 'HIGH-PERFORMANCE NUMERICAL WEATHER PREDICTION',
+    highlightStatTitle: 'OVER',
+    highlightStatNumber: '88%',
+    highlightStatDescription: 'Achieved Advanced Parallel Computing & HPC Model Optimization Benchmarks',
+    image_url: null,
+    achievers: [
+      {
+        id: 'ach-7',
+        name: 'Vikramaditya Iyer',
+        initials: 'VI',
+        role: 'NWP HPC Engineer',
+        institute: 'NCMRWF Noida',
+        achievementBadge: 'AIR 2 (99.5%)',
+        score: 'GPU HPC Specialist',
+        avatar_url: null,
+      },
+      {
+        id: 'ach-8',
+        name: 'Dr. Meera Nambiar',
+        initials: 'MN',
+        role: 'Data Assimilation Specialist',
+        institute: 'IITM Pune',
+        achievementBadge: 'AIR 5 (98.6%)',
+        score: 'Monsoon Mission',
+        avatar_url: null,
+      },
+      {
+        id: 'ach-9',
+        name: 'Sanjay Rawat',
+        initials: 'SR',
+        role: 'Climate AI Researcher',
+        institute: 'MoES Earth System Lab',
+        achievementBadge: 'AIR 8 (97.9%)',
+        score: 'Neural Weather AI',
+        avatar_url: null,
+      },
+    ],
+  },
+  {
+    id: 'climate-2025',
+    bannerTitle: 'Climate Scientists Achieve Milestones in',
+    bannerSubtitle: 'POLAR, CRYOSPHERE & MOUNTAIN METEOROLOGY',
+    highlightStatTitle: 'OVER',
+    highlightStatNumber: '96%',
+    highlightStatDescription: 'Expedition Readiness & Polar Field Data Collection Certification Passed',
+    image_url: null,
+    achievers: [
+      {
+        id: 'ach-10',
+        name: 'Tenzin Norbu',
+        initials: 'TN',
+        role: 'Glaciology Observer',
+        institute: 'NCPOR Goa / Arctic Track',
+        achievementBadge: 'Top Star (99.1%)',
+        score: 'Himansh Station Lead',
+        avatar_url: null,
+      },
+      {
+        id: 'ach-11',
+        name: 'Pooja Bhatt',
+        initials: 'PB',
+        role: 'Antarctic Weather Specialist',
+        institute: 'Maitri Research Base',
+        achievementBadge: 'Excellence (98.4%)',
+        score: 'Polar Met Lead',
+        avatar_url: null,
+      },
+      {
+        id: 'ach-12',
+        name: 'Deepak Joshi',
+        initials: 'DJ',
+        role: 'Western Ghats Field Scientist',
+        institute: 'NCESS Thiruvananthapuram',
+        achievementBadge: 'Distinction (97.5%)',
+        score: 'Hydro-Met Expert',
+        avatar_url: null,
+      },
+    ],
+  },
+];
+
 export const defaultHomePageSettings: HomePageSettings = {
   id: 'default_settings',
   // Section 1
@@ -208,6 +406,15 @@ export const defaultHomePageSettings: HomePageSettings = {
   upcoming_tracks_subtitle: 'Pre-register for next-generation cohorts and masterclasses.',
   upcoming_tracks_btn_text: 'View Complete Catalog',
   upcoming_tracks_items: defaultUpcomingTracks,
+
+  // Section 4
+  achievements_enabled: true,
+  achievements_tag: 'Proven National Impact',
+  achievements_title: 'Inspired trainees. Inspired results',
+  achievements_subtitle: 'National Benchmark Results & Field Recognitions',
+  achievements_moes_badge: '100% Verified Operational Skill Credentials',
+  achievements_moes_desc: 'Direct alignment with WMO, IMD & INCOIS forecast protocols.',
+  achievements_stories: defaultAchievementStories,
 };
 
 const LOCAL_STORAGE_KEY = 'capacity_connect_home_page_settings';
@@ -223,6 +430,7 @@ export function getLocalSettings(): HomePageSettings {
         featured_programs_items: parsed.featured_programs_items?.length ? parsed.featured_programs_items : defaultFeaturedPrograms,
         announcements_items: parsed.announcements_items?.length ? parsed.announcements_items : defaultAnnouncementItems,
         upcoming_tracks_items: parsed.upcoming_tracks_items?.length ? parsed.upcoming_tracks_items : defaultUpcomingTracks,
+        achievements_stories: parsed.achievements_stories?.length ? parsed.achievements_stories : defaultAchievementStories,
       };
     }
   } catch (e) {
@@ -256,6 +464,7 @@ export function useHomePageSettings() {
             featured_programs_items: raw.featured_programs_items?.length ? raw.featured_programs_items : defaultFeaturedPrograms,
             announcements_items: raw.announcements_items?.length ? raw.announcements_items : defaultAnnouncementItems,
             upcoming_tracks_items: raw.upcoming_tracks_items?.length ? raw.upcoming_tracks_items : defaultUpcomingTracks,
+            achievements_stories: raw.achievements_stories?.length ? raw.achievements_stories : defaultAchievementStories,
           };
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
           return merged;
@@ -301,6 +510,14 @@ export function useHomePageSettings() {
         upcoming_tracks_subtitle: updated.upcoming_tracks_subtitle || '',
         upcoming_tracks_btn_text: updated.upcoming_tracks_btn_text || 'View Complete Catalog',
         upcoming_tracks_items: updated.upcoming_tracks_items || [],
+
+        achievements_enabled: updated.achievements_enabled ?? true,
+        achievements_tag: updated.achievements_tag || 'Proven National Impact',
+        achievements_title: updated.achievements_title || 'Inspired trainees. Inspired results',
+        achievements_subtitle: updated.achievements_subtitle || 'National Benchmark Results & Field Recognitions',
+        achievements_moes_badge: updated.achievements_moes_badge || '100% Verified Operational Skill Credentials',
+        achievements_moes_desc: updated.achievements_moes_desc || 'Direct alignment with WMO, IMD & INCOIS forecast protocols.',
+        achievements_stories: updated.achievements_stories || [],
 
         updated_at: new Date().toISOString(),
       };

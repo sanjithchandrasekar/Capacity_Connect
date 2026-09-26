@@ -18,6 +18,7 @@ import { StickyScrollFeatures } from '@/components/landing/StickyScrollFeatures'
 import { DynamicUpdatesSection } from '@/components/landing/DynamicUpdatesSection';
 import { HorizontalAnnouncementBar } from '@/components/landing/HorizontalAnnouncementBar';
 import { MissionExplodedView } from '@/components/landing/MissionExplodedView';
+import { AchievementsSection } from '@/components/landing/AchievementsSection';
 import { useHomePageSettings } from '@/hooks/useHomePageSettings';
 import { supabase } from '@/lib/supabase';
 import {
@@ -941,6 +942,11 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ========================================================================= */}
+      {/* 7.5. PROVEN RESULTS & ACHIEVEMENTS SHOWCASE SECTION                        */}
+      {/* ========================================================================= */}
+      <AchievementsSection />
 
       {/* ========================================================================= */}
       {/* 8. TESTIMONIALS & TRUST BAND                                              */}

@@ -10,6 +10,8 @@ import { Thumbnail } from '@/components/ui/Thumbnail'
 import { toast } from 'sonner'
 import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
 
+import { calculateCourseGradeBreakdown } from '@/lib/courseGrading'
+
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
@@ -20,7 +22,7 @@ export function TraineeMyLearning() {
   const { user, profile } = useAuth()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
-  const { data: enrollments, isLoading } = useQuery({
+  const { data: enrollments, isLoading: isEnrollmentsLoading } = useQuery({
     queryKey: ['my_learning', profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -46,17 +48,50 @@ export function TraineeMyLearning() {
         .order('enrolled_at', { ascending: false })
 
       if (error) throw error
-      return data
+      return (data || []) as any[]
     },
     enabled: !!profile?.id
   })
 
-  const handleDownloadCertificate = async (enrollment: any) => {
+  const courseIds = (enrollments as any[])?.map((e: any) => e.course?.id).filter(Boolean) || []
+
+  const { data: allAssessments = [] } = useQuery({
+    queryKey: ['my_learning_assessments', courseIds],
+    queryFn: async () => {
+      if (courseIds.length === 0) return []
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id, title, assessment_type, course_id, passing_score')
+        .in('course_id', courseIds)
+        .eq('status', 'published')
+      if (error) return []
+      return data || []
+    },
+    enabled: courseIds.length > 0,
+  })
+
+  const { data: allAttempts = [] } = useQuery({
+    queryKey: ['my_learning_attempts', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return []
+      const { data, error } = await supabase
+        .from('assessment_attempts' as any)
+        .select('*')
+        .eq('user_id', profile.id)
+      if (error) return []
+      return (data || []) as any[]
+    },
+    enabled: !!profile?.id,
+  })
+
+  const isLoading = isEnrollmentsLoading
+
+  const handleDownloadCertificate = async (enrollment: any, totalPercentage?: number) => {
     if (!profile || !enrollment.course) return
     setDownloadingId(enrollment.id)
     try {
       const traineeName = profile.full_name || user?.email?.split('@')[0] || 'Trainee'
-      const percentage = enrollment.progress_percent ?? 100
+      const percentage = totalPercentage ? `${totalPercentage}%` : (enrollment.progress_percent ?? 100)
 
       const { blob, fileName } = await generateTraineeCertificate(
         enrollment.course.certificate_template_url,
@@ -144,85 +179,101 @@ export function TraineeMyLearning() {
           </div>
         ) : (
           <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-4">
-            {enrollments?.map((enrollment: any) => (
-              <motion.div 
-                key={enrollment.id} 
-                variants={fadeUp} 
-                className="group bg-white border border-slate-200/90 hover:border-cyan-300 rounded-3xl p-5 flex flex-col md:flex-row md:items-center gap-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/60 transition-all duration-300 hover:-translate-y-0.5"
-              >
-                {/* Thumbnail */}
-                <div className="w-full md:w-48 h-32 md:h-28 rounded-2xl bg-slate-100 border border-slate-200 relative overflow-hidden shrink-0">
-                  <Thumbnail path={enrollment.course?.thumbnail_path || null} alt={enrollment.course?.title || 'Course'} type={enrollment.course?.course_type} />
-                </div>
+            {enrollments?.map((enrollment: any) => {
+              const courseAssessments = allAssessments.filter((a: any) => a.course_id === enrollment.course?.id)
+              const gradeBreakdown = calculateCourseGradeBreakdown({
+                moduleProgressPercent: enrollment.progress_percent ?? 0,
+                courseAssessments: courseAssessments as any,
+                traineeAttempts: allAttempts as any,
+                passingScore: enrollment.course?.passing_score ?? 50,
+              })
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                      enrollment.status === 'completed'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
-                    }`}>
-                      {enrollment.status.replace('_', ' ')}
-                    </span>
-                    <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{enrollment.course?.course_type || 'Standard'}</span>
-                    {enrollment.course?.duration_minutes && (
-                      <span className="text-xs text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-500" /> {enrollment.course.duration_minutes}m
+              const isCourseDone = enrollment.status === 'completed' || gradeBreakdown.isCompleted || enrollment.progress_percent === 100
+
+              return (
+                <motion.div 
+                  key={enrollment.id} 
+                  variants={fadeUp} 
+                  className="group bg-white border border-slate-200/90 hover:border-cyan-300 rounded-3xl p-5 flex flex-col md:flex-row md:items-center gap-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/60 transition-all duration-300 hover:-translate-y-0.5"
+                >
+                  {/* Thumbnail */}
+                  <div className="w-full md:w-48 h-32 md:h-28 rounded-2xl bg-slate-100 border border-slate-200 relative overflow-hidden shrink-0">
+                    <Thumbnail path={enrollment.course?.thumbnail_path || null} alt={enrollment.course?.title || 'Course'} type={enrollment.course?.course_type} />
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                        isCourseDone
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                      }`}>
+                        {isCourseDone ? 'Completed' : enrollment.status.replace('_', ' ')}
                       </span>
-                    )}
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-3 truncate group-hover:text-cyan-600 transition-colors">
-                    {enrollment.course?.title}
-                  </h3>
-                  
-                  {/* Progress Bar */}
-                  <div className="w-full max-w-md">
-                    <div className="flex justify-between text-xs font-semibold text-slate-600 mb-1.5">
-                      <span>Progress</span>
-                      <span className="text-cyan-700 font-bold">{enrollment.progress_percent}%</span>
+                      <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{enrollment.course?.course_type || 'Standard'}</span>
+                      {enrollment.course?.duration_minutes && (
+                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-500" /> {enrollment.course.duration_minutes}m
+                        </span>
+                      )}
                     </div>
-                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-700 ${
-                          enrollment.status === 'completed'
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600'
-                            : 'bg-gradient-to-r from-cyan-600 to-blue-600'
-                        }`}
-                        style={{ width: `${enrollment.progress_percent}%` }}
-                      />
+                    <h3 className="text-lg font-bold text-slate-900 mb-3 truncate group-hover:text-cyan-600 transition-colors">
+                      {enrollment.course?.title}
+                    </h3>
+                    
+                    {/* Progress Bar & Grade stats */}
+                    <div className="w-full max-w-md space-y-1.5">
+                      <div className="flex justify-between text-xs font-semibold text-slate-600">
+                        <span>Modules Progress: <strong className="text-cyan-700">{enrollment.progress_percent}%</strong> (25% wt)</span>
+                        <span>Overall Grade: <strong className="text-slate-900 font-black">{gradeBreakdown.totalScore}%</strong></span>
+                      </div>
+                      <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-700 ${
+                            isCourseDone
+                              ? 'bg-gradient-to-r from-emerald-500 to-teal-600'
+                              : 'bg-gradient-to-r from-cyan-600 to-blue-600'
+                          }`}
+                          style={{ width: `${enrollment.progress_percent}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                        <span>Assessments Avg: {gradeBreakdown.regularAssessmentAveragePercent}% (25% wt)</span>
+                        <span>Final Exam: {gradeBreakdown.finalAssessmentScorePercent !== null ? `${gradeBreakdown.finalAssessmentScorePercent}%` : gradeBreakdown.isFinalUnlocked ? 'Ready' : 'Locked'} (50% wt)</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Actions */}
-                <div className="shrink-0 flex flex-wrap items-center gap-2.5 pt-4 md:pt-0 md:pl-4 md:border-l border-slate-100">
-                  {enrollment.status === 'completed' || enrollment.progress_percent === 100 ? (
-                    <>
-                      <button
-                        onClick={() => handleDownloadCertificate(enrollment)}
-                        disabled={downloadingId === enrollment.id}
-                        className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-sm hover:scale-105 transition-all flex items-center gap-1.5"
-                      >
-                        {downloadingId === enrollment.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5 text-amber-300" />}
-                        {downloadingId === enrollment.id ? 'Generating...' : 'Certificate'}
-                      </button>
+                  {/* Actions */}
+                  <div className="shrink-0 flex flex-wrap items-center gap-2.5 pt-4 md:pt-0 md:pl-4 md:border-l border-slate-100">
+                    {isCourseDone ? (
+                      <>
+                        <button
+                          onClick={() => handleDownloadCertificate(enrollment, gradeBreakdown.totalScore)}
+                          disabled={downloadingId === enrollment.id}
+                          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-sm hover:scale-105 transition-all flex items-center gap-1.5"
+                        >
+                          {downloadingId === enrollment.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5 text-amber-300" />}
+                          {downloadingId === enrollment.id ? 'Generating...' : 'Certificate'}
+                        </button>
+                        <Link to={`/trainee/courses/${enrollment.course?.id}`}>
+                          <button className="px-4 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Review
+                          </button>
+                        </Link>
+                      </>
+                    ) : (
                       <Link to={`/trainee/courses/${enrollment.course?.id}`}>
-                        <button className="px-4 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Review
+                        <button className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs shadow-md shadow-cyan-600/20 hover:scale-105 transition-all flex items-center gap-2">
+                          <PlayCircle className="w-4 h-4" /> Continue Lesson
                         </button>
                       </Link>
-                    </>
-                  ) : (
-                    <Link to={`/trainee/courses/${enrollment.course?.id}`}>
-                      <button className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs shadow-md shadow-cyan-600/20 hover:scale-105 transition-all flex items-center gap-2">
-                        <PlayCircle className="w-4 h-4" /> Continue Lesson
-                      </button>
-                    </Link>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                    )}
+                  </div>
+                </motion.div>
+              )
+            })}
           </motion.div>
         )}
       </div>

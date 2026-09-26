@@ -27,7 +27,10 @@ import {
   Loader2,
   Sliders,
   Eye,
-  Check
+  Check,
+  Trophy,
+  Users,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageCropperModal } from '@/components/ui/ImageCropperModal';
@@ -38,15 +41,19 @@ import {
   HomePageSettings,
   FeaturedProgramItem,
   AnnouncementItem,
-  UpcomingTrackItem
+  UpcomingTrackItem,
+  AchievementStoryItem,
+  AchieverItem,
+  defaultAchievementStories
 } from '@/hooks/useHomePageSettings';
 import { toast } from 'sonner';
 
 export function AdminHomePageSettings() {
   const { settings, updateSettings, isUpdating } = useHomePageSettings();
   const [formData, setFormData] = useState<HomePageSettings>(settings);
-  const [activeSectionTab, setActiveSectionTab] = useState<'programs' | 'announcements' | 'tracks'>('programs');
+  const [activeSectionTab, setActiveSectionTab] = useState<'programs' | 'announcements' | 'tracks' | 'achievements'>('programs');
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [uploadingAchieverKey, setUploadingAchieverKey] = useState<string | null>(null);
 
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [rawImageFile, setRawImageFile] = useState<File | null>(null);
@@ -233,6 +240,173 @@ export function AdminHomePageSettings() {
     toast.info('Track card removed');
   };
 
+  // Achievements Updaters
+  const handleStoryChange = (storyIndex: number, field: keyof AchievementStoryItem, value: any) => {
+    const updated = [...(formData.achievements_stories || [])];
+    if (updated[storyIndex]) {
+      updated[storyIndex] = { ...updated[storyIndex], [field]: value };
+      setFormData((prev) => ({ ...prev, achievements_stories: updated }));
+    }
+  };
+
+  const handleAddStory = () => {
+    const newStory: AchievementStoryItem = {
+      id: `story-${Date.now()}`,
+      bannerTitle: 'Capacity Connect Trainees Shine Bright in',
+      bannerSubtitle: 'NATIONAL EARTH SCIENCES BENCHMARK 2026',
+      highlightStatTitle: 'OVER',
+      highlightStatNumber: '95%',
+      highlightStatDescription: 'Trainees Secured Top Tier-1 Operational Deployment in Premier Institutes',
+      image_url: null,
+      achievers: [
+        {
+          id: `ach-${Date.now()}-1`,
+          name: 'New Achiever',
+          initials: 'NA',
+          role: 'Scientific Officer',
+          institute: 'MoES Institute',
+          achievementBadge: 'AIR 1 (99.5%)',
+          score: 'Top Performer',
+        },
+      ],
+    };
+    setFormData((prev) => ({
+      ...prev,
+      achievements_stories: [...(prev.achievements_stories || []), newStory],
+    }));
+    toast.success('Added new achievement benchmark story');
+  };
+
+  const handleDeleteStory = (storyIndex: number) => {
+    if ((formData.achievements_stories || []).length <= 1) {
+      toast.error('You must keep at least 1 achievement story.');
+      return;
+    }
+    const updated = (formData.achievements_stories || []).filter((_, i) => i !== storyIndex);
+    setFormData((prev) => ({ ...prev, achievements_stories: updated }));
+    toast.info('Achievement story removed');
+  };
+
+  const handleAchieverChange = (
+    storyIndex: number,
+    achieverIndex: number,
+    field: keyof AchieverItem,
+    value: any
+  ) => {
+    const updatedStories = [...(formData.achievements_stories || [])];
+    if (updatedStories[storyIndex]) {
+      const updatedAchievers = [...(updatedStories[storyIndex].achievers || [])];
+      if (updatedAchievers[achieverIndex]) {
+        updatedAchievers[achieverIndex] = {
+          ...updatedAchievers[achieverIndex],
+          [field]: value,
+        };
+        // Auto-update initials if name changed and initials is empty or 2 chars
+        if (field === 'name' && value && typeof value === 'string') {
+          const parts = value.trim().split(/\s+/);
+          const initials = parts.length > 1
+            ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+            : value.slice(0, 2).toUpperCase();
+          updatedAchievers[achieverIndex].initials = initials;
+        }
+        updatedStories[storyIndex] = {
+          ...updatedStories[storyIndex],
+          achievers: updatedAchievers,
+        };
+        setFormData((prev) => ({ ...prev, achievements_stories: updatedStories }));
+      }
+    }
+  };
+
+  const handleAddAchiever = (storyIndex: number) => {
+    const updatedStories = [...(formData.achievements_stories || [])];
+    if (updatedStories[storyIndex]) {
+      const newAchiever: AchieverItem = {
+        id: `ach-${Date.now()}`,
+        name: 'New Trainee',
+        initials: 'NT',
+        role: 'Field Analyst',
+        institute: 'Regional Meteorological Centre',
+        achievementBadge: 'Top Tier (98%)',
+        score: 'Excellence',
+      };
+      updatedStories[storyIndex] = {
+        ...updatedStories[storyIndex],
+        achievers: [...(updatedStories[storyIndex].achievers || []), newAchiever],
+      };
+      setFormData((prev) => ({ ...prev, achievements_stories: updatedStories }));
+      toast.success('Added new achiever to story');
+    }
+  };
+
+  const handleDeleteAchiever = (storyIndex: number, achieverIndex: number) => {
+    const updatedStories = [...(formData.achievements_stories || [])];
+    if (updatedStories[storyIndex]) {
+      if ((updatedStories[storyIndex].achievers || []).length <= 1) {
+        toast.error('You must keep at least 1 achiever in the story.');
+        return;
+      }
+      const updatedAchievers = (updatedStories[storyIndex].achievers || []).filter(
+        (_, i) => i !== achieverIndex
+      );
+      updatedStories[storyIndex] = {
+        ...updatedStories[storyIndex],
+        achievers: updatedAchievers,
+      };
+      setFormData((prev) => ({ ...prev, achievements_stories: updatedStories }));
+      toast.info('Achiever removed');
+    }
+  };
+
+  const handleAchieverAvatarUpload = async (storyIndex: number, achieverIndex: number, file: File) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (PNG, JPG, WEBP, etc.)');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size exceeds 10MB limit.');
+      return;
+    }
+
+    const key = `${storyIndex}-${achieverIndex}`;
+    setUploadingAchieverKey(key);
+    const fileExt = file.name.split('.').pop() || 'png';
+    const fileName = `achiever_${storyIndex}_${achieverIndex}_${Date.now()}.${fileExt}`;
+    const filePath = `achievers/${fileName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('Homepage')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        console.warn('Storage upload note:', uploadError.message);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          handleAchieverChange(storyIndex, achieverIndex, 'avatar_url', dataUrl);
+        };
+        reader.readAsDataURL(file);
+        toast.info('Image loaded as local preview.');
+      } else {
+        const { data: urlData } = supabase.storage
+          .from('Homepage')
+          .getPublicUrl(filePath);
+
+        handleAchieverChange(storyIndex, achieverIndex, 'avatar_url', urlData.publicUrl);
+        toast.success('Achiever image uploaded successfully!');
+      }
+    } catch (err: any) {
+      console.error('Upload exception:', err);
+      toast.error('Failed to upload achiever image.');
+    } finally {
+      setUploadingAchieverKey(null);
+    }
+  };
+
   // Save Settings
   const handleSave = async () => {
     try {
@@ -255,6 +429,7 @@ export function AdminHomePageSettings() {
     formData.featured_programs_enabled,
     formData.announcements_bar_enabled,
     formData.upcoming_tracks_enabled,
+    formData.achievements_enabled,
   ].filter(Boolean).length;
 
   return (
@@ -273,7 +448,7 @@ export function AdminHomePageSettings() {
               Home Page Detailed Customizer
             </h2>
             <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-              Configure, publish, and fine-tune the 3 live landing page sections: Featured Learning Programs, Announcements Marquee Ticker, and Specialized Tracks.
+              Configure, publish, and fine-tune the 4 live landing page sections: Featured Learning Programs, Announcements Marquee Ticker, Specialized Tracks, and Achievements.
             </p>
           </div>
 
@@ -304,7 +479,7 @@ export function AdminHomePageSettings() {
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-white font-bold bg-white/10 px-3 py-1 rounded-lg border border-white/10">
               <Layers className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{activeCount} of 3 Sections Active</span>
+              <span>{activeCount} of 4 Sections Active</span>
             </span>
             <span className="text-emerald-300 flex items-center gap-1 font-bold bg-emerald-500/20 border border-emerald-400/30 px-3 py-1 rounded-lg">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Instant Live Sync
@@ -327,6 +502,7 @@ export function AdminHomePageSettings() {
           { key: 'programs', label: '1. Featured Programs', icon: Sparkles, count: formData.featured_programs_items?.length || 3, enabled: formData.featured_programs_enabled },
           { key: 'announcements', label: '2. Announcements Marquee', icon: Megaphone, count: formData.announcements_items?.length || 5, enabled: formData.announcements_bar_enabled },
           { key: 'tracks', label: '3. Specialized Tracks', icon: Radio, count: formData.upcoming_tracks_items?.length || 3, enabled: formData.upcoming_tracks_enabled },
+          { key: 'achievements', label: '4. Achievements & Results', icon: Award, count: formData.achievements_stories?.length || 4, enabled: formData.achievements_enabled },
         ].map((tab) => {
           const isSelected = activeSectionTab === tab.key;
           return (
@@ -1021,6 +1197,371 @@ export function AdminHomePageSettings() {
                         onChange={(e) => handleTrackItemChange(idx, 'link', e.target.value)}
                         className="w-full px-2.5 py-1.5 text-xs rounded-xl bg-white border border-slate-200 text-cyan-700 font-mono focus:outline-none focus:border-cyan-500 shadow-2xs"
                       />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ─── TAB 4: ACHIEVEMENTS & RESULTS ─── */}
+      {activeSectionTab === 'achievements' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          {/* Main Controls Card */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-200">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <span>Section 4: Proven Results &amp; Achievements</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Highlight verified national rankers, benchmark test achievements, and MoES deployment impact stories.
+                </p>
+              </div>
+
+              {/* Publish Toggle */}
+              <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-2xl border border-slate-200">
+                <span className="text-xs font-bold text-slate-700">
+                  {formData.achievements_enabled ? 'Section is Live' : 'Section is Hidden'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggle('achievements_enabled')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formData.achievements_enabled ? 'bg-cyan-600' : 'bg-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      formData.achievements_enabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* General Section Metadata */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Eyebrow Tag Pill</label>
+                <input
+                  type="text"
+                  value={formData.achievements_tag || ''}
+                  onChange={(e) => handleInputChange('achievements_tag', e.target.value)}
+                  placeholder="Proven National Impact"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-cyan-500 shadow-2xs font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Main Section Heading</label>
+                <input
+                  type="text"
+                  value={formData.achievements_title || ''}
+                  onChange={(e) => handleInputChange('achievements_title', e.target.value)}
+                  placeholder="Inspired trainees. Inspired results"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-cyan-500 shadow-2xs font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">MoES Badge Title</label>
+                <input
+                  type="text"
+                  value={formData.achievements_moes_badge || ''}
+                  onChange={(e) => handleInputChange('achievements_moes_badge', e.target.value)}
+                  placeholder="100% Verified Operational Skill Credentials"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-cyan-500 shadow-2xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">MoES Badge Description</label>
+                <input
+                  type="text"
+                  value={formData.achievements_moes_desc || ''}
+                  onChange={(e) => handleInputChange('achievements_moes_desc', e.target.value)}
+                  placeholder="Direct alignment with WMO, IMD & INCOIS forecast protocols."
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-cyan-500 shadow-2xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Achievement Stories List */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-orange-600" />
+                  <span>Benchmark Stories &amp; Achiever Cohorts ({formData.achievements_stories?.length || 0})</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Each story appears in the interactive carousel showcase with its headline, highlight statistic, and achiever cards.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleAddStory}
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-9 px-4 rounded-xl cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Add Benchmark Story
+              </Button>
+            </div>
+
+            <div className="space-y-6">
+              {(formData.achievements_stories || []).map((story, sIdx) => (
+                <div
+                  key={story.id || sIdx}
+                  className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-5"
+                >
+                  {/* Story Header */}
+                  <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-200/80">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-orange-100 text-orange-700 font-black text-xs flex items-center justify-center">
+                        {sIdx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800">
+                        {story.bannerSubtitle || 'Benchmark Story'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStory(sIdx)}
+                      className="text-red-500 hover:text-red-700 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Remove Story
+                    </button>
+                  </div>
+
+                  {/* Story Headline & Benchmark Title */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Banner Pre-Title</label>
+                      <input
+                        type="text"
+                        value={story.bannerTitle}
+                        onChange={(e) => handleStoryChange(sIdx, 'bannerTitle', e.target.value)}
+                        placeholder="Capacity Connect Trainees Shine Bright in"
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:border-cyan-500 shadow-2xs font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Benchmark Exam / Cohort Title</label>
+                      <input
+                        type="text"
+                        value={story.bannerSubtitle}
+                        onChange={(e) => handleStoryChange(sIdx, 'bannerSubtitle', e.target.value)}
+                        placeholder="NATIONAL WEATHER FORECASTER BENCHMARK 2025"
+                        className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 text-slate-900 focus:outline-none focus:border-cyan-500 shadow-2xs font-mono font-bold text-orange-600"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Highlight Stat Pill Callout */}
+                  <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
+                    <span className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      Highlight Stat Callout (Right Column Pill)
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Prefix / Label</label>
+                        <input
+                          type="text"
+                          value={story.highlightStatTitle}
+                          onChange={(e) => handleStoryChange(sIdx, 'highlightStatTitle', e.target.value)}
+                          placeholder="OVER / EVERY"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-bold focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Big Number / Rate</label>
+                        <input
+                          type="text"
+                          value={story.highlightStatNumber}
+                          onChange={(e) => handleStoryChange(sIdx, 'highlightStatNumber', e.target.value)}
+                          placeholder="94% or 9 IN 10"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-black text-amber-600 focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-1">
+                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Description</label>
+                        <input
+                          type="text"
+                          value={story.highlightStatDescription}
+                          onChange={(e) => handleStoryChange(sIdx, 'highlightStatDescription', e.target.value)}
+                          placeholder="Trainees Secured Top Tier-1 Placement..."
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-[11px] focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Achievers in this story */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-cyan-600" />
+                        <span>Achievers in this Story ({story.achievers?.length || 0})</span>
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAddAchiever(sIdx)}
+                        className="text-xs text-cyan-700 hover:text-cyan-900 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" /> Add Achiever
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {(story.achievers || []).map((achiever, aIdx) => (
+                        <div
+                          key={achiever.id || aIdx}
+                          className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-600">
+                              Achiever #{aIdx + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAchiever(sIdx, aIdx)}
+                              className="text-slate-400 hover:text-red-600 p-0.5 rounded cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Image Upload or Monogram preview */}
+                          <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl border border-slate-200/80">
+                            {achiever.avatar_url ? (
+                              <div className="w-10 h-10 rounded-lg overflow-hidden border border-cyan-500/40 shrink-0">
+                                <img
+                                  src={achiever.avatar_url}
+                                  alt={achiever.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-b from-slate-200 to-slate-400 text-slate-600 flex items-center justify-center shrink-0 border border-slate-300">
+                                <User className="w-5 h-5 stroke-[1.5]" />
+                              </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-[10px] font-bold cursor-pointer border border-cyan-200 transition-colors">
+                                <UploadCloud className="w-3 h-3" />
+                                <span>
+                                  {uploadingAchieverKey === `${sIdx}-${aIdx}` ? 'Uploading...' : 'Upload Photo'}
+                                </span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleAchieverAvatarUpload(sIdx, aIdx, file);
+                                  }}
+                                />
+                              </label>
+
+                              {achiever.avatar_url && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAchieverChange(sIdx, aIdx, 'avatar_url', null)}
+                                  className="block text-[10px] text-red-500 hover:underline mt-0.5"
+                                >
+                                  Use monogram
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500">Name &amp; Initials</label>
+                            <div className="grid grid-cols-4 gap-1.5 mt-0.5">
+                              <input
+                                type="text"
+                                value={achiever.name}
+                                onChange={(e) => handleAchieverChange(sIdx, aIdx, 'name', e.target.value)}
+                                placeholder="Dr. Aarav Sharma"
+                                className="col-span-3 px-2 py-1 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-bold focus:outline-none focus:border-cyan-500"
+                              />
+                              <input
+                                type="text"
+                                value={achiever.initials}
+                                onChange={(e) => handleAchieverChange(sIdx, aIdx, 'initials', e.target.value)}
+                                placeholder="AS"
+                                maxLength={3}
+                                className="col-span-1 px-1.5 py-1 text-xs text-center rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-black focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500">Role</label>
+                              <input
+                                type="text"
+                                value={achiever.role}
+                                onChange={(e) => handleAchieverChange(sIdx, aIdx, 'role', e.target.value)}
+                                placeholder="Radar Meteorologist"
+                                className="w-full px-2 py-1 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500">Institute</label>
+                              <input
+                                type="text"
+                                value={achiever.institute}
+                                onChange={(e) => handleAchieverChange(sIdx, aIdx, 'institute', e.target.value)}
+                                placeholder="IMD New Delhi"
+                                className="w-full px-2 py-1 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500">Specialist Tag</label>
+                              <input
+                                type="text"
+                                value={achiever.score}
+                                onChange={(e) => handleAchieverChange(sIdx, aIdx, 'score', e.target.value)}
+                                placeholder="Top Forecaster"
+                                className="w-full px-2 py-1 text-xs rounded-lg bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500">Rank Pill</label>
+                              <input
+                                type="text"
+                                value={achiever.achievementBadge}
+                                onChange={(e) => handleAchieverChange(sIdx, aIdx, 'achievementBadge', e.target.value)}
+                                placeholder="AIR 1 (99.8%)"
+                                className="w-full px-2 py-1 text-xs rounded-lg bg-slate-50 border border-slate-200 text-amber-700 font-bold focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
