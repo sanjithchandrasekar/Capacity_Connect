@@ -38,8 +38,8 @@ interface Message {
 const SUGGESTED_PROMPTS = [
   'Explore available courses',
   'How do I register?',
-  'Browse training tracks',
   'Tell me about certifications',
+  'How do I contact support?',
 ]
 
 const CANNED_RESPONSES: Record<string, string> = {
@@ -47,10 +47,10 @@ const CANNED_RESPONSES: Record<string, string> = {
     'You can explore our full catalog of scientific courses covering Atmospheric Science, Doppler Weather Radar, Oceanography, and Climatology on the **Courses** page. Filter by department or competency level to find your ideal training track.',
   'How do I register?':
     'To register, click **Get Started** or **Register** at the top right of the navigation bar. Select your role as a **Trainee** or **Trainer**, complete your institutional details, and submit for verification.',
-  'Browse training tracks':
-    'Capacity Connect offers dedicated training tracks including:\n• Atmospheric & Meteorological Sciences\n• Ocean Observations & Coastal Modeling\n• Doppler Weather Radar Operations & Calibration\n• Seismological & Geohazard Monitoring\n• Climate Forecasting & Disaster Risk Reduction',
   'Tell me about certifications':
     'Upon completing all course modules and passing the final assessments (minimum 60% passing score), you receive an official MoES-accredited, verifiable digital PDF certificate complete with cryptographic validation and QR code.',
+  'How do I contact support?':
+    'You can reach out to our official MoES administrators and support team via the **Contact** page. We are available to help you with platform issues, course inquiries, and account verification.',
 }
 
 export function ChatBot() {
@@ -131,13 +131,15 @@ export function ChatBot() {
         throw new Error('No API key configured')
       }
 
-      const formattedMessages = updatedMessages.map((msg) => ({
-        role: msg.role === 'bot' ? 'model' : 'user',
-        parts: [{ text: msg.content }],
-      }))
+      const formattedMessages = updatedMessages
+        .filter((msg, index) => !(index === 0 && msg.role === 'bot')) // Skip initial greeting
+        .map((msg) => ({
+          role: msg.role === 'bot' ? 'model' : 'user',
+          parts: [{ text: msg.content }],
+        }))
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
