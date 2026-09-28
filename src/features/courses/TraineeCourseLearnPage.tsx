@@ -690,16 +690,6 @@ export function TraineeCourseLearnPage() {
 
   const handleDownloadCertificate = async () => {
     if (!course || !profile) return
-    if (!gradeBreakdown.isCompleted) {
-      if (gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted) {
-        toast.error('You must take and pass the Final Assessment before downloading the certificate.')
-      } else if (!gradeBreakdown.isPassed) {
-        toast.error(`Your overall grade (${gradeBreakdown.totalScore}%) is below the passing requirement (${gradeBreakdown.passingScore}%).`)
-      } else {
-        toast.error('Please complete all course requirements before downloading the certificate.')
-      }
-      return
-    }
     setDownloadingCert(true)
     try {
       const result = await generateTraineeCertificate((course as any).certificate_template_url || null, {
@@ -883,6 +873,17 @@ export function TraineeCourseLearnPage() {
               />
             </div>
           </div>
+
+          {/* Certificate Download Button */}
+          <Button
+            onClick={handleDownloadCertificate}
+            disabled={downloadingCert}
+            className="text-xs font-bold rounded-xl px-3.5 py-2 flex items-center gap-1.5 shadow-xs bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white cursor-pointer transition-all hover:scale-105 active:scale-95 disabled:opacity-60"
+            title="Download Course Certificate"
+          >
+            {downloadingCert ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5 text-amber-300" />}
+            <span className="hidden sm:inline">{downloadingCert ? 'Generating...' : 'Certificate'}</span>
+          </Button>
 
           {/* Syllabus Drawer Trigger */}
           <Button
@@ -1687,29 +1688,40 @@ export function TraineeCourseLearnPage() {
                 isCurrentCompleted || quizResult?.passed ? (
                   <div className="flex flex-wrap items-center gap-2">
                     {gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted ? (
-                      <Button
-                        onClick={() => navigate(`/trainee/courses/${courseId}/assessments/${gradeBreakdown.finalAssessmentId}`)}
-                        className="bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-6 py-3 shadow-xl shadow-purple-500/25 gap-2 hover:scale-105 active:scale-95 transition-all animate-pulse"
-                      >
-                        <Award className="w-4 h-4 text-amber-300" />
-                        <span>Take Final Assessment (50% Grade) →</span>
-                      </Button>
-                    ) : gradeBreakdown.isCompleted ? (
-                      <Button
-                        onClick={handleDownloadCertificate}
-                        disabled={downloadingCert}
-                        className="bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-600 hover:from-amber-600 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-5 py-3 shadow-xl shadow-cyan-500/25 gap-2 hover:scale-105 active:scale-95 transition-all"
-                      >
-                        {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
-                        {downloadingCert ? 'Generating...' : 'Download Certificate 🎓'}
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => navigate(`/trainee/courses/${courseId}/assessments/${gradeBreakdown.finalAssessmentId}`)}
+                          className="bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-6 py-3 shadow-xl shadow-purple-500/25 gap-2 hover:scale-105 active:scale-95 transition-all animate-pulse cursor-pointer"
+                        >
+                          <Award className="w-4 h-4 text-amber-300" />
+                          <span>Take Final Assessment (50% Grade) →</span>
+                        </Button>
+                        <Button
+                          onClick={handleDownloadCertificate}
+                          disabled={downloadingCert}
+                          className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-5 py-3 shadow-md gap-2 cursor-pointer transition-all hover:scale-105"
+                        >
+                          {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4 text-amber-300" />}
+                          {downloadingCert ? 'Generating...' : 'Download Certificate 🎓'}
+                        </Button>
+                      </>
                     ) : (
-                      <Button
-                        onClick={() => navigate(`/trainee/courses/${courseId}`)}
-                        className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl px-5 py-3 shadow-md gap-2"
-                      >
-                        <span>View Course Assessments & Progress →</span>
-                      </Button>
+                      <>
+                        <Button
+                          onClick={handleDownloadCertificate}
+                          disabled={downloadingCert}
+                          className="bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-600 hover:from-amber-600 hover:to-cyan-700 text-white font-black text-xs sm:text-sm rounded-xl px-5 py-3 shadow-xl shadow-cyan-500/25 gap-2 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                        >
+                          {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                          {downloadingCert ? 'Generating...' : 'Download Certificate 🎓'}
+                        </Button>
+                        <Button
+                          onClick={() => navigate(`/trainee/courses/${courseId}`)}
+                          className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl px-5 py-3 shadow-md gap-2 cursor-pointer"
+                        >
+                          <span>View Course Assessments & Progress →</span>
+                        </Button>
+                      </>
                     )}
                   </div>
                 ) : (

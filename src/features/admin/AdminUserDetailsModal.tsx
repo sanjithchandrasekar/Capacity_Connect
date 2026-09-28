@@ -4,11 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
+import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
 import {
   User, Mail, Phone, MapPin, Briefcase, GraduationCap,
   Calendar, Shield, Award, CheckCircle, Clock, Ban,
   ExternalLink, FileText, Globe, Link2,
-  BookOpen, Layers, X, Sparkles, AlertCircle
+  BookOpen, Layers, X, Sparkles, AlertCircle, Loader2
 } from 'lucide-react'
 
 interface AdminUserDetailsModalProps {
@@ -42,6 +44,36 @@ export function AdminUserDetailsModal({
     }
   }, [isOpen, user?.id])
 
+  const [downloadingCertEnrollmentId, setDownloadingCertEnrollmentId] = useState<string | null>(null)
+
+  const handleDownloadTraineeCert = async (item: any) => {
+    const c = item.courses
+    if (!c || !user) return
+    setDownloadingCertEnrollmentId(item.id)
+    try {
+      const { blob, fileName } = await generateTraineeCertificate(
+        c.certificate_template_url,
+        {
+          traineeName: user.full_name || user.email?.split('@')[0] || 'Trainee',
+          traineeEmail: user.email || undefined,
+          traineeId: user.id,
+          courseId: c.id,
+          courseTitle: c.title,
+          trainerName: 'Lead Instructor',
+          percentage: `${item.progress_pct ?? item.progress_percent ?? 100}%`,
+          completedAt: new Date().toISOString(),
+        }
+      )
+      triggerFileDownload(blob, fileName)
+      toast.success(`Certificate downloaded for ${user.full_name || 'Trainee'}! 🎉`)
+    } catch (e: any) {
+      console.error('Certificate generation error:', e)
+      toast.error(e?.message || 'Failed to generate certificate')
+    } finally {
+      setDownloadingCertEnrollmentId(null)
+    }
+  }
+
   // Fetch real-time enrollments or authored courses
   useEffect(() => {
     if (!user || !isOpen) {
@@ -55,7 +87,7 @@ export function AdminUserDetailsModal({
         if (user.role === 'trainee') {
           const { data, error } = await supabase
             .from('enrollments')
-            .select('*, courses(id, title, course_type, delivery_mode, duration_minutes)')
+            .select('*, courses(id, title, course_type, delivery_mode, duration_minutes, certificate_template_url)')
             .eq('user_id', user.id)
             .order('enrolled_at', { ascending: false })
           
@@ -460,17 +492,33 @@ export function AdminUserDetailsModal({
                                 {c?.course_type} • {c?.delivery_mode || 'Recorded'} • Enrolled on {item.enrolled_at ? new Date(item.enrolled_at).toLocaleDateString() : '—'}
                               </p>
                             </div>
-                            <div className="text-right shrink-0">
-                              <Badge className={`capitalize font-bold text-xs ${
-                                item.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
-                                item.status === 'in_progress' ? 'bg-cyan-100 text-cyan-800 border-cyan-300' :
-                                'bg-slate-100 text-slate-700'
-                              }`}>
-                                {item.status}
-                              </Badge>
-                              {item.progress_pct !== undefined && (
-                                <p className="text-[11px] font-bold text-slate-600 mt-1">{item.progress_pct}% Completed</p>
-                              )}
+                            <div className="text-right shrink-0 flex items-center gap-3">
+                              <div>
+                                <Badge className={`capitalize font-bold text-xs ${
+                                  item.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                                  item.status === 'in_progress' ? 'bg-cyan-100 text-cyan-800 border-cyan-300' :
+                                  'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {item.status}
+                                </Badge>
+                                {(item.progress_pct !== undefined || item.progress_percent !== undefined) && (
+                                  <p className="text-[11px] font-bold text-slate-600 mt-1">{item.progress_pct ?? item.progress_percent}% Completed</p>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadTraineeCert(item)}
+                                disabled={downloadingCertEnrollmentId === item.id}
+                                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white font-bold text-xs shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+                                title="Download Certificate"
+                              >
+                                {downloadingCertEnrollmentId === item.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Award className="w-3.5 h-3.5 text-amber-300" />
+                                )}
+                                <span>Certificate</span>
+                              </button>
                             </div>
                           </div>
                         )

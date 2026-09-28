@@ -699,16 +699,6 @@ export function TraineeCourseDetails() {
 
   const handleDownloadCertificate = async () => {
     if (!profile || !course) return
-    if (!gradeBreakdown.isCompleted) {
-      if (gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted) {
-        toast.error('You must take and pass the Final Assessment before downloading the certificate.')
-      } else if (!gradeBreakdown.isPassed) {
-        toast.error(`Your total score (${gradeBreakdown.totalScore}%) is below the passing criteria (${gradeBreakdown.passingScore}%).`)
-      } else {
-        toast.error('Please complete all course requirements before downloading the certificate.')
-      }
-      return
-    }
     setDownloadingCert(true)
     try {
       const traineeName = profile.full_name || user?.email?.split('@')[0] || 'Trainee'
@@ -940,6 +930,15 @@ export function TraineeCourseDetails() {
                       </div>
                     ) : isApprovedTrainee ? (
                       <div className="flex flex-wrap items-center gap-3">
+                        <Button
+                          onClick={handleDownloadCertificate}
+                          disabled={downloadingCert}
+                          className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-cyan-700 text-white font-bold rounded-2xl px-6 py-4 shadow-lg shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                        >
+                          {downloadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4 text-amber-300" />}
+                          {downloadingCert ? 'Generating...' : 'Download Certificate'}
+                        </Button>
+
                         {gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted && gradeBreakdown.isFinalUnlocked ? (
                           <Button
                             onClick={() => {

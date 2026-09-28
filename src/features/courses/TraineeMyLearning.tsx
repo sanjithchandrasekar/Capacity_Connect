@@ -96,16 +96,6 @@ export function TraineeMyLearning() {
       traineeAttempts: allAttempts as any,
       passingScore: enrollment.course?.passing_score ?? 50,
     })
-    if (!gradeBreakdown.isCompleted) {
-      if (gradeBreakdown.hasFinalAssessment && !gradeBreakdown.finalAssessmentCompleted) {
-        toast.error('You must take and pass the Final Assessment before downloading the certificate.')
-      } else if (!gradeBreakdown.isPassed) {
-        toast.error(`Your total score (${gradeBreakdown.totalScore}%) is below the passing criteria (${gradeBreakdown.passingScore}%).`)
-      } else {
-        toast.error('Please complete all course requirements before downloading the certificate.')
-      }
-      return
-    }
 
     setDownloadingId(enrollment.id)
     try {
@@ -272,38 +262,38 @@ export function TraineeMyLearning() {
 
                   {/* Actions */}
                   <div className="shrink-0 flex flex-wrap items-center gap-2.5 pt-4 md:pt-0 md:pl-4 md:border-l border-slate-100">
+                    <button
+                      onClick={() => handleDownloadCertificate(enrollment, gradeBreakdown.totalScore)}
+                      disabled={downloadingId === enrollment.id}
+                      className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-sm hover:scale-105 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                      title="Download Certificate"
+                    >
+                      {downloadingId === enrollment.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5 text-amber-300" />}
+                      {downloadingId === enrollment.id ? 'Generating...' : 'Certificate'}
+                    </button>
+
                     {isCourseDone ? (
-                      <>
-                        <button
-                          onClick={() => handleDownloadCertificate(enrollment, gradeBreakdown.totalScore)}
-                          disabled={downloadingId === enrollment.id}
-                          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold shadow-sm hover:scale-105 transition-all flex items-center gap-1.5"
-                        >
-                          {downloadingId === enrollment.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Award className="w-3.5 h-3.5 text-amber-300" />}
-                          {downloadingId === enrollment.id ? 'Generating...' : 'Certificate'}
+                      <Link to={`/trainee/courses/${enrollment.course?.id}`}>
+                        <button className="px-4 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Review
                         </button>
-                        <Link to={`/trainee/courses/${enrollment.course?.id}`}>
-                          <button className="px-4 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Review
-                          </button>
-                        </Link>
-                      </>
+                      </Link>
                     ) : isFinalPending && gradeBreakdown.finalAssessmentId ? (
                       <>
                         <Link to={`/trainee/courses/${enrollment.course?.id}/assessments/${gradeBreakdown.finalAssessmentId}`}>
-                          <button className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-bold text-xs shadow-md shadow-purple-600/20 hover:scale-105 transition-all flex items-center gap-1.5 animate-pulse">
+                          <button className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-700 hover:to-cyan-700 text-white font-bold text-xs shadow-md shadow-purple-600/20 hover:scale-105 transition-all flex items-center gap-1.5 animate-pulse cursor-pointer">
                             <FileCheck className="w-4 h-4 text-amber-300" /> Take Final Exam
                           </button>
                         </Link>
                         <Link to={`/trainee/courses/${enrollment.course?.id}`}>
-                          <button className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5">
+                          <button className="px-3.5 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5 cursor-pointer">
                             <BookOpen className="w-3.5 h-3.5 text-cyan-600" /> Details
                           </button>
                         </Link>
                       </>
                     ) : (
                       <Link to={`/trainee/courses/${enrollment.course?.id}`}>
-                        <button className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs shadow-md shadow-cyan-600/20 hover:scale-105 transition-all flex items-center gap-2">
+                        <button className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold text-xs shadow-md shadow-cyan-600/20 hover:scale-105 transition-all flex items-center gap-2 cursor-pointer">
                           <PlayCircle className="w-4 h-4" /> Continue Lesson
                         </button>
                       </Link>

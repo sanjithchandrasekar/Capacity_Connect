@@ -14,13 +14,14 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
 import {
   User, Mail, Phone, MapPin, GraduationCap, Briefcase, Sparkles,
   Shield, Key, Globe, Save, Loader2, Plus, X,
   CheckCircle2, Compass, BookOpen, BarChart3, Award, Calendar,
   Building, Layers, Lock, FileText, Check, Code, ExternalLink,
   Trophy, Medal, Star, ChevronRight, ArrowRight, Eye, EyeOff,
-  Camera, Upload, Trash2, Image as ImageIcon, Bell
+  Camera, Upload, Trash2, Image as ImageIcon, Bell, Download
 } from 'lucide-react'
 
 function LinkedinIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -123,38 +124,44 @@ export function ProfilePage() {
 
       const certCourseIds = new Set((certsData || []).map((c: any) => c.course_id))
 
-      const list = (enrollmentsList || []).filter((e: any) => {
-        if (!e.course && !e.course_id) return false
-        if (e.status === 'completed' || (e.progress_percent ?? 0) >= 100) return true
-        if (certCourseIds.has(e.course_id || e.course?.id)) return true
-        
-        try {
-          const keysToCheck = [
-            `cc_mod_progress_${e.course_id}_${uid}`,
-            `cc_mod_progress_${e.course?.id}_${uid}`,
-            `cc_mod_progress_${e.course_id}_${user?.id}`,
-            `cc_mod_progress_${e.course?.id}_${user?.id}`,
-          ]
-          for (const k of keysToCheck) {
-            const raw = localStorage.getItem(k)
-            if (raw) {
-              const parsed = JSON.parse(raw)
-              const totalMods = Array.isArray(e.course?.modules) ? e.course.modules.length : 0
-              if (totalMods > 0 && Array.isArray(parsed.completed) && parsed.completed.length >= totalMods) {
-                return true
-              }
-            }
-          }
-        } catch {
-          // ignore
-        }
-        return false
-      })
-
+      const list = (enrollmentsList || []).filter((e: any) => Boolean(e.course || e.course_id))
       return list
     },
     enabled: !!(profile?.id || user?.id) && (profile?.role === 'trainee' || !profile?.role),
   })
+
+  const [downloadingBadgeId, setDownloadingBadgeId] = useState<string | null>(null)
+
+  const handleDownloadBadgeCertificate = async (enr: any) => {
+    const course = enr.course
+    if (!course) return
+    const traineeName = profile?.full_name || user?.email?.split('@')[0] || 'Trainee'
+    const percentage = `${enr.progress_percent ?? 100}%`
+
+    setDownloadingBadgeId(enr.id)
+    try {
+      const { blob, fileName } = await generateTraineeCertificate(
+        course.certificate_template_url,
+        {
+          traineeName,
+          traineeEmail: profile?.email || user?.email,
+          traineeId: user!.id,
+          courseId: course.id,
+          courseTitle: course.title,
+          trainerName: course.trainer?.full_name || 'Lead Trainer',
+          percentage,
+          completedAt: new Date().toISOString(),
+        }
+      )
+      triggerFileDownload(blob, fileName)
+      toast.success('Certificate downloaded successfully! 🎉')
+    } catch (err: any) {
+      console.error('Certificate download error:', err)
+      toast.error(err?.message || 'Failed to download certificate')
+    } finally {
+      setDownloadingBadgeId(null)
+    }
+  }
 
   // Profile Form State
   const [form, setForm] = useState({
@@ -679,16 +686,41 @@ export function ProfilePage() {
                             {course.title}
                           </h4>
 
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-[11px] text-emerald-600 font-extrabold flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Completed
+                          <div className="flex items-center justify-between pt-1 gap-2">
+                            <span className={`text-[11px] font-extrabold flex items-center gap-1 ${
+                              enr.status === 'completed' || (enr.progress_percent ?? 0) >= 100
+                                ? 'text-emerald-600'
+                                : 'text-cyan-700'
+                            }`}>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {enr.status === 'completed' || (enr.progress_percent ?? 0) >= 100
+                                ? 'Completed'
+                                : `${enr.progress_percent ?? 0}% In Progress`}
                             </span>
-                            <Link
-                              to={`/trainee/learn/${course.id}`}
-                              className="text-[11px] font-bold text-slate-600 hover:text-cyan-600 flex items-center gap-0.5"
-                            >
-                              Review <ChevronRight className="w-3 h-3" />
-                            </Link>
+
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadBadgeCertificate(enr)}
+                                disabled={downloadingBadgeId === enr.id}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                                title="Download Certificate"
+                              >
+                                {downloadingBadgeId === enr.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Award className="w-3 h-3 text-amber-300" />
+                                )}
+                                <span>Certificate</span>
+                              </button>
+
+                              <Link
+                                to={`/trainee/courses/${course.id}`}
+                                className="text-[11px] font-bold text-slate-600 hover:text-cyan-600 flex items-center gap-0.5"
+                              >
+                                View <ChevronRight className="w-3 h-3" />
+                              </Link>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -7,7 +7,9 @@ import { TrainerLayout, fadeUp, stagger } from './TrainerLayout'
 import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, Users, BarChart3, Target, BookOpen, Loader2, TrendingUp, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Users, BarChart3, Target, BookOpen, Loader2, TrendingUp, AlertTriangle, Award, Download } from 'lucide-react'
+import { toast } from 'sonner'
+import { generateTraineeCertificate, triggerFileDownload } from '@/lib/certificateGenerator'
 
 import { calculateCourseGradeBreakdown, type CourseGradeBreakdown } from '@/lib/courseGrading'
 
@@ -35,6 +37,7 @@ export function PerformancePage() {
   const [traineeRows, setTraineeRows] = useState<TraineeRow[]>([])
   const [_questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
+  const [downloadingCertId, setDownloadingCertId] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!user || !courseId) return
@@ -143,6 +146,36 @@ export function PerformancePage() {
     { label: 'Avg. Attempts', value: avgAttempts.toString(), icon: BookOpen, iconColor: 'text-amber-600', iconBg: 'bg-amber-50 border-amber-200' },
   ]
 
+  const handleDownloadTraineeCertificate = async (row: TraineeRow) => {
+    if (!course) return
+    const traineeName = row.trainee?.full_name || row.trainee?.email?.split('@')[0] || 'Trainee'
+    const percentage = `${row.gradeBreakdown.totalScore}%`
+
+    setDownloadingCertId(row.enrollment.user_id)
+    try {
+      const { blob, fileName } = await generateTraineeCertificate(
+        (course as any).certificate_template_url,
+        {
+          traineeName,
+          traineeEmail: row.trainee?.email || undefined,
+          traineeId: row.enrollment.user_id,
+          courseId: course.id,
+          courseTitle: course.title,
+          trainerName: profile?.full_name || 'Lead Instructor',
+          percentage,
+          completedAt: new Date().toISOString(),
+        }
+      )
+      triggerFileDownload(blob, fileName)
+      toast.success(`Certificate downloaded for ${traineeName}! 🎉`)
+    } catch (err: any) {
+      console.error('Error downloading certificate:', err)
+      toast.error(err?.message || 'Failed to download certificate')
+    } finally {
+      setDownloadingCertId(null)
+    }
+  }
+
   if (loading) {
     return (
       <TrainerLayout>
@@ -197,8 +230,9 @@ export function PerformancePage() {
         )}
 
         <motion.div variants={fadeUp} className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-xs">
-          <div className="px-6 py-4 border-b border-slate-100">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900">Enrolled Trainees</h3>
+            <span className="text-xs text-slate-500 font-medium">{activeTraineeRows.length} Trainees Total</span>
           </div>
           {activeTraineeRows.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-sm font-medium">No trainees enrolled yet.</div>
@@ -207,7 +241,7 @@ export function PerformancePage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/70">
-                    {['Trainee', 'Enrolled', 'Modules (25%)', 'Assessments (25%)', 'Final Exam (50%)', 'Total Grade (100%)', 'Status'].map(h => (
+                    {['Trainee', 'Enrolled', 'Modules (25%)', 'Assessments (25%)', 'Final Exam (50%)', 'Total Grade (100%)', 'Status', 'Certificate'].map(h => (
                       <th key={h} className="text-left text-xs text-slate-500 font-semibold px-6 py-3">{h}</th>
                     ))}
                   </tr>
@@ -215,6 +249,7 @@ export function PerformancePage() {
                 <tbody className="divide-y divide-slate-100">
                   {activeTraineeRows.map(r => {
                     const gb = r.gradeBreakdown
+                    const isDownloading = downloadingCertId === r.enrollment.user_id
                     return (
                       <tr key={r.enrollment.user_id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="px-6 py-3.5">
@@ -275,6 +310,22 @@ export function PerformancePage() {
                           }`}>
                             {(r.enrollment.status === 'completed' || gb.isCompleted) ? 'Completed' : r.enrollment.status.replace('_', ' ')}
                           </Badge>
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadTraineeCertificate(r)}
+                            disabled={isDownloading}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white font-bold text-xs shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-60"
+                            title="Download Trainee Certificate"
+                          >
+                            {isDownloading ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Award className="w-3.5 h-3.5 text-amber-300" />
+                            )}
+                            <span>{isDownloading ? 'Generating...' : 'Certificate'}</span>
+                          </button>
                         </td>
                       </tr>
                     )
