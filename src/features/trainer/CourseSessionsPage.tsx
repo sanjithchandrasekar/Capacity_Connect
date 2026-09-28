@@ -23,7 +23,8 @@ import {
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useConfirm } from '@/hooks/useConfirm'
-
+import { LiveAttendanceTrainerPanel } from '../courses/LiveAttendanceTrainerPanel'
+import { OverallAttendanceDialog } from './OverallAttendanceDialog'
 type Course = Database['public']['Tables']['courses']['Row']
 type Session = Database['public']['Tables']['course_sessions']['Row']
 type Material = Database['public']['Tables']['materials']['Row']
@@ -48,6 +49,7 @@ export function CourseSessionsPage() {
   // Attendance Modal state
   const [allEnrollments, setAllEnrollments] = useState<any[]>([])
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false)
+  const [overallAttendanceOpen, setOverallAttendanceOpen] = useState(false)
   const [attendanceSession, setAttendanceSession] = useState<Session | null>(null)
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, 'present' | 'absent' | 'late'>>({})
 
@@ -354,6 +356,13 @@ export function CourseSessionsPage() {
   return (
     <TrainerLayout>
       <ConfirmDialog />
+      <OverallAttendanceDialog
+        open={overallAttendanceOpen}
+        onOpenChange={setOverallAttendanceOpen}
+        courseId={courseId!}
+        sessions={sessions}
+        enrollments={allEnrollments}
+      />
       <motion.div variants={stagger} initial="hidden" animate="visible" className="max-w-4xl mx-auto space-y-6">
         <motion.div variants={fadeUp} className="flex items-center justify-between">
           <div>
@@ -363,9 +372,14 @@ export function CourseSessionsPage() {
             <h2 className="text-2xl font-black tracking-tight text-slate-900">Course Sessions</h2>
             <p className="text-slate-500 text-sm mt-1 font-medium">{course?.title}</p>
           </div>
-          <Button onClick={openNew} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">
-            <Plus className="w-4 h-4 mr-2" /> Add Session
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => setOverallAttendanceOpen(true)} variant="outline" className="border-cyan-200 text-cyan-700 hover:bg-cyan-50 font-bold rounded-xl shadow-sm">
+              Overall Attendance
+            </Button>
+            <Button onClick={openNew} className="bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:opacity-95 text-white font-bold rounded-xl shadow-md shadow-cyan-600/10">
+              <Plus className="w-4 h-4 mr-2" /> Add Session
+            </Button>
+          </div>
         </motion.div>
 
         {sessions.length === 0 ? (
@@ -419,73 +433,8 @@ export function CourseSessionsPage() {
 
       {/* Attendance Modal Dialog */}
       <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-white border border-slate-200 shadow-2xl rounded-3xl p-6 text-slate-900">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-cyan-600" /> Attendance: {attendanceSession?.title || 'Session'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-3 space-y-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-100">
-              <span>{activeEnrollments.length} Enrolled Trainees</span>
-              <Button size="sm" variant="ghost" className="h-7 text-xs text-cyan-700 font-semibold" onClick={() => {
-                const allP: Record<string, 'present' | 'absent' | 'late'> = {}
-                activeEnrollments.forEach(e => { allP[e.user_id] = 'present' })
-                setAttendanceRecords(allP)
-              }}>
-                Mark All Present
-              </Button>
-            </div>
-
-            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-              {activeEnrollments.length > 0 ? (
-                activeEnrollments.map((enr) => {
-                  const status = attendanceRecords[enr.user_id] || 'present'
-                  return (
-                    <div key={enr.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">{enr.trainee?.full_name || 'Unknown'}</p>
-                        <p className="text-[10px] text-slate-500">{enr.trainee?.email}</p>
-                      </div>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'present' }))}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'present' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
-                        >
-                          Present
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'late' }))}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'late' ? 'bg-amber-500 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
-                        >
-                          Late
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAttendanceRecords(p => ({ ...p, [enr.user_id]: 'absent' }))}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${status === 'absent' ? 'bg-rose-500 text-white shadow-xs' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
-                        >
-                          Absent
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <p className="text-xs text-slate-400 text-center py-4">No enrolled trainees in this course.</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" className="border-slate-200 text-slate-700 rounded-xl" onClick={() => setAttendanceDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-semibold rounded-xl shadow-sm" onClick={handleSaveAttendance}>
-              Save Attendance
-            </Button>
-          </DialogFooter>
+        <DialogContent className="sm:max-w-[700px] bg-transparent border-0 shadow-none p-0 overflow-hidden">
+          <LiveAttendanceTrainerPanel session={attendanceSession} enrollments={activeEnrollments} isCompleted={attendanceSession ? isSessionFinished(attendanceSession) : false} />
         </DialogContent>
       </Dialog>
 

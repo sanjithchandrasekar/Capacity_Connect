@@ -11,6 +11,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Progress } from '@/components/ui/progress'
 import { Lock, ShieldAlert } from 'lucide-react'
 import { TraineeAssessmentResult } from './TraineeAssessmentResult'
+import * as tf from '@tensorflow/tfjs'
+import * as blazeface from '@tensorflow-models/blazeface'
+import * as cocoSsd from '@tensorflow-models/coco-ssd'
 
 export function TraineeAssessmentTest() {
   const { courseId, assessmentId } = useParams()
@@ -40,6 +43,7 @@ export function TraineeAssessmentTest() {
   const noiseWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const glareTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const roomScanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const faceDetectionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   
   const [randomizedQuestions, setRandomizedQuestions] = useState<any[]>([])
   const [adaptiveHistory, setAdaptiveHistory] = useState<string[]>([])
@@ -177,6 +181,7 @@ export function TraineeAssessmentTest() {
       if (noiseWarningTimeoutRef.current) clearTimeout(noiseWarningTimeoutRef.current)
       if (glareTimeoutRef.current) clearTimeout(glareTimeoutRef.current)
       if (roomScanTimeoutRef.current) clearTimeout(roomScanTimeoutRef.current)
+      if (faceDetectionIntervalRef.current) clearInterval(faceDetectionIntervalRef.current)
     }
   }, [])
 
@@ -216,15 +221,39 @@ export function TraineeAssessmentTest() {
     }
   }, [isScanningRoom])
 
+  const exitFullScreen = async () => {
+    try {
+      const doc = document as any;
+      if (doc.fullscreenElement && doc.exitFullscreen) {
+        await doc.exitFullscreen();
+      } else if (doc.webkitFullscreenElement && doc.webkitExitFullscreen) {
+        await doc.webkitExitFullscreen();
+      } else if (doc.msFullscreenElement && doc.msExitFullscreen) {
+        await doc.msExitFullscreen();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // SEA violation handler - block if ignoring strikes temporarily
   const ignoringViolationsRef = React.useRef(false)
+
+  // Track if current question is open-ended for conditional keyboard blocking
+  const isOpenEndedRef = React.useRef(false)
+  useEffect(() => {
+    const q = randomizedQuestions[currentQuestionIndex]
+    const type = (q?.options as any)?._question_type || q?.question_type || 'mcq'
+    isOpenEndedRef.current = (type === 'open_ended')
+  }, [currentQuestionIndex, randomizedQuestions])
+
   const handleViolation = (reason: string) => {
     if (ignoringViolationsRef.current) return // grace period
     setStrikes(s => {
       const newStrikes = s + 1
       if (newStrikes >= MAX_STRIKES) {
         toast.error(`SEA Violation: ${reason}. Maximum strikes reached. You have been blocked.`, { duration: 5000 })
-        if (document.fullscreenElement) document.exitFullscreen().catch(console.error)
+        exitFullScreen()
         handleSubmit(true)
       } else {
         toast.error(`SEA Warning (${newStrikes}/${MAX_STRIKES}): ${reason}. Return to the test immediately!`, { duration: 5000 })
@@ -253,7 +282,10 @@ export function TraineeAssessmentTest() {
     }
     
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
+      const doc = document as any;
+      const isFull = doc.fullscreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement;
+      
+      if (!isFull) {
         setIsFullScreen(false)
         // Grace period: ignore violations for 1s after exiting fullscreen via browser
         ignoringViolationsRef.current = true
@@ -267,24 +299,69 @@ export function TraineeAssessmentTest() {
       }
     }
 
+    const preventAction = (e: Event) => {
+      e.preventDefault()
+      const actionMap: Record<string, string> = {
+        'copy': 'copy content',
+        'cut': 'cut content',
+        'paste': 'paste content',
+        'contextmenu': 'right-click/open context menu'
+      }
+      handleViolation(`Attempted to ${actionMap[e.type] || e.type}`)
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const forbiddenKeys = ['Escape', 'F11', 'PrintScreen', 'Meta', 'Alt', 'Tab']
+      
+      // Block restricted system keys on all questions
+      if (forbiddenKeys.includes(e.key) || e.metaKey || e.altKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        handleViolation(`Restricted key usage detected: ${e.key}`)
+        return
+      }
+
+      // If it's a multiple choice question, block all keyboard inputs
+      if (!isOpenEndedRef.current) {
+        e.preventDefault()
+        e.stopPropagation()
+        handleViolation('Keyboard input disabled for multiple-choice questions. Please use trackpad/mouse.')
+      }
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleBlur)
     window.addEventListener('focus', handleFocus)
     document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('copy', preventAction)
+    document.addEventListener('cut', preventAction)
+    document.addEventListener('paste', preventAction)
+    document.addEventListener('contextmenu', preventAction)
+    document.addEventListener('keydown', handleKeyDown, { capture: true })
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleBlur)
       window.removeEventListener('focus', handleFocus)
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('copy', preventAction)
+      document.removeEventListener('cut', preventAction)
+      document.removeEventListener('paste', preventAction)
+      document.removeEventListener('contextmenu', preventAction)
+      document.removeEventListener('keydown', handleKeyDown, { capture: true })
       if (blurTimeout) clearTimeout(blurTimeout)
     }
   }, [hasStarted, previousAttempt, assessment])
 
   const requestFullScreen = async () => {
     try {
-      if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen()
+      const docEl = document.documentElement as any;
+      if (docEl.requestFullscreen) {
+        await docEl.requestFullscreen()
+      } else if (docEl.webkitRequestFullscreen) {
+        await docEl.webkitRequestFullscreen()
+      } else if (docEl.msRequestFullscreen) {
+        await docEl.msRequestFullscreen()
       }
     } catch (err) {
       console.error(err)
@@ -337,53 +414,39 @@ export function TraineeAssessmentTest() {
         }
         checkAudioVolume()
 
-        // Polling for video brightness (Glare detection)
-        const checkVideoBrightness = () => {
-          if (videoRef.current && canvasRef.current) {
-            const video = videoRef.current
-            const canvas = canvasRef.current
-            if (video.videoWidth > 0 && video.videoHeight > 0) {
-              const ctx = canvas.getContext('2d')
-              if (ctx) {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-                const frame = ctx.getImageData(0, 0, canvas.width, canvas.height)
-                const data = frame.data
-                let totalBrightness = 0
-                // Sample every 4th pixel for performance
-                for (let i = 0; i < data.length; i += 16) {
-                  const r = data[i]
-                  const g = data[i + 1]
-                  const b = data[i + 2]
-                  // Relative luminance
-                  const brightness = 0.2126 * r + 0.7152 * g + 0.0722 * b
-                  totalBrightness += brightness
+        // Setup ML Face & Object Detection
+        try {
+          await tf.ready();
+          const [faceModel, objectModel] = await Promise.all([
+            blazeface.load(),
+            cocoSsd.load()
+          ]);
+          
+          faceDetectionIntervalRef.current = setInterval(async () => {
+            if (videoRef.current && videoRef.current.readyState >= 2) {
+              // 1. Check for faces
+              const facePredictions = await faceModel.estimateFaces(videoRef.current, false);
+              if (facePredictions.length === 0) {
+                handleViolation('No face detected in camera (ML Check)');
+              } else if (facePredictions.length > 1) {
+                handleViolation('Multiple faces detected in camera (ML Check)');
+              }
+
+              // 2. Check for prohibited objects
+              const objectPredictions = await objectModel.detect(videoRef.current);
+              const prohibitedObjects = ['cell phone', 'book', 'laptop'];
+              
+              for (const prediction of objectPredictions) {
+                if (prohibitedObjects.includes(prediction.class)) {
+                   handleViolation(`Prohibited object detected: ${prediction.class} (ML Check)`);
+                   break;
                 }
-                const avgBrightness = totalBrightness / (data.length / 16)
-                
-                if (lastBrightnessRef.current !== null) {
-                  const delta = avgBrightness - lastBrightnessRef.current
-                  if (delta > 50) { // Raised threshold - only flag very sudden extreme changes
-                    if (!glareTimeoutRef.current) {
-                      glareTimeoutRef.current = setTimeout(() => {
-                        handleViolation('Suspicious Screen Glare Detected (Potential Hidden Device)')
-                        glareTimeoutRef.current = null
-                      }, 3000) // 3 seconds sustained glare before flagging
-                    }
-                  } else {
-                    // Clear glare timer if light normalized
-                    if (glareTimeoutRef.current) {
-                      clearTimeout(glareTimeoutRef.current)
-                      glareTimeoutRef.current = null
-                    }
-                  }
-                }
-                lastBrightnessRef.current = avgBrightness
               }
             }
-          }
-          requestAnimationFrame(checkVideoBrightness)
+          }, 4000); // Check every 4 seconds to balance performance
+        } catch (e) {
+          console.error("ML model load error:", e);
         }
-        checkVideoBrightness()
 
         // Schedule random room scan between 30s and 90s
         roomScanTimeoutRef.current = setTimeout(() => {
@@ -399,7 +462,7 @@ export function TraineeAssessmentTest() {
 
     if (!questions || questions.length === 0) {
       toast.error('No questions available for this assessment. Please contact your trainer.')
-      if (document.fullscreenElement) document.exitFullscreen().catch(console.error)
+      exitFullScreen()
       mediaStreamRef.current?.getTracks().forEach(t => t.stop())
       return
     }
@@ -523,9 +586,7 @@ export function TraineeAssessmentTest() {
       return attemptData
     },
     onSuccess: (data) => {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(console.error)
-      }
+      exitFullScreen()
       // Seed the cache with the new attempt so the Hub updates instantly
       queryClient.setQueryData(['trainee_assessment_attempts', profile?.id], (old: any) => {
         return [...(old || []), data]
@@ -558,9 +619,7 @@ export function TraineeAssessmentTest() {
     setShowSubmitModal(false)
     
     ignoringViolationsRef.current = true
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(console.error)
-    }
+    exitFullScreen()
     
     let correct = 0
     let hasOpenEnded = false

@@ -74,7 +74,7 @@ export function ProfilePage() {
     queryFn: async () => {
       const uid = profile?.id || user?.id
       if (!uid) return []
-      
+
       let enrollmentsList: any[] = []
       try {
         const { data: enrollmentsData, error } = await supabase
@@ -97,7 +97,7 @@ export function ProfilePage() {
             .from('enrollments')
             .select('*')
             .eq('user_id', uid)
-          
+
           if (fallbackEnrs && fallbackEnrs.length > 0) {
             const courseIds = fallbackEnrs.map((e: any) => e.course_id).filter(Boolean)
             const { data: coursesData } = await supabase
@@ -522,7 +522,7 @@ export function ProfilePage() {
       <motion.div variants={fadeUp}>
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#040814] via-[#081329] to-[#040d21] text-white p-6 sm:p-8 border border-cyan-500/30 shadow-xl">
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-cyan-500/15 via-blue-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
               <div className="relative group/avatar w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 via-sky-500 to-blue-600 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-cyan-500/30 ring-4 ring-white/10 shrink-0 overflow-hidden">
@@ -687,11 +687,10 @@ export function ProfilePage() {
                           </h4>
 
                           <div className="flex items-center justify-between pt-1 gap-2">
-                            <span className={`text-[11px] font-extrabold flex items-center gap-1 ${
-                              enr.status === 'completed' || (enr.progress_percent ?? 0) >= 100
+                            <span className={`text-[11px] font-extrabold flex items-center gap-1 ${enr.status === 'completed' || (enr.progress_percent ?? 0) >= 100
                                 ? 'text-emerald-600'
                                 : 'text-cyan-700'
-                            }`}>
+                              }`}>
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               {enr.status === 'completed' || (enr.progress_percent ?? 0) >= 100
                                 ? 'Completed'
@@ -763,11 +762,10 @@ export function ProfilePage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  isActive
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${isActive
                     ? 'bg-white text-slate-900 shadow-sm border border-slate-200/80'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                }`}
+                  }`}
               >
                 <tab.icon className={`w-4 h-4 ${isActive ? 'text-cyan-600' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>

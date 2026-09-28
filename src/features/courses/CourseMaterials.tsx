@@ -59,7 +59,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
   const { courseId } = useParams<{ courseId: string }>()
   const [searchParams] = useSearchParams()
   const sessionId = searchParams.get('session')
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
   const [materials, setMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
@@ -422,7 +422,7 @@ export function CourseMaterials({ embedded = false, onMaterialCountChange }: Cou
     <div className={embedded ? '' : 'max-w-5xl mx-auto space-y-6'}>
       {!embedded && (
         <div>
-          <Link to={`/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-700 font-semibold transition-colors mb-4">
+          <Link to={(profile?.role === 'admin' || profile?.role === 'super_admin') ? `/admin/courses/${courseId}` : `/trainer/courses/${courseId}`} className="flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-700 font-semibold transition-colors mb-4">
             <ArrowLeft className="w-4 h-4" /> Back to Course
           </Link>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Course Materials</h2>
