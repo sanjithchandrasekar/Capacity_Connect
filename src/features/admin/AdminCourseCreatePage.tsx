@@ -37,8 +37,11 @@ type Trainer = {
   years_of_experience?: number | null
   bio?: string | null
   expertise_areas?: string[] | null
-  availability?: string | null
   skills?: string[]
+  department?: string | null
+  designation?: string | null
+  work_experience?: string | null
+  availability?: string | null
 }
 
 export interface QuizQuestion {
@@ -302,7 +305,7 @@ export function AdminCourseCreatePage() {
       setLoadingTrainers(true)
       try {
         const [{ data: trData }, { data: skData }, { data: usData }] = await Promise.all([
-          supabase.from('trainers').select('id, full_name, email, qualifications, years_of_experience, bio, expertise_areas, availability').eq('approval_status', 'approved').order('full_name'),
+          supabase.from('trainers').select('id, full_name, email, qualifications, years_of_experience, bio, expertise_areas, skills, department, designation, work_experience, availability').eq('approval_status', 'approved').order('full_name'),
           supabase.from('skills').select('*').order('name'),
           supabase.from('user_skills').select('user_id, skill_id, skills(id, name)'),
         ])
@@ -331,8 +334,20 @@ export function AdminCourseCreatePage() {
               .filter((us: any) => us.user_id === t.id && us.skills?.name)
               .map((us: any) => us.skills.name)
             
+            const rawTrainerSkills = Array.isArray(t.skills)
+              ? t.skills
+              : typeof t.skills === 'string'
+              ? t.skills.split(',').map((s: string) => s.trim()).filter(Boolean)
+              : []
+
+            const rawExpertise = Array.isArray(t.expertise_areas)
+              ? t.expertise_areas
+              : typeof t.expertise_areas === 'string'
+              ? t.expertise_areas.split(',').map((s: string) => s.trim()).filter(Boolean)
+              : []
+
             const allTrainerSkills = Array.from(
-              new Set([...(t.expertise_areas || []), ...userSkillNames])
+              new Set([...rawExpertise, ...rawTrainerSkills, ...userSkillNames])
             )
 
             return {
@@ -770,86 +785,293 @@ export function AdminCourseCreatePage() {
     setPendingMaterials(prev => prev.filter(m => m.id !== id))
   }
 
-  // Advanced AI Competency Mapping Engine
+  // Advanced AI Competency Mapping Engine across all 6 Course Creation Parts
   const scoredTrainers = React.useMemo(() => {
     if (trainers.length === 0) return []
 
+    // Part 1: Course Details (Step 1)
+    const courseTitle = (detailsForm.watch('title') || '').trim().toLowerCase()
+    const courseDesc = (detailsForm.watch('description') || '').trim().toLowerCase()
+    const courseDept = (detailsForm.watch('department') || '').trim().toLowerCase()
+    const courseType = (detailsForm.watch('course_type') || '').trim().toLowerCase()
+
+    // Part 2: Course Configuration (Step 2)
+    const trainerSuggestion = (settingsForm.watch('trainer_suggestion') || '').trim().toLowerCase()
+    const deliveryMode = settingsForm.watch('delivery_mode') || 'recorded'
+
+    // Part 3: Course Outline / Session Flow (Step 3)
+    const sessionFlowText = (sessionFlowForm.watch('session_flow_text') || '').trim().toLowerCase()
+    const sessionDocName = (sessionFlowDoc?.name || '').trim().toLowerCase()
+
+    // Part 4: Learning Objectives & Skills (Step 4)
+    const courseObjs = (objectivesForm.watch('learning_objectives') || '').trim().toLowerCase()
     const requiredSkillNames = skills
       .filter(s => selectedSkills.includes(s.id))
       .map(s => s.name.toLowerCase())
 
-    const courseTitle = (detailsForm.watch('title') || '').toLowerCase()
-    const courseDesc = (detailsForm.watch('description') || '').toLowerCase()
-    const courseDept = (detailsForm.watch('department') || '').toLowerCase()
-    const courseObjs = (objectivesForm.watch('learning_objectives') || '').toLowerCase()
+    // Part 5: Modules & Quizzes (Step 5)
+    const moduleTitles = modules.map(m => m.title || '').join(' ').toLowerCase()
+    const moduleDescriptions = modules.map(m => m.description || '').join(' ').toLowerCase()
+    const moduleItemsText = modules.flatMap(m => m.items || []).map(i => `${i.title} ${i.content || ''} ${i.quiz_data?.question || ''}`).join(' ').toLowerCase()
+    const allModulesText = `${moduleTitles} ${moduleDescriptions} ${moduleItemsText}`.trim()
 
-    const fullContext = `${courseTitle} ${courseDesc} ${courseDept} ${courseObjs}`
+    // Part 6: Materials & Reference Documents (Step 6)
+    const materialsText = pendingMaterials.map(m => `${m.fileName} ${m.url || ''}`).join(' ').toLowerCase()
+
+    // Check if course has any information entered across the 6 parts
+    const hasCourseDetails = courseTitle.length >= 3 || courseDesc.length >= 8 || courseDept.length > 0
+    const hasCourseConfig = trainerSuggestion.length >= 3
+    const hasCourseOutline = sessionFlowText.length >= 5 || sessionDocName.length >= 3
+    const hasLearningSkills = requiredSkillNames.length > 0 || courseObjs.length >= 5
+    const hasModules = modules.length > 0 && modules.some(m => m.title && m.title.length >= 3 && !m.title.includes('Module 1: Introduction & Fundamentals'))
+    const hasMaterials = pendingMaterials.length > 0
+
+    const hasAnyCourseInfo = hasCourseDetails || hasCourseConfig || hasCourseOutline || hasLearningSkills || hasModules || hasMaterials
 
     return trainers.map(t => {
-      let score = 40 // baseline
-      const qual = (t.qualifications || '').toLowerCase()
-      const bio = (t.bio || '').toLowerCase()
-      const trainerSkills = (t.skills || []).map(s => s.toLowerCase())
-      const allTrainerText = `${qual} ${bio} ${trainerSkills.join(' ')}`
+      const qual = (t.qualifications || '').trim()
+      const bio = (t.bio || '').trim()
+      const workExp = (t.work_experience || '').trim()
+      const dept = (t.department || '').trim()
+      const designation = (t.designation || '').trim()
+      const yearsExp = typeof t.years_of_experience === 'number' ? t.years_of_experience : (t.years_of_experience ? parseInt(String(t.years_of_experience)) : 0)
+      const trainerSkills = (t.skills || []).map(s => s.trim().toLowerCase()).filter(Boolean)
 
-      // 1. Exact Skill Overlap
+      // Profile Completeness Check
+      const hasMeaningfulQual = qual.length > 0 && qual !== '—' && qual.toLowerCase() !== 'n/a'
+      const hasMeaningfulBio = bio.length > 0 && bio !== '—' && !bio.toLowerCase().includes('no specialized bio')
+      const hasMeaningfulWork = workExp.length > 0 && workExp !== '—'
+      const hasSkills = trainerSkills.length > 0
+      const hasExperience = yearsExp > 0
+
+      const isProfileEmpty = !hasSkills && !hasMeaningfulQual && !hasMeaningfulBio && !hasMeaningfulWork && !hasExperience
+
+      if (isProfileEmpty) {
+        return {
+          ...t,
+          matchPercentage: 0,
+          matchedSkillsList: [] as string[],
+          matchedParts: [] as string[],
+          reasoning: 'Incomplete Profile: No recorded skills, qualifications, or domain experience yet.',
+          fitTier: 'incomplete' as const,
+        }
+      }
+
+      if (!hasAnyCourseInfo) {
+        return {
+          ...t,
+          matchPercentage: 0,
+          matchedSkillsList: [] as string[],
+          matchedParts: [] as string[],
+          reasoning: 'Awaiting Course Details: Enter information in Steps 1–6 (Details, Outline, Skills, Modules, Materials) to calculate AI Competency Score.',
+          fitTier: 'incomplete' as const,
+        }
+      }
+
+      const allTrainerText = `${qual} ${bio} ${workExp} ${dept} ${designation} ${t.full_name} ${trainerSkills.join(' ')}`.toLowerCase()
       const matchedSkillsList: string[] = []
-      requiredSkillNames.forEach(reqSkill => {
-        const found = trainerSkills.some(ts => ts.includes(reqSkill) || reqSkill.includes(ts)) || allTrainerText.includes(reqSkill)
-        if (found) {
-          const originalSkill = skills.find(s => s.name.toLowerCase() === reqSkill)?.name || reqSkill
-          matchedSkillsList.push(originalSkill)
-        }
-      })
+      const matchedParts: string[] = []
 
-      if (requiredSkillNames.length > 0) {
-        const matchRatio = matchedSkillsList.length / requiredSkillNames.length
-        score += matchRatio * 40
+      // PART 1: Course Details Match (Max 20 pts)
+      let part1Score = 0
+      if (hasCourseDetails) {
+        let detailsMatched = false
+        const titleWords = courseTitle.split(/\s+/).filter(w => w.length >= 4)
+        const matchedTitleWords = titleWords.filter(w => allTrainerText.includes(w))
+        if (matchedTitleWords.length > 0) {
+          part1Score += Math.min(10, matchedTitleWords.length * 4)
+          detailsMatched = true
+        }
+        const descWords = courseDesc.split(/\s+/).filter(w => w.length >= 4)
+        const matchedDescWords = descWords.filter(w => allTrainerText.includes(w))
+        if (matchedDescWords.length > 0) {
+          part1Score += Math.min(6, matchedDescWords.length * 2)
+          detailsMatched = true
+        }
+        if (courseDept && (dept.toLowerCase().includes(courseDept) || allTrainerText.includes(courseDept))) {
+          part1Score += 6
+          detailsMatched = true
+        }
+        if (detailsMatched) matchedParts.push('Course Details')
+      }
+      part1Score = Math.min(20, part1Score)
+
+      // PART 2: Course Configuration & Trainer Suggestions (Max 10 pts)
+      let part2Score = 0
+      if (hasCourseConfig) {
+        let configMatched = false
+        if (trainerSuggestion) {
+          const suggestionWords = trainerSuggestion.split(/\s+/).filter(w => w.length >= 3)
+          const matchedSuggestion = suggestionWords.some(w => allTrainerText.includes(w) || t.full_name.toLowerCase().includes(w))
+          if (matchedSuggestion) {
+            part2Score += 10
+            configMatched = true
+          }
+        }
+        if (configMatched) matchedParts.push('Configuration')
+      }
+
+      // PART 3: Course Outline & Session Flow (Max 15 pts)
+      let part3Score = 0
+      if (hasCourseOutline) {
+        let outlineMatched = false
+        const outlineWords = `${sessionFlowText} ${sessionDocName}`.split(/\s+/).filter(w => w.length >= 4)
+        const matchedOutline = outlineWords.filter(w => allTrainerText.includes(w))
+        if (matchedOutline.length > 0) {
+          part3Score += Math.min(15, matchedOutline.length * 3)
+          outlineMatched = true
+        }
+        if (outlineMatched) matchedParts.push('Course Outline')
+      }
+      part3Score = Math.min(15, part3Score)
+
+      // PART 4: Learning Objectives & Required Skills (Max 30 pts)
+      let part4Score = 0
+      if (hasLearningSkills) {
+        let skillsMatched = false
+        if (requiredSkillNames.length > 0) {
+          let matchedCount = 0
+          requiredSkillNames.forEach(reqSkill => {
+            const direct = trainerSkills.some(ts => ts === reqSkill || ts.includes(reqSkill) || reqSkill.includes(ts))
+            const textMatch = allTrainerText.includes(reqSkill)
+            if (direct) {
+              matchedCount += 1.0
+              const originalSkill = skills.find(s => s.name.toLowerCase() === reqSkill)?.name || reqSkill
+              if (!matchedSkillsList.includes(originalSkill)) matchedSkillsList.push(originalSkill)
+            } else if (textMatch) {
+              matchedCount += 0.7
+              const originalSkill = skills.find(s => s.name.toLowerCase() === reqSkill)?.name || reqSkill
+              if (!matchedSkillsList.includes(originalSkill)) matchedSkillsList.push(originalSkill)
+            }
+          })
+          part4Score += Math.min(25, (matchedCount / requiredSkillNames.length) * 25)
+          if (matchedCount > 0) skillsMatched = true
+        }
+
+        if (courseObjs) {
+          const objWords = courseObjs.split(/\s+/).filter(w => w.length >= 4)
+          const matchedObjWords = objWords.filter(w => allTrainerText.includes(w))
+          if (matchedObjWords.length > 0) {
+            part4Score += Math.min(8, matchedObjWords.length * 2)
+            skillsMatched = true
+          }
+        }
+        if (skillsMatched) matchedParts.push('Learning & Skills')
+      }
+      part4Score = Math.min(30, part4Score)
+
+      // PART 5: Modules & Quizzes (Max 15 pts)
+      let part5Score = 0
+      if (allModulesText.length > 0) {
+        let modulesMatched = false
+        const moduleWords = allModulesText.split(/\s+/).filter(w => w.length >= 4)
+        const matchedModWords = moduleWords.filter(w => allTrainerText.includes(w))
+        if (matchedModWords.length > 0) {
+          part5Score += Math.min(15, matchedModWords.length * 3)
+          modulesMatched = true
+        }
+        if (modulesMatched) matchedParts.push('Modules')
+      }
+      part5Score = Math.min(15, part5Score)
+
+      // PART 6: Materials & Attachments (Max 10 pts)
+      let part6Score = 0
+      if (materialsText.length > 0) {
+        let materialsMatched = false
+        const materialWords = materialsText.replace(/[\._\-]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !['pdf', 'docx', 'pptx', 'mp4', 'file'].includes(w))
+        const matchedMatWords = materialWords.filter(w => allTrainerText.includes(w))
+        if (matchedMatWords.length > 0) {
+          part6Score += Math.min(10, matchedMatWords.length * 4)
+          materialsMatched = true
+        }
+        if (materialsMatched) matchedParts.push('Materials')
+      }
+      part6Score = Math.min(10, part6Score)
+
+      // Total Core Content Score across all 6 parts
+      const corePartsScore = part1Score + part2Score + part3Score + part4Score + part5Score + part6Score
+
+      // Gating: If NO part matches (0% overlap across all 6 course parts), match is 0%
+      if (corePartsScore === 0) {
+        return {
+          ...t,
+          matchPercentage: 0,
+          matchedSkillsList: [] as string[],
+          matchedParts: [] as string[],
+          reasoning: "No Topical Overlap: Trainer's profile has no keyword or skill match with the 6 course parts.",
+          fitTier: 'low' as const,
+        }
+      }
+
+      // Proportional Seniority & Credentials Bonus (Max 10 pts)
+      const relevanceRatio = Math.min(1, corePartsScore / 60)
+      let expBonus = 0
+      if (yearsExp >= 10) expBonus = 6
+      else if (yearsExp >= 5) expBonus = 4
+      else if (yearsExp >= 2) expBonus = 2
+
+      let qualBonus = 0
+      const qualLower = qual.toLowerCase()
+      if (qualLower.includes('ph.d') || qualLower.includes('phd') || qualLower.includes('scientist')) qualBonus = 4
+      else if (qualLower.includes('master') || qualLower.includes('m.tech') || qualLower.includes('m.sc')) qualBonus = 3
+      else if (qualLower.includes('bachelor') || qualLower.includes('b.tech') || qualLower.includes('b.sc')) qualBonus = 1
+
+      const weightedBonus = Math.round((expBonus + qualBonus) * relevanceRatio)
+
+      const totalRaw = corePartsScore + weightedBonus
+      const matchPercentage = Math.min(99, Math.max(1, Math.round(totalRaw)))
+
+      // Determine fit tier & human-readable reasoning
+      let fitTier: 'high' | 'moderate' | 'low' | 'incomplete' = 'low'
+      let reasoning = ''
+
+      if (matchPercentage >= 70) {
+        fitTier = 'high'
+        reasoning = `High Match (${matchPercentage}%): Aligned with ${matchedParts.join(', ')}${matchedSkillsList.length > 0 ? ` (${matchedSkillsList.slice(0, 2).join(', ')})` : ''}${yearsExp > 0 ? ` + ${yearsExp} yrs exp` : ''}.`
+      } else if (matchPercentage >= 35) {
+        fitTier = 'moderate'
+        reasoning = `Moderate Match (${matchPercentage}%): Matches topics in ${matchedParts.join(', ')}${matchedSkillsList.length > 0 ? ` (${matchedSkillsList[0]})` : ''}.`
       } else {
-        score += 15
-      }
-
-      // 2. Keyword / Context Semantic Alignment
-      const keywords = ['radar', 'meteorology', 'ocean', 'climate', 'atmosphere', 'seismology', 'modelling', 'doppler', 'hydrology', 'satellite', 'python', 'gis']
-      let contextMatches = 0
-      keywords.forEach(kw => {
-        if (fullContext.includes(kw) && allTrainerText.includes(kw)) {
-          contextMatches++
-        }
-      })
-      score += Math.min(contextMatches * 4, 15)
-
-      // 3. Department alignment
-      if (courseDept && (qual.includes(courseDept) || bio.includes(courseDept) || allTrainerText.includes(courseDept))) {
-        score += 8
-      }
-
-      // 4. Experience weighting
-      if (t.years_of_experience) {
-        score += Math.min(t.years_of_experience * 1.5, 12)
-      }
-
-      const matchPercentage = Math.round(Math.min(Math.max(score, 25), 99))
-
-      let reasoning = 'Strong domain background in scientific research and practical instruction.'
-      if (matchedSkillsList.length > 0) {
-        reasoning = `Directly matches ${matchedSkillsList.length} course skill requirement${matchedSkillsList.length > 1 ? 's' : ''}: ${matchedSkillsList.slice(0, 3).join(', ')}.`
-      } else if (t.years_of_experience && t.years_of_experience >= 5) {
-        reasoning = `High instructional experience (${t.years_of_experience}+ years) with strong institutional capacity.`
+        fitTier = 'low'
+        reasoning = `Low Match (${matchPercentage}%): Partial match with ${matchedParts.join(', ')}.`
       }
 
       return {
         ...t,
         matchPercentage,
         matchedSkillsList,
+        matchedParts,
         reasoning,
+        fitTier,
       }
     }).sort((a, b) => b.matchPercentage - a.matchPercentage)
-  }, [trainers, skills, selectedSkills, detailsForm.watch('title'), detailsForm.watch('description'), detailsForm.watch('department'), objectivesForm.watch('learning_objectives')])
+  }, [
+    trainers,
+    skills,
+    selectedSkills,
+    modules,
+    pendingMaterials,
+    sessionFlowDoc,
+    detailsForm.watch('title'),
+    detailsForm.watch('description'),
+    detailsForm.watch('department'),
+    detailsForm.watch('course_type'),
+    settingsForm.watch('trainer_suggestion'),
+    settingsForm.watch('delivery_mode'),
+    sessionFlowForm.watch('session_flow_text'),
+    objectivesForm.watch('learning_objectives'),
+  ])
 
   const handleAutoFillMessage = (trainer: typeof scoredTrainers[0]) => {
     const title = detailsForm.watch('title') || 'this training course'
-    const msg = `Greetings ${trainer.full_name}, you have been appointed as Lead Trainer for "${title}" based on your verified competencies in ${trainer.matchedSkillsList.length > 0 ? trainer.matchedSkillsList.join(', ') : 'this specialized domain'}. Please review the syllabus and coordinate module sessions.`
+    let msg = ''
+    if (trainer.matchedSkillsList.length > 0) {
+      msg = `Greetings ${trainer.full_name}, you have been appointed as Lead Trainer for "${title}" based on your verified competencies in ${trainer.matchedSkillsList.join(', ')}. Please review the syllabus and coordinate module sessions.`
+    } else if (trainer.years_of_experience && trainer.years_of_experience > 0) {
+      msg = `Greetings ${trainer.full_name}, you have been appointed as Lead Trainer for "${title}" based on your ${trainer.years_of_experience} years of domain experience. Please review the syllabus and coordinate module sessions.`
+    } else {
+      msg = `Greetings ${trainer.full_name}, you have been appointed as Lead Trainer for "${title}". Please review the syllabus, update your profile competencies, and coordinate with the administration.`
+    }
     trainerForm.setValue('assignment_message', msg)
     toast.success('Generated AI briefing message!')
   }
@@ -1267,14 +1489,6 @@ export function AdminCourseCreatePage() {
                       <Input {...detailsForm.register('department')} placeholder="e.g. IMD, INCOIS, IITM, NCMRWF" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-slate-700">Course Banner Thumbnail <span className="text-slate-400 font-normal">(optional)</span></Label>
-                    <div onClick={() => thumbRef.current?.click()} className="flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-cyan-500 cursor-pointer transition-colors bg-slate-50">
-                      {thumbnailPreview ? <img src={thumbnailPreview} alt="thumb" className="w-24 h-16 object-cover rounded-xl shadow-xs" /> : <div className="w-24 h-16 rounded-xl bg-slate-200 flex items-center justify-center"><Image className="w-6 h-6 text-slate-400" /></div>}
-                      <div><p className="text-sm font-medium text-slate-700">{thumbnail ? thumbnail.name : 'Click to upload course banner'}</p><p className="text-xs text-slate-400">PNG, JPG — max 5MB (16:5 ratio recommended, e.g. 1600x500px)</p></div>
-                    </div>
-                    <input ref={thumbRef} type="file" accept="image/*" onChange={handleThumbnailChange} className="hidden" />
-                  </div>
                 </div>
               )}
 
@@ -1282,68 +1496,164 @@ export function AdminCourseCreatePage() {
               {step === 2 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900 mb-1">Course Configuration & Schedule</h2>
+                    <h2 className="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-cyan-600" />
+                      Course Configuration
+                    </h2>
                     <p className="text-sm text-slate-500">Configure delivery format, cohort limits, schedules, and assessment parameters.</p>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
+
+                  <div className="space-y-4">
+                    {/* Duration */}
+                    <div className="space-y-1.5">
                       <Label className="text-sm font-semibold text-slate-700">Duration (hours)</Label>
-                      <Input {...settingsForm.register('duration_hours')} type="number" placeholder="e.g. 40" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
+                      <Input
+                        type="number"
+                        {...settingsForm.register('duration_hours')}
+                        placeholder="e.g. 20"
+                        className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-11"
+                      />
+                      <p className="text-xs text-slate-400 font-medium">Leave empty for self-paced</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-slate-700">Passing Score (%)</Label>
-                      <Input {...settingsForm.register('passing_score')} type="number" placeholder="60" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-slate-700">Delivery Mode</Label>
-                      <Select value={settingsForm.watch('delivery_mode')} onValueChange={v => settingsForm.setValue('delivery_mode', v as any)}>
-                        <SelectTrigger className="border-slate-200 bg-slate-50 rounded-xl h-12"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="recorded">Recorded / Self-Paced</SelectItem>
-                          <SelectItem value="live">Live Interactive Sessions</SelectItem>
-                          <SelectItem value="hybrid">Hybrid (Recorded + Live)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-slate-700">Maximum Trainee Capacity (50 - 250)</Label>
-                      <Input {...settingsForm.register('max_trainees')} type="number" placeholder="e.g. 100" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-slate-700">Start Date</Label>
-                      <Input {...settingsForm.register('start_date')} type="date" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
-                      {isUrgent && <span className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md font-semibold border border-amber-200">⚡ Starting in under 30 days</span>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-slate-700">End Date</Label>
-                      <Input {...settingsForm.register('end_date')} type="date" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
-                      {courseDays && <span className="text-[11px] text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-md font-semibold border border-cyan-200">📅 Total Duration: {courseDays} days</span>}
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label className="text-sm font-semibold text-slate-700">Live Meeting Link <span className="text-slate-400 font-normal">(Google Meet, Zoom, Webex)</span></Label>
-                      <Input {...settingsForm.register('meet_link')} placeholder="https://meet.google.com/..." className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-slate-700">Planned Module Assessments Count</Label>
-                      <Input {...settingsForm.register('planned_assessments_count')} type="number" placeholder="e.g. 3" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-slate-700">Planned Mock Tests Count</Label>
-                      <Input {...settingsForm.register('planned_mock_tests_count')} type="number" placeholder="e.g. 2" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-slate-700">Final Examination Date</Label>
-                      <Input {...settingsForm.register('final_test_date')} type="date" className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-12" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-semibold text-slate-700">Exam Start</Label>
-                        <Input {...settingsForm.register('final_test_start_time')} type="time" className="border-slate-200 bg-slate-50 rounded-xl h-12" />
+
+                    {/* Start Date & End Date */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-semibold text-slate-700">Start Date</Label>
+                        <Input
+                          type="date"
+                          {...settingsForm.register('start_date')}
+                          className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-11"
+                        />
+                        {settingsForm.formState.errors.start_date && (
+                          <p className="text-xs text-rose-600 font-medium">{settingsForm.formState.errors.start_date.message}</p>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-semibold text-slate-700">Exam End</Label>
-                        <Input {...settingsForm.register('final_test_end_time')} type="time" className="border-slate-200 bg-slate-50 rounded-xl h-12" />
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-semibold text-slate-700">End Date</Label>
+                        <Input
+                          type="date"
+                          {...settingsForm.register('end_date')}
+                          className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-11"
+                        />
+                        {settingsForm.formState.errors.end_date && (
+                          <p className="text-xs text-rose-600 font-medium">{settingsForm.formState.errors.end_date.message}</p>
+                        )}
                       </div>
+                    </div>
+
+                    {/* Urgent warning banner & Duration badge */}
+                    {isUrgent && settingsForm.watch('start_date') && (
+                      <div className="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs font-medium flex items-center gap-2">
+                        <span className="text-lg">⚠️</span> Course starts in less than 30 days! This will be flagged as <strong className="font-bold">URGENT</strong> for fast-track processing.
+                      </div>
+                    )}
+                    {courseDays && (
+                      <div className="text-xs font-semibold text-cyan-800 bg-cyan-50 px-3 py-1.5 rounded-xl border border-cyan-200 inline-block">
+                        📅 Total Scheduled Duration: {courseDays} days
+                      </div>
+                    )}
+
+                    {/* Trainee Capacity Limit */}
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-semibold text-slate-700">Trainee Capacity Limit</Label>
+                      <Input
+                        type="number"
+                        {...settingsForm.register('max_trainees')}
+                        placeholder="e.g. 50"
+                        className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-11"
+                      />
+                      <p className="text-xs text-slate-400 font-medium">Must be between 50 and 250</p>
+                      {settingsForm.formState.errors.max_trainees && (
+                        <p className="text-xs text-rose-600 font-medium">{settingsForm.formState.errors.max_trainees.message}</p>
+                      )}
+                    </div>
+
+                    {/* Notice to Admin */}
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        Notice to Admin <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 font-normal">Optional</Badge>
+                      </Label>
+                      <Textarea
+                        {...settingsForm.register('trainer_suggestion')}
+                        placeholder="Add any notes or suggestions for the admin approving this course..."
+                        className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl resize-none min-h-[72px]"
+                      />
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-slate-200/80 my-2 pt-3" />
+
+                    {/* Test & Assessment Plan */}
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">Test & Assessment Plan</h3>
+                        <p className="text-xs font-bold text-slate-700 mt-1">Final Exam Details</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-700">Date</Label>
+                          <Input
+                            type="date"
+                            {...settingsForm.register('final_test_date')}
+                            className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-11"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-700">Start Time</Label>
+                          <Input
+                            type="time"
+                            {...settingsForm.register('final_test_start_time')}
+                            className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-11"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-slate-700">End Time</Label>
+                          <Input
+                            type="time"
+                            {...settingsForm.register('final_test_end_time')}
+                            className="border-slate-200 focus:border-cyan-500 bg-slate-50 rounded-xl h-11"
+                          />
+                        </div>
+                      </div>
+
+                      {examDuration && (
+                        <div className="text-xs font-semibold text-slate-700">
+                          Duration: <span className="text-cyan-600 font-bold">{examDuration}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-slate-200/80 my-2 pt-3" />
+
+                    {/* Course Thumbnail */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold text-slate-700">Course Thumbnail</Label>
+                      <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
+                      {thumbnailPreview ? (
+                        <div className="relative w-full h-44 rounded-2xl overflow-hidden border border-slate-200 shadow-xs">
+                          <img src={thumbnailPreview} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => { setThumbnail(null); setThumbnailPreview(null) }}
+                            className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-slate-900/80 text-white hover:bg-rose-600 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => thumbRef.current?.click()}
+                          className="w-full h-36 border-2 border-dashed border-slate-200 hover:border-cyan-500 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-cyan-600 bg-slate-50/70 hover:bg-cyan-50/20 transition-all cursor-pointer"
+                        >
+                          <Upload className="w-6 h-6" />
+                          <span className="text-xs font-semibold text-slate-600">Click to upload thumbnail</span>
+                          <span className="text-[11px] text-slate-400">PNG, JPG up to 5MB (16:5 ratio, e.g. 1600x500px)</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1674,23 +1984,27 @@ export function AdminCourseCreatePage() {
                     </div>
                   </div>
 
-                  {/* AI Competency Matcher Section */}
-                  {trainerTab === 'ai_recommended' && (
-                    <div className="space-y-4">
-                      <div className="bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50 p-5 rounded-2xl border border-cyan-200 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="p-1.5 rounded-lg bg-cyan-600 text-white shadow-xs">
-                              <Sparkles className="w-4 h-4" />
-                            </span>
-                            <div>
-                              <h3 className="text-sm font-bold text-slate-900">AI Competency Mapping Engine</h3>
-                              <p className="text-xs text-slate-600">
-                                Evaluates trainer qualifications, verified skills, and experience against this course's topics.
-                              </p>
-                            </div>
+                  {/* AI Competency Matcher Section & Trainer Cards */}
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50 p-5 rounded-2xl border border-cyan-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="p-1.5 rounded-lg bg-cyan-600 text-white shadow-xs">
+                            <Sparkles className="w-4 h-4" />
+                          </span>
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-900">
+                              {trainerTab === 'ai_recommended' ? 'AI Competency Mapping Engine' : 'All Approved Trainers'}
+                            </h3>
+                            <p className="text-xs text-slate-600">
+                              {trainerTab === 'ai_recommended'
+                                ? "Evaluates verified skills, domain experience, and credentials against this course's topics."
+                                : `Browse all ${trainers.length} approved trainers and view their real-time competency alignment.`}
+                            </p>
                           </div>
+                        </div>
 
+                        {trainerTab === 'ai_recommended' && (
                           <button
                             type="button"
                             onClick={() => {
@@ -1705,103 +2019,133 @@ export function AdminCourseCreatePage() {
                             <Zap className="w-3.5 h-3.5 text-amber-500" />
                             {isAnalyzingCompetency ? 'Scanning...' : 'Re-scan Trainers'}
                           </button>
-                        </div>
+                        )}
+                      </div>
 
-                        {/* Trainer Cards Grid */}
-                        <div className="grid sm:grid-cols-3 gap-3 pt-2">
-                          {scoredTrainers.slice(0, 3).map((t, idx) => {
-                            const isSelected = trainerForm.watch('trainer_id') === t.id
-                            return (
-                              <div
-                                key={t.id}
-                                onClick={() => {
-                                  trainerForm.setValue('trainer_id', t.id, { shouldValidate: true })
-                                  handleAutoFillMessage(t)
-                                }}
-                                className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
-                                  isSelected
-                                    ? 'bg-[#040c1e] text-white border-cyan-400 shadow-xl shadow-cyan-950/40 ring-2 ring-cyan-400/40'
-                                    : 'bg-white border-slate-200 hover:border-cyan-400 hover:shadow-md'
-                                }`}
-                              >
-                                <div>
-                                  <div className="flex items-start justify-between gap-2 mb-2.5">
-                                    <div className="flex items-center gap-2">
-                                      <div
-                                        className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
-                                          isSelected
-                                            ? 'bg-gradient-to-br from-cyan-400 to-blue-500 text-slate-950 font-black'
-                                            : 'bg-cyan-100 text-cyan-900'
-                                        }`}
-                                      >
-                                        {t.full_name.charAt(0)}
-                                      </div>
-                                      <div>
-                                        <p className={`font-bold text-sm line-clamp-1 ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                                          {t.full_name}
-                                        </p>
-                                        <p className={`text-[11px] ${isSelected ? 'text-cyan-200' : 'text-slate-500'}`}>
-                                          {t.years_of_experience ? `${t.years_of_experience} yrs exp` : 'Certified Trainer'}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
+                      {/* Trainer Cards Grid */}
+                      <div className="grid sm:grid-cols-3 gap-3 pt-2">
+                        {(trainerTab === 'ai_recommended' ? scoredTrainers.slice(0, 3) : scoredTrainers).map((t, idx) => {
+                          const isSelected = trainerForm.watch('trainer_id') === t.id
+                          const isHigh = t.matchPercentage >= 70
+                          const isModerate = t.matchPercentage >= 35 && t.matchPercentage < 70
+                          const isLow = t.matchPercentage > 0 && t.matchPercentage < 35
+                          const isIncomplete = t.matchPercentage === 0
 
-                                  <div className="mb-2">
-                                    <span
-                                      className={`inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                          return (
+                            <div
+                              key={t.id}
+                              onClick={() => {
+                                trainerForm.setValue('trainer_id', t.id, { shouldValidate: true })
+                                handleAutoFillMessage(t)
+                              }}
+                              className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                                isSelected
+                                  ? 'bg-[#040c1e] text-white border-cyan-400 shadow-xl shadow-cyan-950/40 ring-2 ring-cyan-400/40'
+                                  : 'bg-white border-slate-200 hover:border-cyan-400 hover:shadow-md'
+                              }`}
+                            >
+                              <div>
+                                <div className="flex items-start justify-between gap-2 mb-2.5">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
                                         isSelected
-                                          ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/40'
-                                          : idx === 0
-                                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                          : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                          ? 'bg-gradient-to-br from-cyan-400 to-blue-500 text-slate-950 font-black'
+                                          : 'bg-cyan-100 text-cyan-900'
                                       }`}
                                     >
-                                      <TrendingUp className="w-3 h-3" />
-                                      {t.matchPercentage}% Competency Fit
-                                    </span>
-                                  </div>
-
-                                  <p className={`text-[11px] leading-relaxed line-clamp-2 mb-3 ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}>
-                                    {t.reasoning}
-                                  </p>
-
-                                  {t.matchedSkillsList.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mb-2">
-                                      {t.matchedSkillsList.slice(0, 2).map((skillName, sIdx) => (
-                                        <span
-                                          key={sIdx}
-                                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                                            isSelected
-                                              ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/40'
-                                              : 'bg-slate-100 text-slate-700 border border-slate-200'
-                                          }`}
-                                        >
-                                          ✓ {skillName}
-                                        </span>
-                                      ))}
+                                      {t.full_name.charAt(0)}
                                     </div>
-                                  )}
+                                    <div>
+                                      <p className={`font-bold text-sm line-clamp-1 ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                                        {t.full_name}
+                                      </p>
+                                      <p className={`text-[11px] ${isSelected ? 'text-cyan-200' : 'text-slate-500'}`}>
+                                        {t.years_of_experience
+                                          ? `${t.years_of_experience} yrs exp`
+                                          : t.qualifications
+                                          ? t.qualifications
+                                          : 'Profile Incomplete'}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
 
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  className={`w-full text-xs font-bold rounded-xl mt-2 cursor-pointer transition-all ${
-                                    isSelected
-                                      ? 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black'
-                                      : 'bg-slate-100 hover:bg-cyan-600 hover:text-white text-slate-800'
-                                  }`}
-                                >
-                                  {isSelected ? 'Assigned ✓' : 'Select Trainer'}
-                                </Button>
+                                <div className="mb-2">
+                                  <span
+                                    className={`inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                                      isSelected
+                                        ? 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/40'
+                                        : isHigh
+                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                        : isModerate
+                                        ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                                        : isLow
+                                        ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                        : 'bg-slate-100 text-slate-600 border border-slate-300'
+                                    }`}
+                                  >
+                                    <TrendingUp className="w-3 h-3" />
+                                    {isIncomplete ? 'Incomplete Profile (0%)' : `${t.matchPercentage}% Competency Fit`}
+                                  </span>
+                                </div>
+
+                                <p className={`text-[11px] leading-relaxed line-clamp-2 mb-3 ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}>
+                                  {t.reasoning}
+                                </p>
+
+                                {t.matchedParts && t.matchedParts.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-1.5">
+                                    {t.matchedParts.map((part, pIdx) => (
+                                      <span
+                                        key={pIdx}
+                                        className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
+                                          isSelected
+                                            ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/40'
+                                            : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                        }`}
+                                      >
+                                        ✦ {part}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {t.matchedSkillsList.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {t.matchedSkillsList.slice(0, 2).map((skillName, sIdx) => (
+                                      <span
+                                        key={sIdx}
+                                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                          isSelected
+                                            ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/40'
+                                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                        }`}
+                                      >
+                                        ✓ {skillName}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            )
-                          })}
-                        </div>
+
+                              <Button
+                                type="button"
+                                size="sm"
+                                className={`w-full text-xs font-bold rounded-xl mt-2 cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black'
+                                    : 'bg-slate-100 hover:bg-cyan-600 hover:text-white text-slate-800'
+                                }`}
+                              >
+                                {isSelected ? 'Assigned ✓' : 'Select Trainer'}
+                              </Button>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   {/* Manual Trainer Dropdown Select */}
                   <div className="space-y-2">

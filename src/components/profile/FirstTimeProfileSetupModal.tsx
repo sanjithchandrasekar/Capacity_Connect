@@ -5,11 +5,12 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import {
   User, Camera, Upload, Trash2, Phone, Building, Briefcase,
-  Sparkles, CheckCircle2, X, Loader2, ArrowRight
+  Sparkles, CheckCircle2, X, Loader2, ArrowRight, Crop
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
 
 export function FirstTimeProfileSetupModal() {
   const { user, profile, refreshProfile } = useAuth()
@@ -25,6 +26,11 @@ export function FirstTimeProfileSetupModal() {
   const [designation, setDesignation] = useState('')
   const [avatarPath, setAvatarPath] = useState<string | null>(null)
   const [bio, setBio] = useState('')
+
+  // Cropper state
+  const [isCropperOpen, setIsCropperOpen] = useState(false)
+  const [rawPhotoFile, setRawPhotoFile] = useState<File | null>(null)
+  const [rawPhotoUrl, setRawPhotoUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user || !profile) return
@@ -53,8 +59,8 @@ export function FirstTimeProfileSetupModal() {
     setIsOpen(false)
   }
 
-  // Handle Photo Upload
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Photo Select
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
 
@@ -68,24 +74,78 @@ export function FirstTimeProfileSetupModal() {
       return
     }
 
+    setRawPhotoFile(file)
+    setRawPhotoUrl(null)
+    setIsCropperOpen(true)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  // Handle Open Adjust View
+  const handleOpenAdjustView = () => {
+    if (!avatarPath || !user) return
+    const storedRaw = localStorage.getItem(`cc_raw_avatar_${user.id}`)
+    setRawPhotoUrl(storedRaw || avatarPath)
+    setRawPhotoFile(null)
+    setIsCropperOpen(true)
+  }
+
+  // Handle Crop Complete
+  const handleCropComplete = async (croppedFile: File) => {
+    const origFile = rawPhotoFile
+    setIsCropperOpen(false)
+    setRawPhotoFile(null)
+    setRawPhotoUrl(null)
+    await uploadCroppedPhoto(croppedFile, origFile)
+  }
+
+  // Handle Upload Cropped Photo
+  const uploadCroppedPhoto = async (file: File, originalRawFile?: File | null) => {
+    if (!user || !profile) return
     setUploadingPhoto(true)
-    const fileExt = file.name.split('.').pop() || 'png'
+    const fileExt = 'jpg'
     const fileName = `avatar_${user.id}_${Date.now()}.${fileExt}`
     const filePath = `avatars/${fileName}`
     const table = profile.role === 'trainer' ? 'trainers' : profile.role === 'trainee' ? 'trainees' : 'admins'
 
     try {
+      if (originalRawFile) {
+        const rawExt = originalRawFile.name.split('.').pop() || 'jpg'
+        const rawFileName = `raw_avatar_${user.id}_${Date.now()}.${rawExt}`
+        const rawFilePath = `avatars/${rawFileName}`
+        
+        try {
+          const { error: rawUploadErr } = await supabase.storage
+            .from('Homepage')
+            .upload(rawFilePath, originalRawFile, { upsert: true })
+
+          if (!rawUploadErr) {
+            const { data: rawUrlData } = supabase.storage.from('Homepage').getPublicUrl(rawFilePath)
+            localStorage.setItem(`cc_raw_avatar_${user.id}`, rawUrlData.publicUrl)
+          } else {
+            const reader = new FileReader()
+            reader.onload = (e) => {
+              if (e.target?.result) {
+                localStorage.setItem(`cc_raw_avatar_${user.id}`, e.target.result as string)
+              }
+            }
+            reader.readAsDataURL(originalRawFile)
+          }
+        } catch {
+          // non-blocking
+        }
+      }
+
       let finalUrl: string | null = null
 
       // Attempt upload to Supabase storage
       const { error: uploadError } = await supabase.storage
         .from('Homepage')
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, file, { upsert: true, contentType: 'image/jpeg' })
 
       if (uploadError) {
         const { error: matError } = await supabase.storage
           .from('materials')
-          .upload(filePath, file, { upsert: true })
+          .upload(filePath, file, { upsert: true, contentType: 'image/jpeg' })
 
         if (!matError) {
           const { data: urlData } = supabase.storage.from('materials').getPublicUrl(filePath)
@@ -116,14 +176,13 @@ export function FirstTimeProfileSetupModal() {
           .eq('id', user.id)
 
         await refreshProfile()
-        toast.success('Photo uploaded!')
+        toast.success('Photo adjusted and uploaded!')
       }
     } catch (err: any) {
       console.error('Photo upload error:', err)
       toast.error('Failed to upload photo')
     } finally {
       setUploadingPhoto(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -267,10 +326,10 @@ export function FirstTimeProfileSetupModal() {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={handlePhotoUpload}
+                onChange={handlePhotoSelect}
               />
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -286,6 +345,19 @@ export function FirstTimeProfileSetupModal() {
                   )}
                   {avatarPath ? 'Change Photo' : 'Upload Photo'}
                 </Button>
+
+                {avatarPath && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenAdjustView}
+                    disabled={uploadingPhoto}
+                    className="h-8 text-xs font-bold border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded-xl px-2.5 cursor-pointer shadow-xs"
+                  >
+                    <Crop className="w-3.5 h-3.5 mr-1 text-cyan-600" /> Adjust View
+                  </Button>
+                )}
 
                 {avatarPath && (
                   <Button
@@ -391,6 +463,21 @@ export function FirstTimeProfileSetupModal() {
           </form>
         </motion.div>
       </div>
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageFile={rawPhotoFile}
+        imageUrl={rawPhotoUrl}
+        aspectRatio={1}
+        cropShape="round"
+        title="Adjust Profile Photo"
+        onClose={() => {
+          setIsCropperOpen(false)
+          setRawPhotoFile(null)
+          setRawPhotoUrl(null)
+        }}
+        onCropComplete={handleCropComplete}
+      />
     </AnimatePresence>
   )
 }

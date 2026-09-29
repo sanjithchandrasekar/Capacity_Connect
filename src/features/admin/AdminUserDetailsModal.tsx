@@ -235,7 +235,7 @@ export function AdminUserDetailsModal({
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-1.5 mt-6 border-b border-white/10 pb-0 overflow-x-auto hide-scrollbar">
+            <div className="flex items-center gap-1.5 mt-6 border-b border-white/10 pb-0 overflow-x-auto hide-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {[
                 { id: 'overview', label: 'Overview & Profile', icon: User },
                 { id: 'credentials', label: isTrainer ? 'Experience & Qualifications' : 'Academic & Skills', icon: GraduationCap },

@@ -1247,11 +1247,11 @@ export function CourseCreatePage() {
                   <div className="space-y-1.5 col-span-1 sm:col-span-2">
                     <Label className="text-slate-700 text-xs font-bold mt-1">Final Exam Details</Label>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-slate-700 text-xs font-semibold">Date</Label>
-                    <Input type="date" {...settingsForm.register('final_test_date')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 col-span-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 col-span-1 sm:col-span-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-slate-700 text-xs font-semibold">Date</Label>
+                      <Input type="date" {...settingsForm.register('final_test_date')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />
+                    </div>
                     <div className="space-y-1.5">
                       <Label className="text-slate-700 text-xs font-semibold">Start Time</Label>
                       <Input type="time" {...settingsForm.register('final_test_start_time')} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white h-10 rounded-xl" />

@@ -211,4 +211,14 @@
   animation-play-state: paused !important;
 }
 
+/* Utility to hide scrollbars while preserving scroll functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+
 

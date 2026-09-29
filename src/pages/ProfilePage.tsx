@@ -21,8 +21,9 @@ import {
   CheckCircle2, Compass, BookOpen, BarChart3, Award, Calendar,
   Building, Layers, Lock, FileText, Check, Code, ExternalLink,
   Trophy, Medal, Star, ChevronRight, ArrowRight, Eye, EyeOff,
-  Camera, Upload, Trash2, Image as ImageIcon, Bell, Download
+  Camera, Upload, Trash2, Image as ImageIcon, Bell, Download, Crop, Sliders
 } from 'lucide-react'
+import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
 
 function LinkedinIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -202,6 +203,11 @@ export function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
+  // Profile Photo Cropper & View Adjustment State
+  const [isCropperOpen, setIsCropperOpen] = useState(false)
+  const [rawAvatarFile, setRawAvatarFile] = useState<File | null>(null)
+  const [rawAvatarUrl, setRawAvatarUrl] = useState<string | null>(null)
+
   // Load profile data
   const loadProfile = useCallback(async () => {
     if (!user) return
@@ -257,8 +263,8 @@ export function ProfilePage() {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
-  // Handle Avatar Photo Upload
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle File Selection for Avatar - Opens Cropper / View Adjuster
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
 
@@ -272,31 +278,86 @@ export function ProfilePage() {
       return
     }
 
+    setRawAvatarFile(file)
+    setRawAvatarUrl(null)
+    setIsCropperOpen(true)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  // Open Adjust View for existing photo - Loads the Original Uncropped Photo
+  const handleOpenAdjustView = () => {
+    if (!form.avatar_path || !user) return
+    const storedRaw = localStorage.getItem(`cc_raw_avatar_${user.id}`)
+    setRawAvatarUrl(storedRaw || form.avatar_path)
+    setRawAvatarFile(null)
+    setIsCropperOpen(true)
+  }
+
+  // Handle Crop Complete
+  const handleCropComplete = async (croppedFile: File) => {
+    const origFile = rawAvatarFile
+    setIsCropperOpen(false)
+    setRawAvatarFile(null)
+    setRawAvatarUrl(null)
+    await uploadCroppedAvatar(croppedFile, origFile)
+  }
+
+  // Upload Cropped Photo to Storage and Update Profile
+  const uploadCroppedAvatar = async (file: File, originalRawFile?: File | null) => {
+    if (!user) return
     setUploadingAvatar(true)
-    const fileExt = file.name.split('.').pop() || 'png'
+    const fileExt = 'jpg'
     const fileName = `avatar_${user.id}_${Date.now()}.${fileExt}`
     const filePath = `avatars/${fileName}`
     const table = profile?.role === 'trainer' ? 'trainers' : profile?.role === 'trainee' ? 'trainees' : 'admins'
 
     try {
+      // 1. If we have the original raw file, upload & persist it so user can re-adjust losslessly
+      if (originalRawFile) {
+        const rawExt = originalRawFile.name.split('.').pop() || 'jpg'
+        const rawFileName = `raw_avatar_${user.id}_${Date.now()}.${rawExt}`
+        const rawFilePath = `avatars/${rawFileName}`
+        
+        try {
+          const { error: rawUploadErr } = await supabase.storage
+            .from('Homepage')
+            .upload(rawFilePath, originalRawFile, { upsert: true })
+
+          if (!rawUploadErr) {
+            const { data: rawUrlData } = supabase.storage.from('Homepage').getPublicUrl(rawFilePath)
+            localStorage.setItem(`cc_raw_avatar_${user.id}`, rawUrlData.publicUrl)
+          } else {
+            // Fallback DataURL for original
+            const reader = new FileReader()
+            reader.onload = (e) => {
+              if (e.target?.result) {
+                localStorage.setItem(`cc_raw_avatar_${user.id}`, e.target.result as string)
+              }
+            }
+            reader.readAsDataURL(originalRawFile)
+          }
+        } catch {
+          // Non-blocking
+        }
+      }
+
       let finalAvatarUrl: string | null = null
 
-      // Attempt upload to Supabase storage bucket
+      // 2. Upload cropped avatar to storage
       const { error: uploadError } = await supabase.storage
         .from('Homepage')
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, file, { upsert: true, contentType: 'image/jpeg' })
 
       if (uploadError) {
-        // Fallback: Try materials bucket or DataURL
         const { error: matError } = await supabase.storage
           .from('materials')
-          .upload(filePath, file, { upsert: true })
+          .upload(filePath, file, { upsert: true, contentType: 'image/jpeg' })
 
         if (!matError) {
           const { data: urlData } = supabase.storage.from('materials').getPublicUrl(filePath)
           finalAvatarUrl = urlData.publicUrl
         } else {
-          // Robust DataURL fallback for instant resilience
+          // DataURL fallback
           await new Promise<void>((resolve) => {
             const reader = new FileReader()
             reader.onload = (event) => {
@@ -321,14 +382,13 @@ export function ProfilePage() {
           .eq('id', user.id)
 
         await refreshProfile()
-        toast.success('Profile photo updated successfully!')
+        toast.success('Profile photo adjusted and updated successfully!')
       }
     } catch (err: any) {
       console.error('Error uploading avatar:', err)
-      toast.error('Failed to upload profile photo')
+      toast.error('Failed to update profile photo')
     } finally {
       setUploadingAvatar(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -412,6 +472,7 @@ export function ProfilePage() {
 
       if (profile?.role === 'trainer') {
         payload.availability = form.availability || 'available'
+        payload.expertise_areas = form.skills
       }
 
       if (profile?.role === 'trainee') {
@@ -813,13 +874,13 @@ export function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={handleAvatarUpload}
+                      onChange={handleAvatarSelect}
                     />
                     <Button
                       type="button"
@@ -836,6 +897,20 @@ export function ProfilePage() {
                       )}
                       {form.avatar_path ? 'Change Photo' : 'Upload Photo'}
                     </Button>
+
+                    {form.avatar_path && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOpenAdjustView}
+                        disabled={uploadingAvatar}
+                        className="border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl h-9 px-3 cursor-pointer shadow-xs"
+                      >
+                        <Crop className="w-3.5 h-3.5 mr-1 text-cyan-600" /> Adjust View
+                      </Button>
+                    )}
+
                     {form.avatar_path && (
                       <Button
                         type="button"
@@ -1489,6 +1564,21 @@ export function ProfilePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageFile={rawAvatarFile}
+        imageUrl={rawAvatarUrl}
+        aspectRatio={1}
+        cropShape="round"
+        title="Adjust Profile Photo"
+        onClose={() => {
+          setIsCropperOpen(false)
+          setRawAvatarFile(null)
+          setRawAvatarUrl(null)
+        }}
+        onCropComplete={handleCropComplete}
+      />
     </motion.div>
   )
 
