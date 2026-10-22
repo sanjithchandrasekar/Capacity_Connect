@@ -123,7 +123,7 @@ export function SupabaseTest() {
             <button
               onClick={resetAndRefresh}
               disabled={stillLoading}
-              className="ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-cyan-500/30 text-zinc-200/60 hover:text-zinc-200 hover:bg-ink/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-cyan-500/30 text-zinc-200/70 hover:text-zinc-100 hover:bg-cyan-500/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <RefreshCw className={`w-3 h-3 ${stillLoading ? 'animate-spin' : ''}`} />
               {stillLoading ? 'Checking...' : 'Refresh'}
@@ -132,25 +132,34 @@ export function SupabaseTest() {
           <div className="p-4 space-y-3">
             {results.map((r) => (
               <div key={r.label} className={`flex items-start gap-3 p-4 rounded-xl border transition-all ${
-                r.status === 'ok' ? 'bg-green-50 border-green-200' :
-                r.status === 'error' ? 'bg-red-50 border-red-200' :
-                r.status === 'warn' ? 'bg-yellow-50 border-yellow-200' :
-                'bg-ink/5 border-cyan-500/30'
+                r.status === 'ok' ? 'bg-emerald-950/30 border-emerald-500/30' :
+                r.status === 'error' ? 'bg-rose-950/30 border-rose-500/30' :
+                r.status === 'warn' ? 'bg-amber-950/30 border-amber-500/30' :
+                'bg-slate-900/60 border-cyan-500/30'
               }`}>
                 <div className="mt-0.5 shrink-0">
-                  {r.status === 'loading' && <Loader2 className="w-4 h-4 text-zinc-200/50 animate-spin" />}
-                  {r.status === 'ok' && <CheckCircle className="w-4 h-4 text-green-600" />}
-                  {r.status === 'warn' && <ShieldCheck className="w-4 h-4 text-yellow-600" />}
-                  {r.status === 'error' && <XCircle className="w-4 h-4 text-red-600" />}
+                  {r.status === 'loading' && <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />}
+                  {r.status === 'ok' && <CheckCircle className="w-4 h-4 text-emerald-400" />}
+                  {r.status === 'warn' && <ShieldCheck className="w-4 h-4 text-amber-400" />}
+                  {r.status === 'error' && <XCircle className="w-4 h-4 text-rose-400" />}
                 </div>
-                <div className="min-w-0">
-                  <p className={`text-sm font-medium ${
-                    r.status === 'ok' ? 'text-green-700' :
-                    r.status === 'error' ? 'text-red-700' :
-                    r.status === 'warn' ? 'text-yellow-700' :
-                    'text-zinc-200/60'
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm font-semibold ${
+                    r.status === 'ok' ? 'text-emerald-400' :
+                    r.status === 'error' ? 'text-rose-400' :
+                    r.status === 'warn' ? 'text-amber-400' :
+                    'text-zinc-200'
                   }`}>{r.label}</p>
-                  {r.detail && <p className="text-xs text-zinc-200/50 mt-0.5 break-all">{r.detail}</p>}
+                  {r.detail && (
+                    <p className={`text-xs mt-1 break-all font-mono ${
+                      r.status === 'ok' ? 'text-emerald-200/90' :
+                      r.status === 'error' ? 'text-rose-200/90' :
+                      r.status === 'warn' ? 'text-amber-200/90' :
+                      'text-zinc-300'
+                    }`}>
+                      {r.detail}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
@@ -159,14 +168,14 @@ export function SupabaseTest() {
           {!stillLoading && (
             <div className="px-4 pb-4">
               {allOk && (
-                <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-center">
-                  <p className="text-green-700 font-semibold text-sm">✅ All systems operational — Supabase is fully connected!</p>
+                <div className="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-center">
+                  <p className="text-emerald-400 font-semibold text-sm">✅ All systems operational — Supabase is fully connected!</p>
                 </div>
               )}
               {hasError && (
-                <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-center">
-                  <p className="text-red-700 font-semibold text-sm">❌ Connection issue detected</p>
-                  <p className="text-xs text-zinc-200/50 mt-1">Check your <code className="text-zinc-200/60">.env.local</code> file and Vercel environment variables.</p>
+                <div className="p-4 rounded-xl bg-rose-950/30 border border-rose-500/30 text-center">
+                  <p className="text-rose-400 font-semibold text-sm">❌ Connection issue detected</p>
+                  <p className="text-xs text-rose-200/80 mt-1">Check your <code className="text-cyan-300 bg-[#070E20] px-1.5 py-0.5 rounded border border-cyan-500/30">.env.local</code> file and Vercel environment variables.</p>
                 </div>
               )}
             </div>
@@ -187,20 +196,24 @@ export function SupabaseTest() {
               <Link
                 key={page.path}
                 to={page.path}
-                className="flex items-center gap-3 p-3 rounded-xl border border-cyan-500/30 hover:border-cyan-500/30 hover:bg-ink/5 transition-all group"
+                className="flex items-center gap-3 p-3 rounded-xl border border-cyan-500/30 hover:border-cyan-500/60 hover:bg-cyan-500/5 transition-all group"
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${page.public ? 'bg-ink/10' : 'bg-ink/5'}`}>
-                  <page.icon className="w-4 h-4 text-zinc-200/60" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${page.public ? 'bg-cyan-500/10' : 'bg-slate-800/50'}`}>
+                  <page.icon className="w-4 h-4 text-cyan-400 group-hover:text-cyan-300 transition-colors" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-zinc-200 group-hover:text-zinc-200 truncate">{page.label}</p>
-                  <p className="text-xs text-zinc-200/50 truncate">{page.desc}</p>
+                  <p className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors truncate">{page.label}</p>
+                  <p className="text-xs text-zinc-400 truncate">{page.desc}</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${page.public ? 'bg-green-50 text-green-700 border-green-200' : 'bg-ink/5 text-zinc-200/50 border-cyan-500/30'}`}>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${
+                    page.public
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+                  }`}>
                     {page.public ? 'Public' : 'Auth'}
                   </span>
-                  <ExternalLink className="w-3 h-3 text-zinc-200/30 group-hover:text-zinc-200/60 transition-colors" />
+                  <ExternalLink className="w-3 h-3 text-zinc-400 group-hover:text-cyan-300 transition-colors" />
                 </div>
               </Link>
             ))}
@@ -211,13 +224,13 @@ export function SupabaseTest() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}
           className="grid grid-cols-1 sm:grid-cols-3 gap-3"
         >
-          <Link to="/login" className="p-4 bg-ink text-cream rounded-xl text-center text-sm font-semibold hover:bg-ink/90 transition-all">
+          <Link to="/login" className="p-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl text-center text-sm font-semibold hover:from-cyan-400 hover:to-blue-500 shadow-lg shadow-cyan-500/20 transition-all">
             Go to Login →
           </Link>
-          <Link to="/register" className="p-4 bg-[#070E20]/90 border border-cyan-500/30 text-zinc-200 rounded-xl text-center text-sm font-semibold hover:bg-ink/5 transition-all">
+          <Link to="/register" className="p-4 bg-[#070E20]/90 border border-cyan-500/30 text-zinc-200 rounded-xl text-center text-sm font-semibold hover:bg-cyan-500/10 hover:text-white transition-all">
             Register New User →
           </Link>
-          <Link to="/" className="p-4 bg-[#070E20]/90 border border-cyan-500/30 text-zinc-200 rounded-xl text-center text-sm font-semibold hover:bg-ink/5 transition-all">
+          <Link to="/" className="p-4 bg-[#070E20]/90 border border-cyan-500/30 text-zinc-200 rounded-xl text-center text-sm font-semibold hover:bg-cyan-500/10 hover:text-white transition-all">
             Back to Landing Page →
           </Link>
         </motion.div>
